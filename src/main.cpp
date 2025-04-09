@@ -6,59 +6,7 @@
 #include <optional>
 #include <vector>
 
-enum class TokenType {
-    exit,
-    int_lit,
-    semi
-};
-
-struct Token {
-    TokenType type;
-    std::optional<std::string> value;
-};
-
 std::vector<Token> tokenize(const std::string& str) {
-    std::vector<Token> tokens {};
-
-    std::string buf = "";
-    for (int i = 0; i < str.length(); ++i) {
-        char c = str.at(i);
-        if (std::isalpha(c)) {
-            buf.push_back(c);
-            ++i;
-            while (std::isalnum(str.at(i))) {
-                buf.push_back(str.at(i));
-                ++i;
-            }
-            --i;
-
-            if (buf == "exit") {
-                tokens.push_back({.type = TokenType::exit});
-                buf.clear();
-                continue;
-            }
-        }
-        else if (std::isdigit(c)) {
-            buf.push_back(c);
-            ++i;
-            while (std::isdigit(str.at(i))) {
-                buf.push_back(str.at(i));
-                ++i;
-            }
-            --i;
-            tokens.push_back({.type = TokenType::int_lit, .value = buf});
-            buf.clear();
-        }
-        else if (c == ';') {
-            tokens.push_back({.type = TokenType::semi});
-        }
-        else if (std::isspace(c)) continue;
-        else {
-            std::cerr << "SHIT!\n";
-            exit(EXIT_FAILURE);
-        }
-    }
-    return tokens;
 }
 
 std::string tokens_to_asm(const std::vector<Token>& tokens) {
