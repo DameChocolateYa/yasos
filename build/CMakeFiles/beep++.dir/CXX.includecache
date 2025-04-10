@@ -6,9 +6,17 @@
 
 #IncludeRegexTransform: 
 
+/Dev/beeplang/src/generation.hpp
+sstream
+-
+
 /Dev/beeplang/src/main.cpp
 tokenization.hpp
 /Dev/beeplang/src/tokenization.hpp
+parser.hpp
+/Dev/beeplang/src/parser.hpp
+generation.hpp
+/Dev/beeplang/src/generation.hpp
 cctype
 -
 cstdlib
@@ -23,6 +31,14 @@ optional
 -
 vector
 -
+
+/Dev/beeplang/src/parser.hpp
+vector
+-
+optional
+-
+tokenization.hpp
+/Dev/beeplang/src/tokenization.hpp
 
 /Dev/beeplang/src/tokenization.hpp
 iostream
