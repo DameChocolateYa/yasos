@@ -7,7 +7,12 @@
 enum class TokenType {
     exit,
     int_lit,
-    semi
+    semi,
+    open_paren,
+    close_paren,
+    ident,
+    var,
+    eq
 };
 
 struct Token {
@@ -17,12 +22,12 @@ struct Token {
 
 class Tokenizer {
     private:
-        [[nodiscard]] inline std::optional<char> peak(int ahead = 1) const {
-            if (m_index + ahead >= m_src.length()) {
+        [[nodiscard]] inline std::optional<char> peek(int offset = 0) const {
+            if (m_index + offset >= m_src.length()) {
                 return {};
             }
             else {
-                return m_src.at(m_index);
+                return m_src.at(m_index + offset);
             }
         }
 
@@ -42,10 +47,10 @@ class Tokenizer {
 
             std::string buf = "";
 
-            while(peak().has_value()) {
-                if (std::isalpha(peak().value())) {
+            while(peek().has_value()) {
+                if (std::isalpha(peek().value())) {
                     buf.push_back(consume());
-                    while(peak().has_value() && std::isalnum(peak().value())) {
+                    while(peek().has_value() && std::isalnum(peek().value())) {
                         buf.push_back(consume());
                     }
                     if (buf == "exit") {
@@ -53,25 +58,45 @@ class Tokenizer {
                         buf.clear();
                         continue;
                     }
+                    else if (buf == "var") {
+                        tokens.push_back({.type = TokenType::var});
+                        buf.clear();
+                        continue;
+                    }
                     else {
-                        std::cout << "AH\n";
-                        exit(EXIT_FAILURE);
+                        tokens.push_back({.type = TokenType::ident, .value = buf});
+                        buf.clear();
                     }
                 }
-                else if (std::isdigit(peak().value())) {
+                else if (std::isdigit(peek().value())) {
                     buf.push_back(consume());
-                    while (peak().has_value() && std::isdigit(peak().value())) {
+                    while (peek().has_value() && std::isdigit(peek().value())) {
                         buf.push_back(consume());
                     }
                     tokens.push_back({.type = TokenType::int_lit, .value = buf});
                     buf.clear();
                 }
-                else if (peak().value() == ';') {
+                else if (peek().value() == '(') {
+                    consume();
+                    tokens.push_back({.type = TokenType::open_paren});
+                    continue;
+                }
+                else if (peek().value() == ')') {
+                    consume();
+                    tokens.push_back({.type = TokenType::close_paren});
+                    continue;
+                }
+                else if (peek().value() == ';') {
                     consume();
                     tokens.push_back({.type = TokenType::semi});
                     continue;
                 }
-                else if (std::isspace(peak().value())) {
+                else if (peek().value() == '=') {
+                    consume();
+                    tokens.push_back({.type = TokenType::eq});
+                    continue;
+                }
+                else if (std::isspace(peek().value())) {
                     consume();
                     continue;
                 }

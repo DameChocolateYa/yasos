@@ -1,26 +1,55 @@
 #pragma once
 
+#include <cmath>
+#include <cstdlib>
 #include <vector>
 #include <optional>
+#include <variant>
 
 #include "tokenization.hpp"
 
-struct NodeExpr {
+struct NodeExprIntLit {
     Token int_lit;
 };
+
+struct NodeExprIdent {
+    Token ident;
+};
+
+struct NodeExpr {
+    std::variant<NodeExprIntLit, NodeExprIdent> var;
+};
+
 struct NodeExit {
     NodeExpr expr;
+};
+
+struct NodeStmtExit {
+    NodeExpr expr;
+};
+
+struct NodeStmtVar {
+    Token ident;
+    NodeExpr expr;
+};
+
+struct NodeStmt {
+    std::variant<NodeStmtExit, NodeStmtVar> var;
+};
+
+struct NodeProg {
+    std::vector<NodeStmt> stmts;
 };
 
 class Parser {
     private:
 
-        [[nodiscard]] inline std::optional<Token> peak(int ahead = 0) const {
-            if (m_index + ahead >= m_tokens.size()) {
+        [[nodiscard]] inline std::optional<Token> peek(int offset = 0) const {
+            if (m_index + offset >= m_tokens.size()) {
                 return {};
             }
             else {
-                return m_tokens.at(m_index + ahead);
+                return m_tokens.at(m_index + offset);
             }
         }
 
@@ -35,36 +64,79 @@ class Parser {
         inline explicit Parser(std::vector<Token> tokens) : m_tokens(std::move(tokens)) {}
 
         std::optional<NodeExpr> parse_expr() {
-            if (peak().has_value() && peak().value().type == TokenType::int_lit) {
-                return NodeExpr{.int_lit = consume()};
+            if (peek().has_value() && peek().value().type == TokenType::int_lit) {
+                return NodeExpr{.var = NodeExprIntLit{.int_lit = consume()}};
+            }
+            else if (peek().has_value() && peek().value().type == TokenType::ident) {
+                return NodeExpr {.var = NodeExprIdent {.ident = consume()}};
             }
             else {
                 return {};
             }
         }
 
-        std::optional<NodeExit> parse() {
-            std::optional<NodeExit> exit_node;
-            while (peak().has_value()) {
-                if (peak().value().type == TokenType::exit) {
+        std::optional<NodeStmt> parse_stmt() {
+            if (peek().value().type == TokenType::exit && peek(1).has_value() && peek(1).value().type == TokenType::open_paren) {
+                consume();
+                consume();
+                NodeStmtExit stmt_exit;
+                if (auto node_expr = parse_expr()) {
+                    stmt_exit = {.expr = node_expr.value()};
+                }
+                else {
+                    std::cerr << "Invalid Expression\n";
+                    exit(EXIT_FAILURE);
+                }
+                if (peek().has_value() && peek().value().type == TokenType::close_paren) {
                     consume();
-                    if (auto node_expr = parse_expr()) {
-                        exit_node = NodeExit{.expr = node_expr.value()};
-                    }
-                    else {
-                        std::cerr << "Invalid Expression\n";
-                        exit(EXIT_FAILURE);
-                    }
-                    if (peak().has_value() && peak().value().type == TokenType::semi) {
-                        consume();
-                    }
-                    else {
-                        std::cerr << "Invalid Expression\n";
-                        exit(EXIT_FAILURE);
-                    }
+                }
+                else {
+                    std::cerr << "Expected a ')'\n";
+                    exit(EXIT_FAILURE);
+                }
+                if (peek().has_value() && peek().value().type == TokenType::semi) {
+                    consume();
+                }
+                else {
+                    std::cerr << "Expected a ';'\n";
+                    exit(EXIT_FAILURE);
+                }
+                return NodeStmt{.var = stmt_exit};
+            }
+            else if (peek().has_value() && peek().value().type == TokenType::var && peek(1).has_value() && peek(1).value().type == TokenType::ident && peek(2).has_value() && peek(2).value().type == TokenType::eq) {
+                consume();
+                auto stmt_var = NodeStmtVar{.ident = consume()};
+                consume();
+                if (auto expr = parse_expr()) {
+                    stmt_var.expr = expr.value();
+                }
+                else {
+                    std::cerr << "Invalid Expression\n";
+                    exit(EXIT_FAILURE);
+                }
+                if (peek().has_value() && peek().value().type == TokenType::semi) consume();
+                else {
+                    std::cerr << "Expected a ';'";
+                    exit(EXIT_FAILURE);
+                }
+                return NodeStmt{.var = stmt_var};
+            }
+            else {
+                return {};
+            }
+        }
+
+        std::optional<NodeProg> parse_prog() {
+            NodeProg prog;
+            while(peek().has_value()) {
+                if (auto stmt = parse_stmt()) {
+                    prog.stmts.push_back(stmt.value());
+                }
+                else {
+                    std::cerr << "Invalid Statement\n";
+                    exit(EXIT_FAILURE);
                 }
             }
-            m_index = 0;
-            return exit_node;
+            return prog;
         }
 };

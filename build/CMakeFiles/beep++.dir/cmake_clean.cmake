@@ -1,7 +1,9 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/beep++.dir/link.d"
   "CMakeFiles/beep++.dir/src/main.cpp.o"
-  "beep++.pdb"
+  "CMakeFiles/beep++.dir/src/main.cpp.o.d"
   "beep++"
+  "beep++.pdb"
 )
 
 # Per-language clean rules from dependency scanning.
