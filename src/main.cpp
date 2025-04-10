@@ -1,3 +1,5 @@
+#include "tokenization.hpp"
+
 #include <cctype>
 #include <cstdlib>
 #include <iostream>
@@ -42,7 +44,10 @@ int main(int argc, char** argv) {
         contents = contents_stream.str();
     }
 
-    std::vector<Token> tokens = tokenize(contents);
+    Tokenizer tokenizer(std::move(contents));
+
+
+    std::vector<Token> tokens = tokenizer.tokenize();
     std::cout << tokens_to_asm(tokens) << "\n";
     {
         std::fstream file("out.asm", std::ios::out);

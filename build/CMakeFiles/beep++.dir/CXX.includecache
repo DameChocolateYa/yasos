@@ -1,0 +1,34 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Dev/beeplang/src/main.cpp
+tokenization.hpp
+/Dev/beeplang/src/tokenization.hpp
+cctype
+-
+cstdlib
+-
+iostream
+-
+fstream
+-
+sstream
+-
+optional
+-
+vector
+-
+
+/Dev/beeplang/src/tokenization.hpp
+iostream
+-
+vector
+-
+optional
+-
+

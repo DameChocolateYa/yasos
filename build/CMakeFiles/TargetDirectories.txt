@@ -1,3 +1,3 @@
-/home/samuel/dev/cpp/compiler/build/CMakeFiles/beep++.dir
-/home/samuel/dev/cpp/compiler/build/CMakeFiles/edit_cache.dir
-/home/samuel/dev/cpp/compiler/build/CMakeFiles/rebuild_cache.dir
+/Dev/beeplang/build/CMakeFiles/rebuild_cache.dir
+/Dev/beeplang/build/CMakeFiles/beep++.dir
+/Dev/beeplang/build/CMakeFiles/edit_cache.dir
