@@ -4,4 +4,8 @@ project(beep++)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(beep++ src/main.cpp)
+set(OBJS src/functions/std.o)
+
+set(CMAKE_CXX_FLAGS "-no-pie")
+
+add_executable(beep++ src/main.cpp ${OBJS})

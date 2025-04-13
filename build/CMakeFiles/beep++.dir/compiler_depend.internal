@@ -263,7 +263,8 @@ CMakeFiles/beep++.dir/src/main.cpp.o
  /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include/stddef.h
 
 beep++
- /usr/lib/Scrt1.o
+ /home/samuel/dev/cpp/compiler/src/functions/std.o
+ /usr/lib/crt1.o
  /usr/lib/crti.o
  /usr/lib/crtn.o
  /usr/lib/libc.so
@@ -271,8 +272,8 @@ beep++
  /usr/lib/libgcc_s.so.1
  /usr/lib/libm.so
  /usr/lib/libstdc++.so
- /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtbeginS.o
- /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtendS.o
+ /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtbegin.o
+ /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtend.o
  /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/libgcc.a
  /usr/lib/ld-linux-x86-64.so.2
  /usr/lib/libc.so.6

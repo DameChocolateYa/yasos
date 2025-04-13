@@ -16,8 +16,12 @@ struct NodeExprIdent {
     Token ident;
 };
 
+struct NodeExprStrLit {
+    Token str_lit;
+};
+
 struct NodeExpr {
-    std::variant<NodeExprIntLit, NodeExprIdent> var;
+    std::variant<NodeExprIntLit, NodeExprIdent, NodeExprStrLit> var;
 };
 
 struct NodeExit {
@@ -33,8 +37,13 @@ struct NodeStmtVar {
     NodeExpr expr;
 };
 
+struct NodeStmtCall {
+    Token name;
+    NodeExpr arg;
+};
+
 struct NodeStmt {
-    std::variant<NodeStmtExit, NodeStmtVar> var;
+    std::variant<NodeStmtExit, NodeStmtVar, NodeStmtCall> var;
 };
 
 struct NodeProg {
@@ -69,6 +78,9 @@ class Parser {
             }
             else if (peek().has_value() && peek().value().type == TokenType::ident) {
                 return NodeExpr {.var = NodeExprIdent {.ident = consume()}};
+            }
+            else if (peek().has_value() && peek().value().type == TokenType::str_lit) {
+                return NodeExpr {.var = NodeExprStrLit{.str_lit = consume()}};
             }
             else {
                 return {};
@@ -121,6 +133,35 @@ class Parser {
                 }
                 return NodeStmt{.var = stmt_var};
             }
+            else if (peek().has_value() && peek().value().type == TokenType::ident
+                     && peek(1).has_value() && peek(1).value().type == TokenType::open_paren) {
+
+                Token name = consume(); // ident
+                consume();              // '('
+
+                NodeExpr arg_expr;
+                if (auto e = parse_expr()) {
+                    arg_expr = e.value();
+                } else {
+                    std::cerr << "Invalid Expression in function call\n";
+                    exit(EXIT_FAILURE);
+                }
+
+                if (peek().value().type != TokenType::close_paren) {
+                    std::cerr << "Expected ')'\n";
+                    exit(EXIT_FAILURE);
+                }
+                consume(); // ')'
+
+                if (peek().value().type != TokenType::semi) {
+                    std::cerr << "Expected ';'\n";
+                    exit(EXIT_FAILURE);
+                }
+                consume(); // ';'
+
+                return NodeStmt{.var = NodeStmtCall{.name = name, .arg = arg_expr}};
+            }
+
             else {
                 return {};
             }

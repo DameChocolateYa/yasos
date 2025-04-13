@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdlib>
 #include <iostream>
 #include <vector>
 #include <optional>
@@ -7,6 +8,7 @@
 enum class TokenType {
     exit,
     int_lit,
+    str_lit,
     semi,
     open_paren,
     close_paren,
@@ -58,7 +60,7 @@ class Tokenizer {
                         buf.clear();
                         continue;
                     }
-                    else if (buf == "var") {
+                    else if (buf == "set") {
                         tokens.push_back({.type = TokenType::var});
                         buf.clear();
                         continue;
@@ -74,6 +76,20 @@ class Tokenizer {
                         buf.push_back(consume());
                     }
                     tokens.push_back({.type = TokenType::int_lit, .value = buf});
+                    buf.clear();
+                }
+                else if (peek().value() == '"') {
+                    consume();
+                    while (peek().has_value() && peek().value() != '"') {
+                        buf.push_back(consume());
+                    }
+                    if (!peek().has_value() || peek().value() != '"') {
+                        std::cerr << "Undeterminated string literal\n";
+                        exit(EXIT_FAILURE);
+                    }
+                    consume();
+
+                    tokens.push_back({.type = TokenType::str_lit, .value = buf});
                     buf.clear();
                 }
                 else if (peek().value() == '(') {

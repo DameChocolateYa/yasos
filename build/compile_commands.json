@@ -1,7 +1,7 @@
 [
 {
   "directory": "/home/samuel/dev/cpp/compiler/build",
-  "command": "/usr/bin/c++   -std=gnu++20 -o CMakeFiles/beep++.dir/src/main.cpp.o -c /home/samuel/dev/cpp/compiler/src/main.cpp",
+  "command": "/usr/bin/c++   -no-pie -std=gnu++20 -o CMakeFiles/beep++.dir/src/main.cpp.o -c /home/samuel/dev/cpp/compiler/src/main.cpp",
   "file": "/home/samuel/dev/cpp/compiler/src/main.cpp",
   "output": "CMakeFiles/beep++.dir/src/main.cpp.o"
 }

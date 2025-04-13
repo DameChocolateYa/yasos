@@ -1,3 +1,5 @@
-var x = 32;
-var y = 34;
-exit(y);
+print("HOLA");
+println();
+print("MUNDO");
+
+exit(0);

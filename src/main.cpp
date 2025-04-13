@@ -10,9 +10,6 @@
 #include <optional>
 #include <vector>
 
-std::vector<Token> tokenize(const std::string& str) {
-}
-
 int main(int argc, char** argv) {
     if (argc != 2) {
         std::cerr << "Incorrect usage. Correct usage is...\n";
@@ -47,8 +44,8 @@ int main(int argc, char** argv) {
         file << generator.gen_prog();
     }
 
-    system("nasm -felf64 out.asm");
-    system("ld -o out out.o");
+    system("nasm -f elf64 -o out.o out.asm");
+    system("g++ -o out out.o src/functions/std.o -no-pie");
     //system("rm out.asm");
 
     return EXIT_SUCCESS;

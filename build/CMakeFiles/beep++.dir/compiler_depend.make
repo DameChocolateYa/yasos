@@ -261,7 +261,8 @@ CMakeFiles/beep++.dir/src/main.cpp.o: /home/samuel/dev/cpp/compiler/src/main.cpp
   /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include/stdarg.h \
   /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include/stddef.h
 
-beep++: /usr/lib/Scrt1.o \
+beep++: /home/samuel/dev/cpp/compiler/src/functions/std.o \
+  /usr/lib/crt1.o \
   /usr/lib/crti.o \
   /usr/lib/crtn.o \
   /usr/lib/libc.so \
@@ -269,8 +270,8 @@ beep++: /usr/lib/Scrt1.o \
   /usr/lib/libgcc_s.so.1 \
   /usr/lib/libm.so \
   /usr/lib/libstdc++.so \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtbeginS.o \
-  /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtendS.o \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtbegin.o \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtend.o \
   /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/libgcc.a \
   /usr/lib/ld-linux-x86-64.so.2 \
   /usr/lib/libc.so.6 \
@@ -290,9 +291,9 @@ CMakeFiles/beep++.dir/src/main.cpp.o:
 
 /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/libgcc.a:
 
-/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtendS.o:
+/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtend.o:
 
-/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtbeginS.o:
+/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtbegin.o:
 
 /usr/lib/libm.so:
 
@@ -301,6 +302,8 @@ CMakeFiles/beep++.dir/src/main.cpp.o:
 /usr/lib/crtn.o:
 
 /usr/lib/crti.o:
+
+/usr/lib/crt1.o:
 
 /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include/stddef.h:
 
@@ -373,6 +376,8 @@ CMakeFiles/beep++.dir/src/main.cpp.o:
 /usr/include/c++/14.2.1/ext/string_conversions.h:
 
 /usr/include/bits/wctype-wchar.h:
+
+/home/samuel/dev/cpp/compiler/src/functions/std.o:
 
 /usr/include/c++/14.2.1/tr1/riemann_zeta.tcc:
 
@@ -757,8 +762,6 @@ CMakeFiles/beep++.dir/src/main.cpp.o:
 /usr/include/bits/timex.h:
 
 /usr/include/c++/14.2.1/tuple:
-
-/usr/lib/Scrt1.o:
 
 /usr/include/c++/14.2.1/type_traits:
 
