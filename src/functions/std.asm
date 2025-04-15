@@ -163,11 +163,11 @@ testret:
     ret
 
 scani:
-    mov eax, 3
-    mov ebx, 0
-    mov ecx, scani_buffer
-    mov edx, 100
-    int 0x80
+    mov rax, 0
+    mov rdi, 0
+    mov rsi, scani_buffer
+    mov rdx, 100
+    syscall
     test eax, eax
     jz .input_error
     lea rax, [scani_buffer]

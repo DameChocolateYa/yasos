@@ -1,7 +1,29 @@
 include <standard>
-use {print, scani, itostr, stoint}; ! From standard library %
+use {print, scani};
 
-let num1: int = 3;
-println(num1);
+let num: int = 0;
+let emptyBuf: str = "";
+
+println("Presiona 'Enter' hasta que llegue a 5");
+
+emptyBuf = scani();
+num++;
+println(num);
+
+emptyBuf = scani();
+num++;
+println(num);
+
+emptyBuf = scani();
+num++;
+println(num);
+
+emptyBuf = scani();
+num++;
+println(num);
+
+emptyBuf = scani();
+num++;
+println(num);
 
 end();

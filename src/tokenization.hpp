@@ -91,38 +91,8 @@ class Tokenizer {
                         buf.clear();
                         continue;
                     }
-                    else if (buf == "+=") {
-                        tokens.push_back({.type = TokenType::plus_eq});
-                        buf.clear();
-                        continue;
-                    }
                     else if (buf == "add") {
-                        tokens.push_back({.type = TokenType::plus});
-                        buf.clear();
-                        continue;
-                    }
-                    else if (buf == "-=") {
-                        tokens.push_back({.type = TokenType::minus_eq});
-                        buf.clear();
-                        continue;
-                    }
-                    else if (buf == "*=") {
-                        tokens.push_back({.type = TokenType::star_eq});
-                        buf.clear();
-                        continue;
-                    }
-                    else if (buf == "/=") {
-                        tokens.push_back({.type = TokenType::slash_eq});
-                        buf.clear();
-                        continue;
-                    }
-                    else if (buf == "++") {
-                        tokens.push_back({.type = TokenType::plusplus});
-                        buf.clear();
-                        continue;
-                    }
-                    else if (buf == "--") {
-                        tokens.push_back({.type = TokenType::minusminus});
+                        tokens.push_back({.type = TokenType::plus, .value="+"});
                         buf.clear();
                         continue;
                     }
@@ -188,6 +158,36 @@ class Tokenizer {
                     tokens.push_back({.type = TokenType::comma});
                     continue;
                 }
+                else if (peek().value() == '+' && peek(1).has_value() && peek(1).value() == '+') {
+                    consume(); consume();
+                    tokens.push_back({.type = TokenType::plusplus, .value="++"});
+                    continue;
+                }
+                else if (peek().value() == '-' && peek(1).has_value() && peek(1).value() == '-') {
+                    consume(); consume();
+                    tokens.push_back({.type = TokenType::minusminus, .value="--"});
+                    continue;
+                }
+                else if (peek().value() == '+' && peek(1).has_value() && peek(1).value() == '=') {
+                    consume(); consume();
+                    tokens.push_back({.type = TokenType::plus_eq, .value = "+="});
+                    continue;
+                }
+                else if (peek().value() == '-' && peek(1).has_value() && peek(1).value() == '=') {
+                    consume(); consume();
+                    tokens.push_back({.type = TokenType::minus_eq, .value = "-="});
+                    continue;
+                }
+                else if (peek().value() == '*' && peek(1).has_value() && peek(1).value() == '=') {
+                    consume(); consume();
+                    tokens.push_back({.type = TokenType::star_eq, .value = "*="});
+                    continue;
+                }
+                else if (peek().value() == '/' && peek(1).has_value() && peek(1).value() == '=') {
+                    consume(); consume();
+                    tokens.push_back({.type = TokenType::slash_eq, .value = "/="});
+                    continue;
+                }
                 else if (peek().value() == '=') {
                     consume();
                     tokens.push_back({.type = TokenType::eq});
@@ -195,22 +195,22 @@ class Tokenizer {
                 }
                 else if (peek().value() == '+') {
                     consume();
-                    tokens.push_back({.type = TokenType::plus});
+                    tokens.push_back({.type = TokenType::plus, .value="+"});
                     continue;
                 }
                 else if (peek().value() == '-') {
                     consume();
-                    tokens.push_back({.type = TokenType::minus});
+                    tokens.push_back({.type = TokenType::minus, .value="-"});
                     continue;
                 }
                 else if (peek().value() == '*') {
                     consume();
-                    tokens.push_back({.type = TokenType::star});
+                    tokens.push_back({.type = TokenType::star, .value="*"});
                     continue;
                 }
                 else if (peek().value() == '/') {
                     consume();
-                    tokens.push_back({.type = TokenType::slash});
+                    tokens.push_back({.type = TokenType::slash, .value="/"});
                     continue;
                 }
                 else if (peek().value() == '!') {

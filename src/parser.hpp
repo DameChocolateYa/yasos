@@ -105,7 +105,6 @@ class Parser {
 
         [[nodiscard]] inline std::optional<Token> peek(int offset = 0) const {
             if (m_index + offset >= m_tokens.size()) {
-                std::cout << "returning an empty peek\n";
                 return {};
             }
             else {
@@ -127,7 +126,7 @@ class Parser {
     public:
         inline explicit Parser(std::vector<Token> tokens) : m_tokens(std::move(tokens)) {}
 
-        std::optional<NodeExpr> parse_expr() {
+        std::optional<NodeExpr> parse_primary_expr() {
             if (peek().has_value() && peek().value().type == TokenType::ident &&
                 peek(1).has_value() && peek(1).value().type == TokenType::open_paren) {
 
@@ -166,7 +165,6 @@ class Parser {
                 return NodeExpr(NodeExprCall{name, wrapped_args});
 
             }
-
             else if (peek().has_value() && peek().value().type == TokenType::int_lit) {
                 return NodeExpr(NodeExprIntLit{consume()});
             }
@@ -176,79 +174,59 @@ class Parser {
             else if (peek().has_value() && peek().value().type == TokenType::str_lit) {
                 return NodeExpr(NodeExprStrLit{consume()});
             }
+            return {};
+        }
 
-            else if (peek().has_value() &&
-                     (peek().value().type == TokenType::ident ||
-                      peek().value().type == TokenType::int_lit ||
-                      peek().value().type == TokenType::str_lit) &&
-                     peek(1).has_value() && peek(1).value().type == TokenType::plus)
- {
-                Token ident_token = peek().value();
-                Token lookahead = peek(1).value();
-                std::cout << (lookahead.type == TokenType::plus) << "\n";
-                std::cout << peek(1).value().value.value_or("NULL") << "\n";
+        std::optional<NodeExpr> parse_expr() {
+            auto lhs = parse_primary_expr();
+            if (!lhs.has_value()) return {};
 
-                if (lookahead.type == TokenType::plus ||
-                    lookahead.type == TokenType::minus ||
-                    lookahead.type == TokenType::star ||
-                    lookahead.type == TokenType::slash) {
+            while (true) {
+                auto maybe_op = peek();
+                if (!maybe_op.has_value()) break;
 
-                    auto lhs = NodeExpr(NodeExprIdent{consume()});
-                    Token op_token = consume();
-                    auto rhs = parse_expr();
+                Token op = maybe_op.value();
+                if (op.type == TokenType::plus || op.type == TokenType::minus || op.type == TokenType::star || op.type == TokenType::slash) {
+                    consume(); // the operator
+                    auto rhs = parse_primary_expr();
 
                     if (!rhs.has_value()) {
-                        std::cerr << "Invalid expression after operator\n";
+                        std::cerr << "Invalid right expression\n";
                         exit(EXIT_FAILURE);
                     }
 
-                    return NodeExpr(NodeExprBinary{
-                        std::make_shared<NodeExpr>(lhs),
-                        op_token,
-                        std::make_shared<NodeExpr>(rhs.value())
+                    lhs = NodeExpr(NodeExprBinary{ // FIXME
+                        std::make_shared<NodeExpr>(*lhs),
+                        op,
+                        std::make_shared<NodeExpr>(*rhs)
                     });
                 }
-
-                else if (lookahead.type == TokenType::plus_eq ||
-                         lookahead.type == TokenType::minus_eq ||
-                         lookahead.type == TokenType::star_eq ||
-                         lookahead.type == TokenType::slash_eq) {
-
-                    Token left_token = consume();
-                    Token op_token = consume();
-                    auto right_expr = parse_expr();
-
-                    if (!right_expr.has_value()) {
-                        std::cerr << "Invalid expression after operator\n";
+                else if (op.type == TokenType::plus_eq || op.type == TokenType::minus_eq || op.type == TokenType::star_eq || op.type == TokenType::slash_eq) {
+                    consume();
+                    auto rhs = parse_primary_expr();
+                    if (!rhs.has_value() || !lhs.has_value()) {
+                        std::cerr << "Invalid expression\n";
                         exit(EXIT_FAILURE);
                     }
 
-                    return NodeExpr(NodeExprBinaryAssign{
-                        left_token,
-                        op_token,
-                        std::make_shared<NodeExpr>(right_expr.value())
-                    });
-                }
+                    if (!std::holds_alternative<NodeExprIdent>(lhs->var)) {
+                        std::cerr << "Expected an identifier\n";
+                        exit(EXIT_FAILURE);
+                    }
 
-                else if (lookahead.type == TokenType::plusplus ||
-                         lookahead.type == TokenType::minusminus) {
+                    Token ident_token = std::get<NodeExprIdent>(lhs->var).ident;
 
-                    Token ident = consume();
-                    Token op_token = consume();
-
-                    return NodeExpr(NodeExprUnaryIncDec{
-                        ident,
-                        op_token
+                    lhs = NodeExpr(NodeExprBinaryAssign{
+                        .left_token = ident_token,
+                        .op_token = op,
+                        .right_expr = std::make_shared<NodeExpr>(*rhs)
                     });
                 }
                 else {
-                    return {};
+                    break;
                 }
             }
-
-            else {
-                return {};
-            }
+            return lhs;
         }
 
         std::optional<NodeStmt> parse_stmt() {
@@ -268,7 +246,6 @@ class Parser {
                 stmt_var.ident = ident;
                 stmt_var.type = type_token;
 
-                std::cout << "assign\n";
                 auto expr = parse_expr();
                 if (!expr.has_value()) {
                     std::cerr << "Invalid Expression\n";
@@ -289,11 +266,9 @@ class Parser {
             else if (peek().has_value() && peek().value().type == TokenType::ident &&
                      peek(1).has_value() && peek(1).value().type == TokenType::eq)
             {
-                std::cout << "reassign\n";
                 Token ident = consume();
                 consume();
 
-                std::cout << "reassign\n";
                 auto expr = parse_expr();
 
                 if (!expr.has_value()) {
@@ -303,7 +278,6 @@ class Parser {
 
                 if (!peek().has_value() || peek().value().type != TokenType::semi) {
                     std::cerr << "Expected a ';'\n";
-                    std::cerr << peek().value().value.value_or("TUKS") << "\n";
                     exit(EXIT_FAILURE);
                 }
                 consume();
@@ -313,7 +287,61 @@ class Parser {
                     .type = Token{.type = TokenType::ident},
                     .expr = expr.value()
                 };
+                return NodeStmt{.var = reassignment};
+            }
 
+            else if (peek().has_value() && peek().value().type == TokenType::ident && peek(1).has_value() && (
+                peek(1).value().type == TokenType::plus_eq ||
+                peek(1).value().type == TokenType::minus_eq ||
+                peek(1).value().type == TokenType::star_eq ||
+                peek(1).value().type == TokenType::slash_eq
+            )) {
+                Token ident = consume(); // Identifier   ...var1...
+                Token op = consume(); // Operator (+=, -=, *=, /=)
+
+                auto expr = parse_expr();
+                if (!expr.has_value()) {
+                    std::cerr << "Invalid expression in assignment\n";
+                    exit(EXIT_FAILURE);
+                }
+
+                if (!peek().has_value() || peek().value().type != TokenType::semi) {
+                    std::cerr << "Expected ';'";
+                    exit(EXIT_FAILURE);
+                }
+                consume(); // ;
+
+                NodeStmtVar reassignment {
+                    .ident = ident,
+                    .type = Token{.type = TokenType::ident},
+                    .expr = NodeExpr(NodeExprBinaryAssign{
+                        .left_token = ident,
+                        .op_token = op,
+                        .right_expr = std::make_shared<NodeExpr>(expr.value())
+                    })
+                };
+                return NodeStmt{.var = reassignment};
+            }
+            else if (peek().has_value() && peek().value().type == TokenType::ident && peek(1).has_value() && (
+                peek(1).value().type == TokenType::plusplus || peek(1).value().type == TokenType::minusminus
+            )) {
+                Token ident = consume(); // Identifier   ...var1...
+                Token op = consume(); // Operator (+=, -=, *=, /=)
+
+                if (!peek().has_value() || peek().value().type != TokenType::semi) {
+                    std::cerr << "Expected ';'";
+                    exit(EXIT_FAILURE);
+                }
+                consume(); // ;
+
+                NodeStmtVar reassignment {
+                    .ident = ident,
+                    .type = Token{.type = TokenType::ident},
+                    .expr = NodeExpr(NodeExprUnaryIncDec{
+                        .ident = ident,
+                        .op_token = op,
+                    })
+                };
                 return NodeStmt{.var = reassignment};
             }
 

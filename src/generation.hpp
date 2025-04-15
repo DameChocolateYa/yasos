@@ -84,8 +84,61 @@ public:
                 }
                 gen->push("rax");
             }
-            void operator()(const NodeExprBinaryAssign& expr_bin_assign) const {}
-            void operator()(const NodeExprUnaryIncDec& algo) const {};
+            void operator()(const NodeExprBinaryAssign& expr_bin_assign) const {
+                const std::string& op = expr_bin_assign.op_token.value.value();
+                const std::string& var_name = expr_bin_assign.left_token.value.value();
+
+                size_t offset_bytes = (gen->m_stack_size - gen->m_vars.at(var_name).stack_loc - 1) * 8;
+                gen->m_output << "  mov rax, QWORD [ rsp + " << offset_bytes << "]\n";
+                gen->push("rax");
+
+                gen->gen_expr(*expr_bin_assign.right_expr);
+
+                gen->pop("rbx");
+                gen->pop("rax");
+
+                if (op == "+=") {
+                    gen->m_output << "  add rax, rbx\n";
+                }
+                else if (op == "-=") {
+                    gen->m_output << "  sub rax, rbx\n";
+                }
+                else if (op == "*=") {
+                    gen->m_output << "  imul rax, rbx\n";
+                }
+                else if (op == "/=") {
+                    gen->m_output << "  xor rdx, rdx\n";
+                    gen->m_output << "  idiv rbx\n";
+                }
+                else {
+                    std::cerr << "Invalid assignment operator\n";
+                    exit(EXIT_FAILURE);
+                }
+
+                gen->m_output << "  mov QWORD [ rsp + " << offset_bytes << "], rax\n";
+                gen->push("rax");
+            }
+            void operator()(const NodeExprUnaryIncDec& expr_unary_operator) const {
+                const std::string& op = expr_unary_operator.op_token.value.value();
+                const std::string& var_name = expr_unary_operator.ident.value.value();
+
+                size_t offset_bytes = (gen->m_stack_size - gen->m_vars.at(var_name).stack_loc - 1) * 8;
+                gen->m_output << "  mov rax, QWORD [ rsp + " << offset_bytes << " ]\n";
+                gen->push("rax");
+
+                if (op == "++") {
+                    gen->m_output << "  add rax, 1\n";
+                }
+                else if (op == "--") {
+                    gen->m_output << "  sub rax, 1\n";
+                }
+                else {
+                    std::cerr << "Invalid unary operator\n";
+                    exit(EXIT_FAILURE);
+                }
+                gen->m_output << "  mov QWORD [ rsp + " << offset_bytes << "], rax\n";
+                gen->push("rax");
+            };
 
             void operator()(const NodeExprIdent& expr_ident) const {
                 const std::string& name = expr_ident.ident.value.value();
@@ -210,7 +263,13 @@ public:
                         gen->m_output << "  mov rdi, 0\n";
                     }
                     else if (stmt_call.args.size() == 1) {
-                        gen->m_output << "mov rdi, " << std::get<NodeExprIntLit>(stmt_call.args[0]->var).int_lit.value.value() << "\n";
+                        if (std::holds_alternative<NodeExprIdent>(stmt_call.args[0]->var)) {
+                            gen->gen_expr(*stmt_call.args[0]);
+                            gen->pop("rdi");
+                        }
+                        else {
+                            gen->m_output << "mov rdi, " << std::get<NodeExprIntLit>(stmt_call.args[0]->var).int_lit.value.value() << "\n";
+                        }
                     }
                     else {
                         std::cerr << "Expected optionally 1 arg\n";
