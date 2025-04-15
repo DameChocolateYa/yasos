@@ -6,15 +6,36 @@
 #include <optional>
 
 enum class TokenType {
-    exit,
     int_lit,
     str_lit,
     semi,
+    comma,
     open_paren,
     close_paren,
     ident,
     var,
-    eq
+    eq,
+    str_type,
+    int_type,
+    dp,
+    comment_begin,
+    comment_end,
+    include,
+    use,
+    l_arrow,
+    r_arrow,
+    l_key,
+    r_key,
+    plus, // 20
+    minus,
+    star,
+    slash,
+    plus_eq,
+    minus_eq,
+    star_eq,
+    slash_eq,
+    plusplus,
+    minusminus
 };
 
 struct Token {
@@ -55,13 +76,63 @@ class Tokenizer {
                     while(peek().has_value() && std::isalnum(peek().value())) {
                         buf.push_back(consume());
                     }
-                    if (buf == "exit") {
-                        tokens.push_back({.type = TokenType::exit});
+                    if (buf == "let") {
+                        tokens.push_back({.type = TokenType::var});
                         buf.clear();
                         continue;
                     }
-                    else if (buf == "set") {
-                        tokens.push_back({.type = TokenType::var});
+                    else if (buf == "str") {
+                        tokens.push_back({.type = TokenType::str_type});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "int") {
+                        tokens.push_back({.type = TokenType::int_type});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "+=") {
+                        tokens.push_back({.type = TokenType::plus_eq});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "add") {
+                        tokens.push_back({.type = TokenType::plus});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "-=") {
+                        tokens.push_back({.type = TokenType::minus_eq});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "*=") {
+                        tokens.push_back({.type = TokenType::star_eq});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "/=") {
+                        tokens.push_back({.type = TokenType::slash_eq});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "++") {
+                        tokens.push_back({.type = TokenType::plusplus});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "--") {
+                        tokens.push_back({.type = TokenType::minusminus});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "include") {
+                        tokens.push_back({.type = TokenType::include});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "use") {
+                        tokens.push_back({.type = TokenType::use});
                         buf.clear();
                         continue;
                     }
@@ -107,17 +178,80 @@ class Tokenizer {
                     tokens.push_back({.type = TokenType::semi});
                     continue;
                 }
+                else if (peek().value() == ':') {
+                    consume();
+                    tokens.push_back({.type = TokenType::dp});
+                    continue;
+                }
+                else if (peek().value() == ',') {
+                    consume();
+                    tokens.push_back({.type = TokenType::comma});
+                    continue;
+                }
                 else if (peek().value() == '=') {
                     consume();
                     tokens.push_back({.type = TokenType::eq});
                     continue;
                 }
+                else if (peek().value() == '+') {
+                    consume();
+                    tokens.push_back({.type = TokenType::plus});
+                    continue;
+                }
+                else if (peek().value() == '-') {
+                    consume();
+                    tokens.push_back({.type = TokenType::minus});
+                    continue;
+                }
+                else if (peek().value() == '*') {
+                    consume();
+                    tokens.push_back({.type = TokenType::star});
+                    continue;
+                }
+                else if (peek().value() == '/') {
+                    consume();
+                    tokens.push_back({.type = TokenType::slash});
+                    continue;
+                }
+                else if (peek().value() == '!') {
+                    consume();
+                    while (peek().has_value() && peek().value() != '%') {
+                        consume(); // ignora todo dentro del comentario
+                    }
+                    if (!peek().has_value()) {
+                        std::cerr << "Unclosed comment\n";
+                        exit(EXIT_FAILURE);
+                    }
+                    consume(); // consume '%'
+                    continue;  // skip a agregar token
+                }
+                else if (peek().value() == '<') {
+                    consume();
+                    tokens.push_back({.type = TokenType::l_arrow});
+                    continue;
+                }
+                else if (peek().value() == '>') {
+                    consume();
+                    tokens.push_back({.type = TokenType::r_arrow});
+                    continue;
+                }
+                else if (peek().value() == '{') {
+                    consume();
+                    tokens.push_back({.type = TokenType::l_key});
+                    continue;
+                }
+                else if (peek().value() == '}') {
+                    consume();
+                    tokens.push_back({.type = TokenType::r_key});
+                    continue;
+                }
+
                 else if (std::isspace(peek().value())) {
                     consume();
                     continue;
                 }
                 else {
-                    std::cout << "AH\n";
+                    std::cout << "TOKEN ERROR" << peek().value() << "\n";
                     exit(EXIT_FAILURE);
                 }
             }

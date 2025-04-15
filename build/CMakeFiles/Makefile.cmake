@@ -54,5 +54,5 @@ set(CMAKE_MAKEFILE_PRODUCTS
 
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
-  "CMakeFiles/beep++.dir/DependInfo.cmake"
+  "CMakeFiles/beepc.dir/DependInfo.cmake"
   )

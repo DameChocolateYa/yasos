@@ -151,7 +151,7 @@ CMAKE_PROJECT_DESCRIPTION:STATIC=
 CMAKE_PROJECT_HOMEPAGE_URL:STATIC=
 
 //Value Computed by CMake
-CMAKE_PROJECT_NAME:STATIC=beep++
+CMAKE_PROJECT_NAME:STATIC=beeplang
 
 //Path to a program.
 CMAKE_RANLIB:FILEPATH=/usr/bin/ranlib
@@ -226,6 +226,15 @@ beep++_IS_TOP_LEVEL:STATIC=ON
 
 //Value Computed by CMake
 beep++_SOURCE_DIR:STATIC=/home/samuel/dev/cpp/compiler
+
+//Value Computed by CMake
+beeplang_BINARY_DIR:STATIC=/home/samuel/dev/cpp/compiler/build
+
+//Value Computed by CMake
+beeplang_IS_TOP_LEVEL:STATIC=ON
+
+//Value Computed by CMake
+beeplang_SOURCE_DIR:STATIC=/home/samuel/dev/cpp/compiler
 
 
 ########################

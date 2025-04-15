@@ -63,11 +63,11 @@ CMAKE_BINARY_DIR = /home/samuel/dev/cpp/compiler/build
 # Directory level rules for the build root directory
 
 # The main recursive "all" target.
-all: CMakeFiles/beep++.dir/all
+all: CMakeFiles/beepc.dir/all
 .PHONY : all
 
 # The main recursive "codegen" target.
-codegen: CMakeFiles/beep++.dir/codegen
+codegen: CMakeFiles/beepc.dir/codegen
 .PHONY : codegen
 
 # The main recursive "preinstall" target.
@@ -75,40 +75,40 @@ preinstall:
 .PHONY : preinstall
 
 # The main recursive "clean" target.
-clean: CMakeFiles/beep++.dir/clean
+clean: CMakeFiles/beepc.dir/clean
 .PHONY : clean
 
 #=============================================================================
-# Target rules for target CMakeFiles/beep++.dir
+# Target rules for target CMakeFiles/beepc.dir
 
 # All Build rule for target.
-CMakeFiles/beep++.dir/all:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/beep++.dir/build.make CMakeFiles/beep++.dir/depend
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/beep++.dir/build.make CMakeFiles/beep++.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/samuel/dev/cpp/compiler/build/CMakeFiles --progress-num=1,2 "Built target beep++"
-.PHONY : CMakeFiles/beep++.dir/all
+CMakeFiles/beepc.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/beepc.dir/build.make CMakeFiles/beepc.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/beepc.dir/build.make CMakeFiles/beepc.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/samuel/dev/cpp/compiler/build/CMakeFiles --progress-num=1,2 "Built target beepc"
+.PHONY : CMakeFiles/beepc.dir/all
 
 # Build rule for subdir invocation for target.
-CMakeFiles/beep++.dir/rule: cmake_check_build_system
+CMakeFiles/beepc.dir/rule: cmake_check_build_system
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/samuel/dev/cpp/compiler/build/CMakeFiles 2
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/beep++.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/beepc.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/samuel/dev/cpp/compiler/build/CMakeFiles 0
-.PHONY : CMakeFiles/beep++.dir/rule
+.PHONY : CMakeFiles/beepc.dir/rule
 
 # Convenience name for target.
-beep++: CMakeFiles/beep++.dir/rule
-.PHONY : beep++
+beepc: CMakeFiles/beepc.dir/rule
+.PHONY : beepc
 
 # codegen rule for target.
-CMakeFiles/beep++.dir/codegen:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/beep++.dir/build.make CMakeFiles/beep++.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/samuel/dev/cpp/compiler/build/CMakeFiles --progress-num=1,2 "Finished codegen for target beep++"
-.PHONY : CMakeFiles/beep++.dir/codegen
+CMakeFiles/beepc.dir/codegen:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/beepc.dir/build.make CMakeFiles/beepc.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/samuel/dev/cpp/compiler/build/CMakeFiles --progress-num=1,2 "Finished codegen for target beepc"
+.PHONY : CMakeFiles/beepc.dir/codegen
 
 # clean rule for target.
-CMakeFiles/beep++.dir/clean:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/beep++.dir/build.make CMakeFiles/beep++.dir/clean
-.PHONY : CMakeFiles/beep++.dir/clean
+CMakeFiles/beepc.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/beepc.dir/build.make CMakeFiles/beepc.dir/clean
+.PHONY : CMakeFiles/beepc.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

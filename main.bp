@@ -1,5 +1,7 @@
-print("HOLA");
-println();
-print("MUNDO");
+include <standard>
+use {print, scani, itostr, stoint}; ! From standard library %
 
-exit(0);
+let num1: int = 3;
+println(num1);
+
+end();

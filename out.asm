@@ -1,33 +1,20 @@
 global main
+section .text
 main:
-  lea rax, [str_0]
+  extern print
+  extern scani
+  extern itostr
+  extern stoint
+  mov rax, 3
   push rax
+  mov rsi, QWORD [rsp + 0]
+  push rsi
+  mov rdi, 0
   pop rsi
-  mov rdi, 2
   mov rdx, 0
-  extern print
   call print
-  lea rax, [str_1]
-  push rax
-  pop rsi
-  mov rdi, 2
-  mov rdx, 1
-  extern print
+  mov rdx, 3
   call print
-  lea rax, [str_2]
-  push rax
-  pop rsi
-  mov rdi, 2
-  mov rdx, 0
-  extern print
-  call print
-  mov rax, 0
-  push rax
   mov rax, 60
-  pop rdi
+  mov rdi, 0
   syscall
-
-section .rodata
-str_0: db "HOLA", 0
-str_1: db "", 0
-str_2: db "MUNDO", 0

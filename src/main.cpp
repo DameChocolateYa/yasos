@@ -44,8 +44,18 @@ int main(int argc, char** argv) {
         file << generator.gen_prog();
     }
 
-    system("nasm -f elf64 -o out.o out.asm");
-    system("g++ -o out out.o src/functions/std.o -no-pie");
+    std::string link_command = "g++ -o out out.o ";
+
+    system("nasm -f elf64 -o out.o out.asm ");
+    const std::string func_dir = "src/functions/";
+
+    for (int i = 0; i < generator.libraries.size(); ++i) {
+        link_command.append(func_dir + generator.libraries[i] + ".o ");
+    }
+    link_command.append("-no-pie");
+
+    system(link_command.c_str());
+    //system("g++ -o out out.o src/functions/std.o -no-pie");
     //system("rm out.asm");
 
     return EXIT_SUCCESS;
