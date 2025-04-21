@@ -1,29 +1,9 @@
-include <standard>
-use {print, scani};
+import <standard>
+use {print, scani, clsterm, waitk};
 
-let num: int = 0;
-let emptyBuf: str = "";
-
-println("Presiona 'Enter' hasta que llegue a 5");
-
-emptyBuf = scani();
-num++;
-println(num);
-
-emptyBuf = scani();
-num++;
-println(num);
-
-emptyBuf = scani();
-num++;
-println(num);
-
-emptyBuf = scani();
-num++;
-println(num);
-
-emptyBuf = scani();
-num++;
-println(num);
+clsterm();
+let msg: str = "Esto es un mensaje";
+println(msg);
+waitk();
 
 end();

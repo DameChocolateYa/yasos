@@ -1,0 +1,6 @@
+[DEBUG STARTED]
+
+[src/generation.hpp] Printing float
+[src/main.cpp] Success compilation of source file (main.bp)
+
+[DEBUG FINISHED | SUCCESS]

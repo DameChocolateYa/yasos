@@ -5,9 +5,12 @@
 #include <vector>
 #include <optional>
 
+#include "global.hpp"
+
 enum class TokenType {
     int_lit,
     str_lit,
+    float_lit,
     semi,
     comma,
     open_paren,
@@ -17,6 +20,7 @@ enum class TokenType {
     eq,
     str_type,
     int_type,
+    float_type,
     dp,
     comment_begin,
     comment_end,
@@ -35,7 +39,18 @@ enum class TokenType {
     star_eq,
     slash_eq,
     plusplus,
-    minusminus
+    minusminus,
+    _if,
+    _else,
+    _elif,
+    _and,
+    _or,
+    lt,
+    lte,
+    gt,
+    gte,
+    eq_eq,
+    bang_eq
 };
 
 struct Token {
@@ -91,12 +106,72 @@ class Tokenizer {
                         buf.clear();
                         continue;
                     }
+                    else if (buf == "float") {
+                        tokens.push_back({.type = TokenType::float_type});
+                        buf.clear();
+                        continue;
+                    }
                     else if (buf == "add") {
                         tokens.push_back({.type = TokenType::plus, .value="+"});
                         buf.clear();
                         continue;
                     }
-                    else if (buf == "include") {
+                    else if (buf == "if") {
+                        tokens.push_back({.type = TokenType::_if, .value="if"});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "else") {
+                        tokens.push_back({.type = TokenType::_else, .value="else"});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "elif") {
+                        tokens.push_back({.type = TokenType::_elif, .value="elif"});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "and") {
+                        tokens.push_back({.type = TokenType::_and, .value="&&"});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "or") {
+                        tokens.push_back({.type = TokenType::_or, .value="||"});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "eq") {
+                        tokens.push_back({.type = TokenType::eq_eq, .value="=="});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "neq") {
+                        tokens.push_back({.type = TokenType::bang_eq, .value="!="});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "gt") {
+                        tokens.push_back({.type = TokenType::gt, .value=">"});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "gte") {
+                        tokens.push_back({.type = TokenType::gte, .value=">="});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "lt") {
+                        tokens.push_back({.type = TokenType::lt, .value="<"});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "lte") {
+                        tokens.push_back({.type = TokenType::lte, .value="<="});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "import") {
                         tokens.push_back({.type = TokenType::include});
                         buf.clear();
                         continue;
@@ -112,11 +187,35 @@ class Tokenizer {
                     }
                 }
                 else if (std::isdigit(peek().value())) {
-                    buf.push_back(consume());
+                    buf.push_back(consume());  // Primer dígito
+                    bool is_float = false;
+
+                    // Parte entera
                     while (peek().has_value() && std::isdigit(peek().value())) {
                         buf.push_back(consume());
                     }
-                    tokens.push_back({.type = TokenType::int_lit, .value = buf});
+
+                    // Parte decimal
+                    if (peek().has_value() && peek().value() == '.') {
+                        is_float = true;
+                        buf.push_back(consume());  // Consume '.'
+
+                        // Requiere al menos un dígito después del punto
+                        if (peek().has_value() && std::isdigit(peek().value())) {
+                            while (peek().has_value() && std::isdigit(peek().value())) {
+                                buf.push_back(consume());
+                            }
+                        } else {
+                            // Error léxico: punto sin decimales
+                            // Puedes manejarlo como quieras, por ejemplo:
+                            std::cerr << "Error: punto decimal sin dígitos después\n";
+                        }
+                    }
+
+                    tokens.push_back({
+                        .type = is_float ? TokenType::float_lit : TokenType::int_lit,
+                        .value = buf
+                    });
                     buf.clear();
                 }
                 else if (peek().value() == '"') {

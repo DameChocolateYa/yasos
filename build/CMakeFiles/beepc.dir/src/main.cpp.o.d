@@ -154,6 +154,11 @@ CMakeFiles/beepc.dir/src/main.cpp.o: \
  /usr/include/c++/14.2.1/bits/stl_bvector.h \
  /usr/include/c++/14.2.1/bits/vector.tcc /usr/include/c++/14.2.1/optional \
  /usr/include/c++/14.2.1/bits/enable_special_members.h \
+ /home/samuel/dev/cpp/compiler/src/global.hpp \
+ /usr/include/c++/14.2.1/fstream /usr/include/c++/14.2.1/bits/codecvt.h \
+ /usr/include/c++/14.2.1/x86_64-pc-linux-gnu/bits/basic_file.h \
+ /usr/include/c++/14.2.1/x86_64-pc-linux-gnu/bits/c++io.h \
+ /usr/include/c++/14.2.1/bits/fstream.tcc \
  /home/samuel/dev/cpp/compiler/src/parser.hpp \
  /usr/include/c++/14.2.1/algorithm \
  /usr/include/c++/14.2.1/bits/stl_algo.h \
@@ -226,8 +231,4 @@ CMakeFiles/beepc.dir/src/main.cpp.o: \
  /usr/include/c++/14.2.1/bits/hashtable.h \
  /usr/include/c++/14.2.1/bits/hashtable_policy.h \
  /usr/include/c++/14.2.1/bits/node_handle.h \
- /usr/include/c++/14.2.1/bits/erase_if.h /usr/include/c++/14.2.1/fstream \
- /usr/include/c++/14.2.1/bits/codecvt.h \
- /usr/include/c++/14.2.1/x86_64-pc-linux-gnu/bits/basic_file.h \
- /usr/include/c++/14.2.1/x86_64-pc-linux-gnu/bits/c++io.h \
- /usr/include/c++/14.2.1/bits/fstream.tcc
+ /usr/include/c++/14.2.1/bits/erase_if.h

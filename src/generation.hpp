@@ -6,6 +6,10 @@
 #include <unordered_map>
 #include <variant>
 #include "parser.hpp"
+#include "global.hpp"
+
+#undef __FILE__
+#define __FILE__ "src/generation.hpp"
 
 static std::string escape_string(const std::string& raw);
 
@@ -27,9 +31,17 @@ private:
     size_t m_stack_size = 0;
     std::unordered_map<std::string, Var> m_vars;
     std::vector<std::string> m_string_literals;
+    std::vector<float> m_float_literals;
 
     void push(const std::string& reg) {
         m_output << "  push " << reg << "\n";
+        ++m_stack_size;
+    }
+
+    void push_float(const std::string& reg) {
+        //m_output << "   sub rsp, 8\n";
+        m_output << "   movsd [rsp], " << reg << "\n";
+        m_output << "   add rsp, 8\n";
         ++m_stack_size;
     }
 
@@ -40,6 +52,25 @@ private:
             exit(EXIT_FAILURE);
         }
         --m_stack_size;
+    }
+
+    void pop_float(const std::string& reg) {
+        m_output << "   movsd " << reg << ", [rsp]\n";
+        m_output << "   add rsp, 8\n";
+        if (m_stack_size == 0) {
+            std::cerr << "Stack underflow!\n";
+            exit(EXIT_FAILURE);
+        }
+        --m_stack_size;
+    }
+
+    size_t get_var(const std::string& var_name) {
+        if (!m_vars.contains(var_name)) {
+            std::cerr << "Error trying to get an undeclared variable\n";
+            exit(EXIT_FAILURE);
+        }
+        size_t offset_bytes = (m_stack_size - m_vars.at(var_name).stack_loc - 1) * 8; // this should be the var pos
+        return offset_bytes;
     }
 
 public:
@@ -78,9 +109,57 @@ public:
                     gen->m_output << "  xor rdx, rdx\n";
                     gen->m_output << "  idiv rbx\n";
                 }
+                else if (op == "==") {
+                    gen->m_output << "  cmp rax, rbx\n";
+                    gen->m_output << "  sete al\n";
+                    gen->m_output << "  movzx rax, al\n";
+                }
+                else if (op == "!=") {
+                    gen->m_output << "  cmp rax, rbx\n";
+                    gen->m_output << "  setne al\n";
+                    gen->m_output << "  movzx rax, al\n";
+                }
+                else if (op == "<") {
+                    gen->m_output << "  cmp rax, rbx\n";
+                    gen->m_output << "  setl al\n";
+                    gen->m_output << "  movzx rax, al\n";
+                }
+                else if (op == "<=") {
+                    gen->m_output << "  cmp rax, rbx\n";
+                    gen->m_output << "  setle al\n";
+                    gen->m_output << "  movzx rax, al\n";
+                }
+                else if (op == ">") {
+                    gen->m_output << "  cmp rax, rbx\n";
+                    gen->m_output << "  setg al\n";
+                    gen->m_output << "  movzx rax, al\n";
+                }
+                else if (op == ">=") {
+                    gen->m_output << "  cmp rax, rbx\n";
+                    gen->m_output << "  setge al\n";
+                    gen->m_output << "  movzx rax, al\n";
+                }
+                else if (op == "&&") {
+                    gen->m_output << "  cmp rax, 0\n";
+                    gen->m_output << "  setne al\n";
+                    gen->m_output << "  movzx rax, al\n";
+                    gen->m_output << "  cmp rbx, 0\n";
+                    gen->m_output << "  setne bl\n";
+                    gen->m_output << "  and al, bl\n";
+                    gen->m_output << "  movzx rax, al\n";
+                }
+                else if (op == "||") {
+                    gen->m_output << "  cmp rax, 0\n";
+                    gen->m_output << "  setne al\n";
+                    gen->m_output << "  movzx rax, al\n";
+                    gen->m_output << "  cmp rbx, 0\n";
+                    gen->m_output << "  setne bl\n";
+                    gen->m_output << "  or al, bl\n";
+                    gen->m_output << "  movzx rax, al\n";
+                }
                 else {
                     std::cerr << "Unsupported binary operator\n";
-                    exit(EXIT_FAILURE);
+                    terminate(EXIT_FAILURE);
                 }
                 gen->push("rax");
             }
@@ -88,7 +167,7 @@ public:
                 const std::string& op = expr_bin_assign.op_token.value.value();
                 const std::string& var_name = expr_bin_assign.left_token.value.value();
 
-                size_t offset_bytes = (gen->m_stack_size - gen->m_vars.at(var_name).stack_loc - 1) * 8;
+                size_t offset_bytes = gen->get_var(var_name);
                 gen->m_output << "  mov rax, QWORD [ rsp + " << offset_bytes << "]\n";
                 gen->push("rax");
 
@@ -112,7 +191,7 @@ public:
                 }
                 else {
                     std::cerr << "Invalid assignment operator\n";
-                    exit(EXIT_FAILURE);
+                    terminate(EXIT_FAILURE);
                 }
 
                 gen->m_output << "  mov QWORD [ rsp + " << offset_bytes << "], rax\n";
@@ -122,7 +201,7 @@ public:
                 const std::string& op = expr_unary_operator.op_token.value.value();
                 const std::string& var_name = expr_unary_operator.ident.value.value();
 
-                size_t offset_bytes = (gen->m_stack_size - gen->m_vars.at(var_name).stack_loc - 1) * 8;
+                size_t offset_bytes = gen->get_var(var_name);
                 gen->m_output << "  mov rax, QWORD [ rsp + " << offset_bytes << " ]\n";
                 gen->push("rax");
 
@@ -134,20 +213,15 @@ public:
                 }
                 else {
                     std::cerr << "Invalid unary operator\n";
-                    exit(EXIT_FAILURE);
+                    terminate(EXIT_FAILURE);
                 }
                 gen->m_output << "  mov QWORD [ rsp + " << offset_bytes << "], rax\n";
                 gen->push("rax");
             };
 
             void operator()(const NodeExprIdent& expr_ident) const {
-                const std::string& name = expr_ident.ident.value.value();
-                if (!gen->m_vars.contains(name)) {
-                    std::cerr << "Undeclared identifier: " << name << "\n";
-                    exit(EXIT_FAILURE);
-                }
-                const auto& var = gen->m_vars.at(name);
-                size_t offset_bytes = (gen->m_stack_size - var.stack_loc - 1) * 8;
+                const std::string& var_name = expr_ident.ident.value.value();
+                size_t offset_bytes = gen->get_var(var_name);
                 gen->m_output << "  mov rsi, QWORD [rsp + " << offset_bytes << "]\n";
                 gen->push("rsi");
             }
@@ -155,8 +229,15 @@ public:
             void operator()(const NodeExprStrLit& expr_str_lit) const {
                 std::string label = "str_" + std::to_string(gen->m_string_literals.size());
                 gen->m_string_literals.push_back(expr_str_lit.str_lit.value.value());
-                gen->m_output << "  lea rax, [" << label << "]\n";
+                gen->m_output << "  lea rax, [ rel " << label << "]\n";
                 gen->push("rax");
+            }
+
+            void operator()(const NodeExprFloatLit& expr_float_lit) const {
+                std::string label = "float_" + std::to_string(gen->m_float_literals.size());
+                gen->m_float_literals.push_back((std::stof(expr_float_lit.float_lit.value.value())));
+                gen->m_output << "  movsd xmm0, [ " << label << "]\n";
+                gen->push_float("xmm0");
             }
 
             void operator()(const NodeExprCall& expr_call) const {
@@ -165,7 +246,7 @@ public:
                 if (fn == "itostr") {
                     if (expr_call.args.size() != 1) {
                         std::cerr << "Expected 1 arg\n";
-                        exit(EXIT_FAILURE);
+                        terminate(EXIT_FAILURE);
                     }
 
                     gen->gen_expr(*expr_call.args[0]);
@@ -188,6 +269,16 @@ public:
                 }
                 else if (fn == "testret") {
                     gen->m_output << "  call testret\n";
+                    gen->push("rax");
+                }
+                else if (fn == "strcmp") {
+                    gen->gen_expr(*expr_call.args[0]);
+                    gen->gen_expr(*expr_call.args[1]);
+
+                    gen->pop("rdi");
+                    gen->pop("rsi");
+
+                    gen->m_output << "  call strcmp\n";
                     gen->push("rax");
                 }
             }
@@ -219,45 +310,74 @@ public:
 
             void operator()(const NodeStmtVar& stmt_var) const {
                 const std::string& name = stmt_var.ident.value.value();
+                gen->gen_expr(stmt_var.expr);
                 if (gen->m_vars.contains(name)) {
-                    gen->gen_expr(stmt_var.expr);
                     auto& var = gen->m_vars.find(name)->second;
-                    for (auto it = gen->m_vars.begin(); it != gen->m_vars.end();) {
-                        if (it->first == name) {
-                            gen->m_vars.erase(it);
-                            break;
-                        }
-                        else {
-                            ++it;
-                        }
-                    }
+                    gen->m_vars.erase(name);
                     gen->m_vars.insert({name, Var{.stack_loc = gen->m_stack_size - 1, .type = var.type}});
                     return;
                 }
-
-                gen->gen_expr(stmt_var.expr);
 
                 VarType var_type;
                 switch (stmt_var.type.type) {
                     case TokenType::str_type: var_type = VarType::Str; break;
                     case TokenType::int_type: var_type = VarType::Int; break;
+                    case TokenType::float_type: var_type = VarType::Float; break;
                     default:
                         std::cerr << "Unknown variable type for: " << name << "\n";
-                        exit(EXIT_FAILURE);
+                        terminate(EXIT_FAILURE);
                 }
 
                 gen->m_vars.insert({name, Var{.stack_loc = gen->m_stack_size - 1, .type = var_type}});
             }
 
+            void operator()(const NodeStmtIf stmt_if) const {
+                static int label_counter = 0;
+                int current = label_counter++;
+
+                std::string else_label = "else_" + std::to_string(current);
+                std::string end_label = "endif" + std::to_string(current);
+
+                gen->gen_expr(stmt_if.condition);
+                gen->pop("rax");
+                gen->m_output << "  cmp rax, 0\n";
+                gen->m_output << "  je " << else_label << "\n";
+
+                for (const auto& stmt : stmt_if.then_branch) {
+                    gen->gen_stmt(stmt);
+                }
+                gen->m_output << "  jmp " << end_label << "\n";
+
+                gen->m_output << else_label << ":\n";
+                if (stmt_if.else_branch.has_value()) {
+                    if (std::holds_alternative<std::shared_ptr<NodeStmtIf>>(stmt_if.else_branch.value())) {
+                        gen->gen_stmt(NodeStmt{
+                            .var = *std::get<std::shared_ptr<NodeStmtIf>>(stmt_if.else_branch.value())
+                        });
+                    }
+                    else {
+                        for (const auto& stmt : std::get<std::vector<NodeStmt>>(stmt_if.else_branch.value())) {
+                            gen->gen_stmt(stmt);
+                        }
+                    }
+                }
+
+                gen->m_output << end_label << ":\n";
+            }
+
             std::unordered_map<std::string, VarType> known_function_types = {
                 {"testret", VarType::Str},
                 {"itostr", VarType::Str},
-                {"scani", VarType::Str}
+                {"stoint", VarType::Int},
+                {"scani", VarType::Str},
+                {"strcmp", VarType::Int},
             };
             void operator()(const NodeStmtCall& stmt_call) const {
                 const std::string& fn = stmt_call.name.value.value();
 
                 if (fn == "end") {
+                    //gen->m_output << "  mov rdi, rax\n";
+                    //gen->m_output << "  call free\n";
                     gen->m_output << "  mov rax, 60\n";
                     if (stmt_call.args.size() == 0) {
                         gen->m_output << "  mov rdi, 0\n";
@@ -267,13 +387,18 @@ public:
                             gen->gen_expr(*stmt_call.args[0]);
                             gen->pop("rdi");
                         }
-                        else {
-                            gen->m_output << "mov rdi, " << std::get<NodeExprIntLit>(stmt_call.args[0]->var).int_lit.value.value() << "\n";
+                        else if (std::holds_alternative<NodeExprIntLit>(stmt_call.args[0]->var)) {
+                            gen->m_output << "  mov rdi, " << std::get<NodeExprIntLit>(stmt_call.args[0]->var).int_lit.value.value() << "\n";
+                        }
+                        else if (std::holds_alternative<NodeExprCall>(stmt_call.args[0]->var)) {
+                            const auto& call_expr = std::get<NodeExprCall>(stmt_call.args[0]->var);
+                            gen->gen_expr(*call_expr.args[0]);  // Evaluamos el primer argumento
+                            gen->pop("rdi");  // Movemos el valor a rdi para la syscall
                         }
                     }
                     else {
                         std::cerr << "Expected optionally 1 arg\n";
-                        exit(EXIT_FAILURE);
+                        terminate(EXIT_FAILURE);
                     }
                     gen->m_output << "  syscall\n";
                 }
@@ -292,6 +417,9 @@ public:
                         else if (std::holds_alternative<NodeExprStrLit>(arg->var)) {
                             print_type = PrintType::Str;
                         }
+                        else if (std::holds_alternative<NodeExprFloatLit>(arg->var)) {
+                            print_type = PrintType::Float;
+                        }
                         else if (std::holds_alternative<NodeExprCall>(arg->var)) {
                             const auto& call = std::get<NodeExprCall>(arg->var);
                             for (const auto& know_return : known_function_types) {
@@ -301,9 +429,17 @@ public:
 
                         gen->gen_expr(*arg);
 
-                        gen->m_output << "  mov rdi, " << static_cast<int>(print_type) << "\n";
-                        gen->pop("rsi");
-                        gen->m_output << "  mov rdx, 0" << "\n";
+                        if (print_type != PrintType::Float) {
+                            gen->m_output << "  mov rdi, " << static_cast<int>(print_type) << "\n";
+                            gen->pop("rsi");
+                            gen->m_output << "  mov rdx, 0" << "\n";
+                            LOG(__FILE__, "Printing float");
+                        }
+                        else {
+                            gen->pop_float("xmm0");
+                            gen->m_output << "  mov rdi, 1\n";
+                            gen->m_output << "  mov rdx, 0\n";
+                        }
                         gen->m_output << "  call print\n";
                     }
                     if (fn != "println") return;
@@ -317,9 +453,16 @@ public:
                     }
                     gen->m_output << "  call clsterm\n";
                 }
+                else if (fn == "waitk") {
+                    if (stmt_call.args.size() != 0) {
+                        std::cerr << "Expected 0 args\n";
+                        exit(EXIT_FAILURE);
+                    }
+                    gen->m_output << "  call waitk\n";
+                }
                 else {
                     std::cerr << "Error, unknown function or statment\n";
-                    exit(EXIT_FAILURE);
+                    terminate(EXIT_FAILURE);
                 }
             }
         };
@@ -330,15 +473,21 @@ public:
 
     [[nodiscard]] std::string gen_prog() {
         m_output << "global main\nsection .text\nmain:\n";
+        m_output << "  extern free\n";
 
         for (const NodeStmt& stmt : m_prog.stmts) {
             gen_stmt(stmt);
         }
 
+        m_output << "\nsection .rodata\n";
         if (!m_string_literals.empty()) {
-            m_output << "\nsection .rodata\n";
             for (size_t i = 0; i < m_string_literals.size(); ++i) {
                 m_output << "str_" << i << ": db \"" << escape_string(m_string_literals[i]) << "\", 0\n";
+            }
+        }
+        if (!m_float_literals.empty()) {
+            for (size_t i = 0; i < m_float_literals.size(); ++i) {
+                m_output << "float_" << i << ": dq " << m_float_literals[i] << "\n";
             }
         }
 

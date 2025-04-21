@@ -1,0 +1,8 @@
+[
+{
+  "directory": "/home/samuel/dev/cpp/compiler/build",
+  "command": "/usr/bin/c++   -no-pie -std=gnu++20 -o CMakeFiles/beepc.dir/src/main.cpp.o -c /home/samuel/dev/cpp/compiler/src/main.cpp",
+  "file": "/home/samuel/dev/cpp/compiler/src/main.cpp",
+  "output": "CMakeFiles/beepc.dir/src/main.cpp.o"
+}
+]

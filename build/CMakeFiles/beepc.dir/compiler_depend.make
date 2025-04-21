@@ -3,6 +3,7 @@
 
 CMakeFiles/beepc.dir/src/main.cpp.o: /home/samuel/dev/cpp/compiler/src/main.cpp \
   /home/samuel/dev/cpp/compiler/src/generation.hpp \
+  /home/samuel/dev/cpp/compiler/src/global.hpp \
   /home/samuel/dev/cpp/compiler/src/parser.hpp \
   /home/samuel/dev/cpp/compiler/src/tokenization.hpp \
   /usr/include/alloca.h \
@@ -501,21 +502,13 @@ CMakeFiles/beepc.dir/src/main.cpp.o:
 
 /usr/include/bits/mathcalls.h:
 
-/usr/lib/crtn.o:
-
-/usr/include/c++/14.2.1/bits/atomic_lockfree_defines.h:
-
-/usr/include/wctype.h:
-
-/usr/include/sched.h:
-
-/usr/include/bits/fp-fast.h:
-
-/usr/include/c++/14.2.1/bits/stl_tempbuf.h:
-
 /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include/stdint.h:
 
 /usr/include/bits/flt-eval-method.h:
+
+/usr/include/c++/14.2.1/tuple:
+
+/usr/include/bits/timex.h:
 
 /usr/include/bits/errno.h:
 
@@ -563,13 +556,19 @@ CMakeFiles/beepc.dir/src/main.cpp.o:
 
 /usr/include/bits/long-double.h:
 
-/usr/include/c++/14.2.1/bits/basic_string.h:
+/usr/lib/crtn.o:
 
-/usr/lib/libc.so:
+/usr/include/c++/14.2.1/bits/atomic_lockfree_defines.h:
 
-/usr/include/bits/pthreadtypes.h:
+/usr/include/wctype.h:
 
-/usr/include/c++/14.2.1/bits/stl_iterator_base_funcs.h:
+/usr/include/sched.h:
+
+/usr/include/bits/fp-fast.h:
+
+/usr/include/c++/14.2.1/bits/stl_tempbuf.h:
+
+/home/samuel/dev/cpp/compiler/src/global.hpp:
 
 /usr/include/bits/mathcalls-macros.h:
 
@@ -667,6 +666,14 @@ CMakeFiles/beepc.dir/src/main.cpp.o:
 
 /usr/include/asm/bitsperlong.h:
 
+/usr/include/c++/14.2.1/bits/basic_string.h:
+
+/usr/lib/libc.so:
+
+/usr/include/bits/pthreadtypes.h:
+
+/usr/include/c++/14.2.1/bits/stl_iterator_base_funcs.h:
+
 /usr/include/bits/types.h:
 
 /usr/include/bits/getopt_core.h:
@@ -739,14 +746,6 @@ CMakeFiles/beepc.dir/src/main.cpp.o:
 
 /usr/include/c++/14.2.1/exception:
 
-/usr/include/c++/14.2.1/bits/exception.h:
-
-/usr/include/bits/atomic_wide_counter.h:
-
-/usr/include/c++/14.2.1/bits/specfun.h:
-
-/usr/include/c++/14.2.1/bits/hashtable_policy.h:
-
 /usr/include/bits/setjmp.h:
 
 /usr/include/c++/14.2.1/bits/charconv.h:
@@ -756,6 +755,14 @@ CMakeFiles/beepc.dir/src/main.cpp.o:
 /usr/include/bits/sched.h:
 
 /usr/include/bits/types/__FILE.h:
+
+/usr/include/c++/14.2.1/bits/exception.h:
+
+/usr/include/bits/atomic_wide_counter.h:
+
+/usr/include/c++/14.2.1/bits/specfun.h:
+
+/usr/include/c++/14.2.1/bits/hashtable_policy.h:
 
 /usr/include/c++/14.2.1/bits/exception_defines.h:
 
@@ -992,7 +999,3 @@ CMakeFiles/beepc.dir/src/main.cpp.o:
 /usr/include/c++/14.2.1/tr1/legendre_function.tcc:
 
 /usr/include/c++/14.2.1/tr1/modified_bessel_func.tcc:
-
-/usr/include/bits/timex.h:
-
-/usr/include/c++/14.2.1/tuple:

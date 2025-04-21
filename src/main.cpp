@@ -1,6 +1,7 @@
 #include "tokenization.hpp"
 #include "parser.hpp"
 #include "generation.hpp"
+#include "global.hpp"
 
 #include <cctype>
 #include <cstdlib>
@@ -8,9 +9,14 @@
 #include <fstream>
 #include <sstream>
 #include <optional>
+#include <string>
 #include <vector>
 
+#undef __FILE__
+#define __FILE__ "src/main.cpp"
+
 int main(int argc, char** argv) {
+    init_debug();
     if (argc != 2) {
         std::cerr << "Incorrect usage. Correct usage is...\n";
         std::cerr << "beep++ <input.bp>\n";
@@ -46,7 +52,14 @@ int main(int argc, char** argv) {
 
     std::string link_command = "g++ -o out out.o ";
 
-    system("nasm -f elf64 -o out.o out.asm ");
+    if (system("nasm -f elf64 -o out.o out.asm ") != 0) {
+        LOG(__FILE__, std::string("Failure compiling source file (").append(argv[1]) + ")");
+        terminate(EXIT_FAILURE);
+    }
+    else {
+        LOG(__FILE__, std::string("Success compilation of source file (").append(argv[1]) + ")");
+    }
+
     const std::string func_dir = "src/functions/";
 
     for (int i = 0; i < generator.libraries.size(); ++i) {
@@ -55,9 +68,9 @@ int main(int argc, char** argv) {
     link_command.append("-no-pie");
 
     system(link_command.c_str());
-    //system("g++ -o out out.o src/functions/std.o -no-pie");
     //system("rm out.asm");
 
+    terminate(EXIT_SUCCESS);
     return EXIT_SUCCESS;
     return 0;
 }
