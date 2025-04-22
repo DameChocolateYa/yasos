@@ -1,1 +1,0 @@
-/usr/bin/c++ -no-pie -Wl,--dependency-file=CMakeFiles/beep++.dir/link.d CMakeFiles/beep++.dir/src/main.cpp.o /home/samuel/dev/cpp/compiler/src/functions/std.o -o beep++

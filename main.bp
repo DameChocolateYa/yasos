@@ -1,9 +1,6 @@
 import <standard>
-use {print, scani, clsterm, waitk};
+use {print};
 
-clsterm();
-let msg: str = "Esto es un mensaje";
-println(msg);
-waitk();
+println("FALA GALEGO NA GALIZA");
 
 end();

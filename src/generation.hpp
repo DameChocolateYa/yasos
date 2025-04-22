@@ -375,7 +375,7 @@ public:
             void operator()(const NodeStmtCall& stmt_call) const {
                 const std::string& fn = stmt_call.name.value.value();
 
-                if (fn == "end") {
+                if (fn == "end" || fn == "killme") {
                     //gen->m_output << "  mov rdi, rax\n";
                     //gen->m_output << "  call free\n";
                     gen->m_output << "  mov rax, 60\n";
