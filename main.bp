@@ -1,6 +1,3 @@
-import <standard>
-use {print};
-
-println("FALA GALEGO NA GALIZA");
-
-end();
+++
+--
+if
