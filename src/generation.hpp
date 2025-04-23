@@ -3,10 +3,12 @@
 #include <cstdlib>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <variant>
 #include "parser.hpp"
 #include "global.hpp"
+#include "tokenization.hpp"
 
 #undef __FILE__
 #define __FILE__ "src/generation.hpp"
@@ -21,25 +23,67 @@ enum ArgType {
     Float,
     OptionalInteger,
     OptionalString,
-    OptionalFloat
+    OptionalFloat,
+    VariableValue,
+    NxtUndefNum
 };
 
 enum ArgRequired {Yes, No};
 
-static void check_func_args(std::vector<NodeExpr> args, std::unordered_map<ArgType, ArgRequired> required_args) {
+std::unordered_map<std::string, VarType> known_function_types = {
+    {"testret", VarType::Str},
+    {"itostr", VarType::Str},
+    {"stoint", VarType::Int},
+    {"scani", VarType::Str},
+    {"strcmp", VarType::Int},
+};
+
+static bool is_int(const NodeExprPtr& expr) { return std::holds_alternative<NodeExprIntLit>(expr->var); }
+static bool is_string(const NodeExprPtr& expr) { return std::holds_alternative<NodeExprStrLit>(expr->var); }
+static bool is_float(const NodeExprPtr& expr) { return std::holds_alternative<NodeExprFloatLit>(expr->var); }
+
+static void check_func_args(const std::vector<NodeExprPtr>& args, const std::unordered_multimap<ArgType, ArgRequired>& required_args) {
     int required_args_count = 0;
+    int not_count = false;
+
     for (const auto& required_arg : required_args) {
+        if (required_arg.first == ArgType::NxtUndefNum) not_count = true;
         if (required_arg.second == ArgRequired::Yes) ++required_args_count;
     }
-    if (args.size() != required_args_count) {
+    if (args.size() != required_args_count && !not_count) {
         std::cerr << "Error, invalid args\n";
         exit(EXIT_FAILURE);
     }
 
     int current_arg = 0;
     for (const auto& required_arg : required_args) {
-        if (required_arg.second == ArgRequired::No && dynamic_cast<NodeExprNoArg*>(args[current_arg].var)) continue;
-        
+        if (required_arg.first == ArgType::VariableValue) continue;
+        if (required_arg.second == ArgRequired::No) continue;
+
+        if (required_arg.first == ArgType::NxtUndefNum) return;
+
+        if (required_arg.first == ArgType::Float) {
+            if (!std::holds_alternative<NodeExprFloatLit>(args[current_arg]->var)) {
+                std::cerr << "Error: argument " << current_arg + 1 << " should be a float\n";
+                exit(EXIT_FAILURE);
+            }
+        }
+        else if (required_arg.first == ArgType::Integer) {
+            if (!std::holds_alternative<NodeExprIdent>(args[current_arg]->var)) {
+                std::cerr << "Error: argument " << current_arg + 1 << " should be an integer\n";
+                exit(EXIT_FAILURE);
+            }
+        }
+        else if (required_arg.first == ArgType::String) {
+            if (!std::holds_alternative<NodeExprStrLit>(args[current_arg]->var)) {
+                std::cerr << "Error: argument " << current_arg + 1 << " should be a string\n";
+                exit(EXIT_FAILURE);
+            }
+        }
+        else if (std::holds_alternative<NodeExprCall>(args[current_arg]->var)) {
+            // We will handle it later
+        }
+
         ++current_arg;
     }
 }
@@ -271,14 +315,14 @@ public:
                 gen->push_float("xmm0");
             }
 
+            void operator()(const NodeExprNone& expr_none) const {}
+            void operator()(const NodeExprNoArg& expr_no_arg) const {}
+
             void operator()(const NodeExprCall& expr_call) const {
                 const std::string& fn = expr_call.name.value.value();
 
                 if (fn == "itostr") {
-                    if (expr_call.args.size() != 1) {
-                        std::cerr << "Expected 1 arg\n";
-                        terminate(EXIT_FAILURE);
-                    }
+                    check_func_args(expr_call.args, {{Integer, Yes}});
 
                     gen->gen_expr(*expr_call.args[0]);
                     gen->pop("rdi");
@@ -287,7 +331,8 @@ public:
                     gen->push("rax");
                 }
                 else if (fn == "stoint") {
-                    //if
+                    check_func_args(expr_call.args, {{String, Yes}});
+
                     gen->gen_expr(*expr_call.args[0]);
                     gen->pop("rdi");
 
@@ -295,14 +340,19 @@ public:
                     gen->push("rax");
                 }
                 else if (fn == "scani") {
+                    check_func_args(expr_call.args, {});
+
                     gen->m_output << "  call scani\n";
                     gen->push("rax");
                 }
                 else if (fn == "testret") {
+                    check_func_args(expr_call.args, {});
+
                     gen->m_output << "  call testret\n";
                     gen->push("rax");
                 }
                 else if (fn == "strcmp") {
+                    check_func_args(expr_call.args, {{String, Yes}, {String, Yes}});
                     gen->gen_expr(*expr_call.args[0]);
                     gen->gen_expr(*expr_call.args[1]);
 
@@ -393,17 +443,12 @@ public:
                 gen->m_output << end_label << ":\n";
             }
 
-            std::unordered_map<std::string, VarType> known_function_types = {
-                {"testret", VarType::Str},
-                {"itostr", VarType::Str},
-                {"stoint", VarType::Int},
-                {"scani", VarType::Str},
-                {"strcmp", VarType::Int},
-            };
             void operator()(const NodeStmtCall& stmt_call) const {
                 const std::string& fn = stmt_call.name.value.value();
 
                 if (fn == "end" || fn == "killme") {
+                    check_func_args(stmt_call.args, {{Integer, No}});
+
                     //gen->m_output << "  mov rdi, rax\n";
                     //gen->m_output << "  call free\n";
                     gen->m_output << "  mov rax, 60\n";
@@ -431,6 +476,8 @@ public:
                     gen->m_output << "  syscall\n";
                 }
                 else if (fn == "print" || fn == "println") {
+                    check_func_args(stmt_call.args, {{NxtUndefNum, Yes}});
+
                     PrintType print_type = PrintType::Int;
                     for (const auto& arg : stmt_call.args) {
                         if (std::holds_alternative<NodeExprIdent>(arg->var)) {
@@ -475,17 +522,13 @@ public:
                     gen->m_output << "  call print\n";
                 }
                 else if (fn == "clsterm") {
-                    if (stmt_call.args.size() != 0) {
-                        std::cerr << "Expected 0 args\n";
-                        exit(EXIT_FAILURE);
-                    }
+                    check_func_args(stmt_call.args, {});
+
                     gen->m_output << "  call clsterm\n";
                 }
                 else if (fn == "waitk") {
-                    if (stmt_call.args.size() != 0) {
-                        std::cerr << "Expected 0 args\n";
-                        exit(EXIT_FAILURE);
-                    }
+                    check_func_args(stmt_call.args, {});
+
                     gen->m_output << "  call waitk\n";
                 }
                 else {

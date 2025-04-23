@@ -16,4 +16,4 @@ main:
   syscall
 
 section .rodata
-str_0: db "Hi", 0
+str_0: db "VIVA ESPAÑA!", 0

@@ -1,1 +1,1 @@
-/usr/bin/g++ -no-pie -g -O2 CMakeFiles/beepc.dir/src/main.cpp.o -o beepc 
+/usr/bin/c++ -no-pie -g -O2 -Wl,--dependency-file=CMakeFiles/beepc.dir/link.d CMakeFiles/beepc.dir/src/main.cpp.o -o beepc

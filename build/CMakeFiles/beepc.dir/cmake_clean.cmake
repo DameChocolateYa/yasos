@@ -1,5 +1,7 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/beepc.dir/link.d"
   "CMakeFiles/beepc.dir/src/main.cpp.o"
+  "CMakeFiles/beepc.dir/src/main.cpp.o.d"
   "beepc"
   "beepc.pdb"
 )

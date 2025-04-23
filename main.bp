@@ -1,6 +1,6 @@
 import <standard>
 use {print};
 
-println("Hi");
+println("VIVA ESPAÑA!");
 
 end();
