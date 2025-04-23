@@ -1,3 +1,0 @@
-/home/samuel/dev/cpp/compiler/build/CMakeFiles/beepc.dir
-/home/samuel/dev/cpp/compiler/build/CMakeFiles/edit_cache.dir
-/home/samuel/dev/cpp/compiler/build/CMakeFiles/rebuild_cache.dir
