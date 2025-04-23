@@ -38,6 +38,14 @@ struct NodeExprFloatLit {
     Token float_lit;
 };
 
+struct NodeExprNone {
+    Token none;
+};
+
+struct NodeExprNoArg {
+    Token no_arg;
+};
+
 struct NodeExprBinary {
     NodeExprPtr lhs;
     Token op_token;
@@ -69,7 +77,9 @@ struct NodeExpr {
         NodeExprCall,
         NodeExprBinary,
         NodeExprBinaryAssign,
-        NodeExprUnaryIncDec
+        NodeExprUnaryIncDec,
+        NodeExprNoArg,
+        NodeExprNone
     > var;
 
     NodeExpr() = default;
@@ -97,8 +107,8 @@ struct NodeStmtUse {
     std::vector<Token> use;
 };
 
-struct NodeStmtInclude {
-    Token include;
+struct NodeStmtImport {
+    Token to_import;
 };
 
 struct NodeStmt;
@@ -110,7 +120,7 @@ struct NodeStmtIf {
 };
 
 struct NodeStmt {
-    std::variant<NodeStmtVar, NodeStmtCall, NodeStmtInclude, NodeStmtUse, NodeStmtIf> var;
+    std::variant<NodeStmtVar, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf> var;
 };
 
 struct NodeProg {
@@ -193,6 +203,12 @@ class Parser {
             }
             else if (peek().has_value() && peek().value().type == TokenType::float_lit) {
                 return NodeExpr(NodeExprFloatLit{consume()});
+            }
+            else if (peek().has_value() && peek().value().type == TokenType::none) {
+                return NodeExpr(NodeExprNone{consume()});
+            }
+            else if (peek().has_value() && peek().value().type == TokenType::no_arg) {
+                return NodeExpr(NodeExprNoArg{consume()});
             }
             return {};
         }
@@ -502,14 +518,14 @@ class Parser {
                 return NodeStmt{.var=if_stmt};
             }
 
-            else if (peek().has_value() && peek().value().type == TokenType::include &&
+            else if (peek().has_value() && peek().value().type == TokenType::import &&
                      peek(1).has_value() && peek(1).value().type == TokenType::l_arrow)
             {
                 consume();
                 consume();
-                NodeStmtInclude stmt_include;
+                NodeStmtImport stmt_import;
 
-                stmt_include.include = consume();
+                stmt_import.to_import = consume();
 
                 if (!peek().has_value() || peek().value().type != TokenType::r_arrow) {
                     std::cerr << "Expected '>'\n";
@@ -517,7 +533,7 @@ class Parser {
                 }
                 consume();
 
-                return NodeStmt{.var = stmt_include};
+                return NodeStmt{.var = stmt_import};
             }
 
             else if (peek().has_value() && peek().value().type == TokenType::use &&

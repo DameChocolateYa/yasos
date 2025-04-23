@@ -24,7 +24,7 @@ enum class TokenType {
     dp,
     comment_begin,
     comment_end,
-    include,
+    import,
     use,
     l_arrow,
     r_arrow,
@@ -50,7 +50,9 @@ enum class TokenType {
     gt,
     gte,
     eq_eq,
-    bang_eq
+    bang_eq,
+    none,
+    no_arg
 };
 
 struct Token {
@@ -172,12 +174,22 @@ class Tokenizer {
                         continue;
                     }
                     else if (buf == "import") {
-                        tokens.push_back({.type = TokenType::include});
+                        tokens.push_back({.type = TokenType::import});
                         buf.clear();
                         continue;
                     }
                     else if (buf == "use") {
                         tokens.push_back({.type = TokenType::use});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "none" || buf == "None") {
+                        tokens.push_back({.type = TokenType::none});
+                        buf.clear();
+                        continue;
+                    }
+                    else if (buf == "NoArg" || buf == "noarg") {
+                        tokens.push_back({.type = TokenType::no_arg});
                         buf.clear();
                         continue;
                     }

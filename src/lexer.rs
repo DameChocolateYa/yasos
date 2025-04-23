@@ -24,7 +24,7 @@ pub enum TokenType {
     RArrow,
     LKey,
     RKey,
-    Plus, // 20
+    Plus,
     Minus,
     Star,
     Slash,

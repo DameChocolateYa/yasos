@@ -1,8 +1,5 @@
 [DEBUG STARTED]
 
-[src/parser.hpp] Added Binary Expression Node: type '=='
-[src/parser.hpp] Added Binary Expression Node: type '&&'
-[src/parser.hpp] Added Binary Expression Node: type '=='
 [src/generation.hpp] Printing float
 [src/main.cpp] Success compilation of source file (main.bp)
 

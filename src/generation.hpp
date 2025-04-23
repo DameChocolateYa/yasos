@@ -13,6 +13,37 @@
 
 static std::string escape_string(const std::string& raw);
 
+enum ArgType {
+    NoArg,
+    None,
+    Integer,
+    String,
+    Float,
+    OptionalInteger,
+    OptionalString,
+    OptionalFloat
+};
+
+enum ArgRequired {Yes, No};
+
+static void check_func_args(std::vector<NodeExpr> args, std::unordered_map<ArgType, ArgRequired> required_args) {
+    int required_args_count = 0;
+    for (const auto& required_arg : required_args) {
+        if (required_arg.second == ArgRequired::Yes) ++required_args_count;
+    }
+    if (args.size() != required_args_count) {
+        std::cerr << "Error, invalid args\n";
+        exit(EXIT_FAILURE);
+    }
+
+    int current_arg = 0;
+    for (const auto& required_arg : required_args) {
+        if (required_arg.second == ArgRequired::No && dynamic_cast<NodeExprNoArg*>(args[current_arg].var)) continue;
+        
+        ++current_arg;
+    }
+}
+
 enum class PrintType : int {
     Int = 0,
     Float = 1,
@@ -292,13 +323,10 @@ public:
         struct StmtVisitor {
             Generator* gen;
 
-            void operator()(const NodeStmtInclude& stmt_include) const {
-                //std::cout << stmt_include.include.value.value() << "\n";
-                const std::string& name = stmt_include.include.value.value();
+            void operator()(const NodeStmtImport& stmt_import) const {
+                const std::string& name = stmt_import.to_import.value.value();
 
-                if (name == "standard") {
-                    gen->libraries.push_back("std");
-                }
+                gen->libraries.push_back(name);
             }
 
             void operator()(const NodeStmtUse& stmt_use) const {
