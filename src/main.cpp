@@ -10,17 +10,24 @@
 #include <sstream>
 #include <optional>
 #include <string>
+#include <cstring>
 #include <vector>
 
 #undef __FILE__
 #define __FILE__ "src/main.cpp"
 
 int main(int argc, char** argv) {
+    int delete_out_asm = true;
+
     init_debug();
-    if (argc != 2) {
+    if (argc < 2) {
         std::cerr << "Incorrect usage. Correct usage is...\n";
         std::cerr << "beep++ <input.bp>\n";
         return EXIT_FAILURE;
+    }
+
+    for (int i = 1; i < argc; ++i) {
+        if (strcmp(argv[i], "--preserve-asm") == 0) delete_out_asm = false;
     }
 
     std::string contents; {
@@ -68,7 +75,7 @@ int main(int argc, char** argv) {
     link_command.append("-no-pie");
 
     system(link_command.c_str());
-    //system("rm out.asm");
+    if (delete_out_asm) system("rm out.asm");
 
     terminate(EXIT_SUCCESS);
     return EXIT_SUCCESS;

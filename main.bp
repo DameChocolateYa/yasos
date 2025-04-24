@@ -1,6 +1,17 @@
 import <standard>
-use {print};
+use {print, scani, strcmp, clsterm};
 
-println("VIVA ESPAÑA!");
+clsterm();
 
+print("QUIRES DEPORTAR A CARLOS A RUMANIA (y/n): ");
+let answer: str = scani();
+
+if (strcmp(answer, "y") eq 1) {
+    println("OK... DEPORTANDO A CARLOS...");
+} 
+else {
+    println("ME LA SUDA TU PUTA OPINION... DEPORTANDO A CARLOS...");
+}
+
+println("FIN DEL PROGRAMA DE DEPORTACION!");
 end();

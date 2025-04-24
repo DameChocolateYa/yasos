@@ -38,21 +38,24 @@ std::unordered_map<std::string, VarType> known_function_types = {
     {"strcmp", VarType::Int},
 };
 
-static bool is_int(const NodeExprPtr& expr) { return std::holds_alternative<NodeExprIntLit>(expr->var); }
-static bool is_string(const NodeExprPtr& expr) { return std::holds_alternative<NodeExprStrLit>(expr->var); }
-static bool is_float(const NodeExprPtr& expr) { return std::holds_alternative<NodeExprFloatLit>(expr->var); }
+static bool is_int(const NodeExpr& expr) { return std::holds_alternative<NodeExprIntLit>(expr.var); }
+static bool is_str(const NodeExpr& expr) { return std::holds_alternative<NodeExprStrLit>(expr.var); }
+static bool is_float(const NodeExpr& expr) { return std::holds_alternative<NodeExprFloatLit>(expr.var); }
+static bool is_ident(const NodeExpr& expr) { return std::holds_alternative<NodeExprIdent>(expr.var); }
 
 static void check_func_args(const std::vector<NodeExprPtr>& args, const std::unordered_multimap<ArgType, ArgRequired>& required_args) {
+    int max_args = 0;
     int required_args_count = 0;
     int not_count = false;
 
     for (const auto& required_arg : required_args) {
         if (required_arg.first == ArgType::NxtUndefNum) not_count = true;
         if (required_arg.second == ArgRequired::Yes) ++required_args_count;
+        ++max_args;
     }
-    if (args.size() != required_args_count && !not_count) {
-        std::cerr << "Error, invalid args\n";
-        exit(EXIT_FAILURE);
+    if (args.size() != max_args && !not_count) {
+        /*std::cerr << "Error, invalid args\n";
+        exit(EXIT_FAILURE);*/
     }
 
     int current_arg = 0;
@@ -62,20 +65,21 @@ static void check_func_args(const std::vector<NodeExprPtr>& args, const std::uno
 
         if (required_arg.first == ArgType::NxtUndefNum) return;
 
+        if (is_ident(args[current_arg]->var)) continue;
         if (required_arg.first == ArgType::Float) {
-            if (!std::holds_alternative<NodeExprFloatLit>(args[current_arg]->var)) {
+            if (!is_float(args[current_arg]->var)) {
                 std::cerr << "Error: argument " << current_arg + 1 << " should be a float\n";
                 exit(EXIT_FAILURE);
             }
         }
         else if (required_arg.first == ArgType::Integer) {
-            if (!std::holds_alternative<NodeExprIdent>(args[current_arg]->var)) {
+            if (!is_int(args[current_arg]->var)) {
                 std::cerr << "Error: argument " << current_arg + 1 << " should be an integer\n";
                 exit(EXIT_FAILURE);
             }
         }
         else if (required_arg.first == ArgType::String) {
-            if (!std::holds_alternative<NodeExprStrLit>(args[current_arg]->var)) {
+            if (!is_str(args[current_arg]->var)) {
                 std::cerr << "Error: argument " << current_arg + 1 << " should be a string\n";
                 exit(EXIT_FAILURE);
             }
