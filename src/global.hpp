@@ -9,7 +9,7 @@
 
 #define __LOG_FILE__ "log.txt"
 
-std::ofstream file;
+extern std::ofstream file;
 
 inline void init_debug() {
     file = std::ofstream(__LOG_FILE__);

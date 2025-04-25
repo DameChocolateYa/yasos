@@ -1,17 +1,14 @@
 import <standard>
-use {print, scani, strcmp, clsterm};
+use {print};
 
-clsterm();
+let x: int = 5;
 
-print("QUIRES DEPORTAR A CARLOS A RUMANIA (y/n): ");
-let answer: str = scani();
+x adding 3;
+x subing 2;
+x inc;
+x muling 2;
+x dec;
 
-if (strcmp(answer, "y") eq 1) {
-    println("OK... DEPORTANDO A CARLOS...");
-} 
-else {
-    println("ME LA SUDA TU PUTA OPINION... DEPORTANDO A CARLOS...");
-}
+println(x);
 
-println("FIN DEL PROGRAMA DE DEPORTACION!");
 end();

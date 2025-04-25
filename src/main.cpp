@@ -16,6 +16,8 @@
 #undef __FILE__
 #define __FILE__ "src/main.cpp"
 
+std::ofstream file;
+
 int main(int argc, char** argv) {
     int delete_out_asm = true;
 
