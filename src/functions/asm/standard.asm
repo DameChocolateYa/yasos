@@ -78,6 +78,9 @@ print:
     mov rdi, fmt_int
     xor rax, rax
     call printf
+    extern fflush
+    mov rdi, 0
+    call fflush
     ret
 
 .float:

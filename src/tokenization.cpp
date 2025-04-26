@@ -10,6 +10,9 @@ std::vector<Token> Tokenizer::tokenize() {
             buf.push_back(consume());
             while(peek().has_value() && std::isalnum(peek().value())) {
                 buf.push_back(consume());
+                for (auto& c : buf) {
+                    c = std::tolower(c);
+                }
             }
             if (buf == "let") {
                 tokens.push_back({.type = TokenType::var});
@@ -153,6 +156,11 @@ std::vector<Token> Tokenizer::tokenize() {
             }
             else if (buf == "NoArg" || buf == "noarg") {
                 tokens.push_back({.type = TokenType::no_arg});
+                buf.clear();
+                continue;
+            }
+            else if (buf == "cr") {
+                tokens.push_back({.type = TokenType::cr});
                 buf.clear();
                 continue;
             }

@@ -55,6 +55,8 @@ int main(int argc, char** argv) {
 
     Generator generator(prog.value());
     {
+        initialize_func_map();
+        initialize_func_ret_map();
         std::fstream file("out.asm", std::ios::out);
         file << generator.gen_prog();
     }
@@ -69,7 +71,7 @@ int main(int argc, char** argv) {
         LOG(__FILE__, std::string("Success compilation of source file (").append(argv[1]) + ")");
     }
 
-    const std::string func_dir = "src/functions/";
+    const std::string func_dir = "src/functions/asm/";
 
     for (int i = 0; i < generator.libraries.size(); ++i) {
         link_command.append(func_dir + generator.libraries[i] + ".o ");

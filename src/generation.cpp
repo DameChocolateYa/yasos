@@ -1,4 +1,10 @@
 #include "generation.hpp"
+#include <cstdlib>
+#include <functional>
+#include <variant>
+
+#include "functions/standard.hpp"
+#include "parser.hpp"
 
 std::unordered_map<std::string, VarType> known_function_types = {
     {"testret", VarType::Str},
@@ -8,13 +14,31 @@ std::unordered_map<std::string, VarType> known_function_types = {
     {"strcmp", VarType::Int},
 };
 
+std::unordered_map<std::string, std::function<void(const NodeStmtCall&, Generator*)>> function_handlers;
+std::unordered_map<std::string, std::function<void(const NodeExprCall&, Generator*)>> function_ret_handlers;
+
+void initialize_func_map() {
+    function_handlers["end"] = &handle_end;
+    function_handlers["print"] = &handle_print;
+    function_handlers["println"] = &handle_println;
+    function_handlers["clsterm"] = &handle_clsterm;
+}
+
+void initialize_func_ret_map() {
+    function_ret_handlers["testret"] = &handle_testret;
+    function_ret_handlers["itostr"] = &handle_itostr;
+    function_ret_handlers["stoint"] = &handle_stoint;
+    function_ret_handlers["scani"] = &handle_scani;
+    function_ret_handlers["strcmp"] = &handle_strcmp;
+}
+
 static bool is_int(const NodeExpr& expr) { return std::holds_alternative<NodeExprIntLit>(expr.var); }
 static bool is_str(const NodeExpr& expr) { return std::holds_alternative<NodeExprStrLit>(expr.var); }
 static bool is_float(const NodeExpr& expr) { return std::holds_alternative<NodeExprFloatLit>(expr.var); }
 static bool is_ident(const NodeExpr& expr) { return std::holds_alternative<NodeExprIdent>(expr.var); }
 static bool is_call(const NodeExpr& expr) { return std::holds_alternative<NodeExprCall>(expr.var); }
 
-static void check_func_args(const std::vector<NodeExprPtr>& args, const std::unordered_multimap<ArgType, ArgRequired>& required_args) {
+void check_func_args(const std::vector<NodeExprPtr>& args, const std::unordered_multimap<ArgType, ArgRequired>& required_args) {
     int max_args = 0;
     int required_args_count = 0;
     int not_count = false;
@@ -37,7 +61,7 @@ static void check_func_args(const std::vector<NodeExprPtr>& args, const std::uno
         if (required_arg.first == ArgType::NxtUndefNum) return;
 
         if (is_ident(args[current_arg]->var)) continue;
-	if (is_call(args[current_arg]->var)) continue; 
+	if (is_call(args[current_arg]->var)) continue;
 
         if (required_arg.first == ArgType::Float) {
             if (!is_float(args[current_arg]->var)) {
@@ -229,50 +253,18 @@ void Generator::gen_expr(const NodeExpr& expr) {
 
         void operator()(const NodeExprNone& expr_none) const {}
         void operator()(const NodeExprNoArg& expr_no_arg) const {}
+        void operator()(const NodeExprCR& expr_cr) const {}
 
         void operator()(const NodeExprCall& expr_call) const {
             const std::string& fn = expr_call.name.value.value();
 
-            if (fn == "itostr") {
-                check_func_args(expr_call.args, {{Integer, Yes}});
-
-                gen->gen_expr(*expr_call.args[0]);
-                gen->pop("rdi");
-
-                gen->m_output << "  call itostr\n";
-                gen->push("rax");
+            auto it = function_ret_handlers.find(fn);
+            if (it != function_ret_handlers.end()) {
+                it->second(expr_call, gen);
             }
-            else if (fn == "stoint") {
-                check_func_args(expr_call.args, {{String, Yes}});
-
-                gen->gen_expr(*expr_call.args[0]);
-                gen->pop("rdi");
-
-                gen->m_output << "  call stoint\n";
-                gen->push("rax");
-            }
-            else if (fn == "scani") {
-                check_func_args(expr_call.args, {});
-
-                gen->m_output << "  call scani\n";
-                gen->push("rax");
-            }
-            else if (fn == "testret") {
-                check_func_args(expr_call.args, {});
-
-                gen->m_output << "  call testret\n";
-                gen->push("rax");
-            }
-            else if (fn == "strcmp") {
-                check_func_args(expr_call.args, {{String, Yes}, {String, Yes}});
-                gen->gen_expr(*expr_call.args[0]);
-                gen->gen_expr(*expr_call.args[1]);
-
-                gen->pop("rdi");
-                gen->pop("rsi");
-
-                gen->m_output << "  call strcmp\n";
-                gen->push("rax");
+            else {
+                std::cerr << "Error, unknown func\n";
+                exit(EXIT_FAILURE);
             }
         }
     };
@@ -355,97 +347,67 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             gen->m_output << end_label << ":\n";
         }
 
-        void operator()(const NodeStmtCall& stmt_call) const {
-            const std::string& fn = stmt_call.name.value.value();
+        void operator()(const NodeStmtPrint& stmt_print) const {
+            gen->m_output << "  mov rdi, 2\n";
+            gen->m_output << "  mov rdx, 0\n";
+            std::string label = "str_" + std::to_string(gen->m_string_literals.size());
+            gen->m_string_literals.push_back(stmt_print.str_lit.value.value());
+            gen->m_output << "  lea rsi, [ rel " << label << "]\n";
+            gen->push("rsi");
+            gen->m_output << "  call print\n";
 
-            if (fn == "end" || fn == "killme") {
-                check_func_args(stmt_call.args, {{Integer, No}});
-
-                //gen->m_output << "  mov rdi, rax\n";
-                //gen->m_output << "  call free\n";
-                gen->m_output << "  mov rax, 60\n";
-                if (stmt_call.args.size() == 0) {
-                    gen->m_output << "  mov rdi, 0\n";
-                }
-                else if (stmt_call.args.size() == 1) {
-                    if (std::holds_alternative<NodeExprIdent>(stmt_call.args[0]->var)) {
-                        gen->gen_expr(*stmt_call.args[0]);
-                        gen->pop("rdi");
-                    }
-                    else if (std::holds_alternative<NodeExprIntLit>(stmt_call.args[0]->var)) {
-                        gen->m_output << "  mov rdi, " << std::get<NodeExprIntLit>(stmt_call.args[0]->var).int_lit.value.value() << "\n";
-                    }
-                    else if (std::holds_alternative<NodeExprCall>(stmt_call.args[0]->var)) {
-                        const auto& call_expr = std::get<NodeExprCall>(stmt_call.args[0]->var);
-                        gen->gen_expr(*call_expr.args[0]);  // Evaluamos el primer argumento
-                        gen->pop("rdi");  // Movemos el valor a rdi para la syscall
-                    }
-                }
-                else {
-                    std::cerr << "Expected optionally 1 arg\n";
-                    terminate(EXIT_FAILURE);
-                }
-                gen->m_output << "  syscall\n";
-            }
-            else if (fn == "print" || fn == "println") {
-                check_func_args(stmt_call.args, {{NxtUndefNum, Yes}});
-
+            if (stmt_print.args.empty()) return;
+            for (const auto& arg : stmt_print.args) {
                 PrintType print_type = PrintType::Int;
-                for (const auto& arg : stmt_call.args) {
-                    if (std::holds_alternative<NodeExprIdent>(arg->var)) {
-                        const auto& name = std::get<NodeExprIdent>(arg->var).ident.value.value();
-                        if (!gen->m_vars.contains(name)) {
-                            std::cerr << "Undeclared identifier: " << name << "\n";
-                            exit(EXIT_FAILURE);
-                        }
-                        auto var_type = gen->m_vars.at(name).type;
-                        if (var_type == VarType::Str) print_type = PrintType::Str;
+                if(std::holds_alternative<NodeExprIdent>(arg.var)) {
+                    const auto& name = std::get<NodeExprIdent>(arg.var).ident.value.value();
+                    if (!gen->m_vars.contains(name)) {
+                        std::cerr << "Undeclared Indeitifier\n";
+                        exit(EXIT_FAILURE);
                     }
-                    else if (std::holds_alternative<NodeExprStrLit>(arg->var)) {
-                        print_type = PrintType::Str;
-                    }
-                    else if (std::holds_alternative<NodeExprFloatLit>(arg->var)) {
-                        print_type = PrintType::Float;
-                    }
-                    else if (std::holds_alternative<NodeExprCall>(arg->var)) {
-                        const auto& call = std::get<NodeExprCall>(arg->var);
-                        for (const auto& know_return : known_function_types) {
-                            if (know_return.first == call.name.value.value()) print_type = PrintType::Str;
-                        }
-                    }
-
-                    gen->gen_expr(*arg);
-
-                    if (print_type != PrintType::Float) {
-                        gen->m_output << "  mov rdi, " << static_cast<int>(print_type) << "\n";
-                        gen->pop("rsi");
-                        gen->m_output << "  mov rdx, 0" << "\n";
-                        LOG(__FILE__, "Printing float");
-                    }
-                    else {
-                        gen->pop_float("xmm0");
-                        gen->m_output << "  mov rdi, 1\n";
-                        gen->m_output << "  mov rdx, 0\n";
-                    }
-                    gen->m_output << "  call print\n";
+                    auto var_type = gen->m_vars.at(name).type;
+                    if (var_type == VarType::Str) print_type = PrintType::Str;
                 }
-                if (fn != "println") return;
-                gen->m_output << "  mov rdx, 3\n"; // Only an emty line for println
+                else if (std::holds_alternative<NodeExprStrLit>(arg.var)) {
+                    print_type = PrintType::Str;
+                }
+                else if (std::holds_alternative<NodeExprIntLit>(arg.var)) print_type = PrintType::Int;
+                else if (std::holds_alternative<NodeExprFloatLit>(arg.var)) {
+                    print_type = PrintType::Float;
+                }
+                else if (std::holds_alternative<NodeExprCall>(arg.var)) {
+                    const auto& call = std::get<NodeExprCall>(arg.var);
+                    for (const auto& know_return : known_function_types) {
+                        if (know_return.first == call.name.value.value()) {
+                            print_type = static_cast<PrintType>(know_return.second);
+                        }
+                    }
+                }
+                else if (std::holds_alternative<NodeExprCR>(arg.var)) print_type = PrintType::CR;
+                gen->gen_expr(arg);
+
+                if (print_type != PrintType::Float && print_type != PrintType::CR) {
+                    gen->m_output << "  mov rdi, " << static_cast<int>(print_type) << "\n";
+                    gen->pop("rsi");
+                    gen->m_output << "  mov rdx, 0\n";
+                }
+                else if (print_type == PrintType::CR) {
+                    gen->m_output << "  mov rdi, 2\n";
+                    gen->m_output << "  mov rdx, 3\n";
+                }
                 gen->m_output << "  call print\n";
             }
-            else if (fn == "clsterm") {
-                check_func_args(stmt_call.args, {});
+        }
 
-                gen->m_output << "  call clsterm\n";
-            }
-            else if (fn == "waitk") {
-                check_func_args(stmt_call.args, {});
-
-                gen->m_output << "  call waitk\n";
+        void operator()(const NodeStmtCall& stmt_call) const {
+            const std::string& fn = stmt_call.name.value.value();
+            auto it = function_handlers.find(fn);
+            if (it != function_handlers.end()) {
+                it->second(stmt_call, gen);
             }
             else {
-                std::cerr << "Error, unknown function or statment\n";
-                terminate(EXIT_FAILURE);
+                std::cerr << "Error, unknown func\n";
+                exit(EXIT_FAILURE);
             }
         }
     };

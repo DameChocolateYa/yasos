@@ -16,7 +16,9 @@
 #define __FILE__ "src/parser.hpp"
 
 enum class VarType {
-    Str, Int, Float
+    Int = 0,
+    Float = 1,
+    Str = 2
 };
 
 struct NodeExpr;
@@ -68,6 +70,10 @@ struct NodeExprCall {
     std::vector<NodeExprPtr> args;
 };
 
+struct NodeExprCR {
+    Token token;
+};
+
 struct NodeExpr {
     std::variant<
         NodeExprIntLit,
@@ -79,7 +85,8 @@ struct NodeExpr {
         NodeExprBinaryAssign,
         NodeExprUnaryIncDec,
         NodeExprNoArg,
-        NodeExprNone
+        NodeExprNone,
+        NodeExprCR
     > var;
 
     NodeExpr() = default;
@@ -119,8 +126,13 @@ struct NodeStmtIf {
     std::optional<std::variant<std::shared_ptr<NodeStmtIf>, std::vector<NodeStmt>>> else_branch;
 };
 
+struct NodeStmtPrint {
+    Token str_lit;
+    std::vector<NodeExpr> args;
+};
+
 struct NodeStmt {
-    std::variant<NodeStmtVar, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf> var;
+    std::variant<NodeStmtVar, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtPrint> var;
 };
 
 struct NodeProg {

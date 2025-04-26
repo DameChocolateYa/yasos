@@ -1,4 +1,6 @@
 #include "parser.hpp"
+#include "tokenization.hpp"
+#include <cstdlib>
 
 std::optional<NodeExpr> Parser::parse_primary_expr() {
     if (peek().has_value() && peek().value().type == TokenType::ident &&
@@ -56,6 +58,9 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
     }
     else if (peek().has_value() && peek().value().type == TokenType::no_arg) {
         return NodeExpr(NodeExprNoArg{consume()});
+    }
+    else if (peek().has_value() && peek().value().type == TokenType::cr) {
+        return NodeExpr(NodeExprCR{consume()});
     }
     return {};
 }
@@ -216,7 +221,27 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         Token op = consume(); // Operator (+=, -=, *=, /=)
 
         if (!peek().has_value() || peek().value().type != TokenType::semi) {
-            std::cerr << "Expected ';'";
+            std::cerr << "Expected ';'\n";
+            terminate(EXIT_FAILURE);
+        }
+        consume(); // ;
+
+        NodeStmtVar reassignment {
+            .ident = ident,
+            .type = Token{.type = TokenType::ident},
+            .expr = NodeExpr(NodeExprUnaryIncDec{
+                .ident = ident,
+                .op_token = op,
+            })
+        };
+        return NodeStmt{.var = reassignment};
+    }
+    else if (peek().has_value() && (peek().value().type == TokenType::plusplus || peek().value().type == TokenType::minusminus) && peek(1).has_value() && peek(1).value().type == TokenType::ident) {
+        Token op = consume();
+        Token ident = consume();
+
+        if (!peek().has_value() || peek().value().type != TokenType::semi) {
+            std::cerr << "Expected ';'\n";
             terminate(EXIT_FAILURE);
         }
         consume(); // ;
@@ -271,6 +296,27 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         return NodeStmt(NodeStmtCall{name, wrapped_args});
 
         //return NodeStmt(.var = NodeStmtCall{name, args}};
+    }
+    else if (peek().has_value() && peek().value().type == TokenType::str_lit) {
+        Token str_lit = consume();
+        std::vector<NodeExpr> args;
+        while (auto tok = peek()) {
+            if (tok->type != TokenType::comma) break;
+
+            consume();
+
+            if (auto expr = parse_expr()) {
+                args.push_back(std::move(*expr));
+            }
+        }
+
+        if (!peek().has_value() || peek().value().type != TokenType::semi) {
+            std::cerr << "Expected a ';'\n";
+            terminate(EXIT_FAILURE);
+        }
+        consume();
+
+        return NodeStmt(NodeStmtPrint{str_lit, args});
     }
 
     else if (peek().has_value() && peek().value().type == TokenType::_if) {

@@ -1,14 +1,9 @@
 import <standard>
-use {print};
+use {print, scani};
 
-let x: int = 5;
+"Prompt: ";
+let input: str = scani();
 
-x adding 3;
-x subing 2;
-x inc;
-x muling 2;
-x dec;
-
-println(x);
+"Output: ", input, cr;
 
 end();
