@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <unordered_map>
 #include <vector>
 #include <optional>
 #include <variant>
@@ -10,7 +11,6 @@
 #include <iostream>
 
 #include "tokenization.hpp"
-#include "global.hpp"
 
 #undef __FILE__
 #define __FILE__ "src/parser.hpp"
@@ -131,8 +131,29 @@ struct NodeStmtPrint {
     std::vector<NodeExpr> args;
 };
 
+struct CustomFuncArgs {
+    std::string name;
+    ArgType arg_type;
+};
+
+struct NodeStmtDefFunc {
+    Token name;
+    std::vector<CustomFuncArgs> args;
+};
+
+struct NodeStmtEndfn {
+    // We dont need anything here...
+};
+
+struct NodeStmtCallCustomFunc {
+    Token name;
+    //std::vector<NodeExpr> args;
+    std::vector<Token> arg_names;
+    std::vector<NodeExpr> arg_values;
+};
+
 struct NodeStmt {
-    std::variant<NodeStmtVar, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtPrint> var;
+    std::variant<NodeStmtVar, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtCallCustomFunc> var;
 };
 
 struct NodeProg {

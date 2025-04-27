@@ -3,12 +3,10 @@
 #include <cstdlib>
 #include <sstream>
 #include <string>
-#include <type_traits>
 #include <unordered_map>
-#include <variant>
+
 #include "parser.hpp"
 #include "global.hpp"
-#include "tokenization.hpp"
 
 #undef __FILE__
 #define __FILE__ "src/generation.hpp"
@@ -17,19 +15,6 @@ static std::string escape_string(const std::string& raw);
 
 void initialize_func_map();
 void initialize_func_ret_map();
-
-enum ArgType {
-    NoArg,
-    None,
-    Integer,
-    String,
-    Float,
-    OptionalInteger,
-    OptionalString,
-    OptionalFloat,
-    VariableValue,
-    NxtUndefNum
-};
 
 enum ArgRequired {Yes, No};
 
@@ -44,10 +29,18 @@ enum class PrintType : int {
     CR = 3
 };
 
+enum class Mode {
+    Global,
+    Function
+};
+
 class Generator {
 private:
 
 public:
+Mode current_mode = Mode::Global;
+std::stringstream function_buffer;
+
 struct Var {
     size_t stack_loc;
     VarType type;
@@ -60,20 +53,25 @@ std::unordered_map<std::string, Var> m_vars;
 std::vector<std::string> m_string_literals;
 std::vector<float> m_float_literals;
 
+inline void write(const std::string& output) {
+    if (current_mode == Mode::Function) m_output << output << "\n";
+    else function_buffer << output << "\n";
+}
+
 void push(const std::string& reg) {
-    m_output << "  push " << reg << "\n";
+    write("  push " + reg);
     ++m_stack_size;
 }
 
 void push_float(const std::string& reg) {
     //m_output << "   sub rsp, 8\n";
-    m_output << "   movsd [rsp], " << reg << "\n";
-    m_output << "   add rsp, 8\n";
+    write("   movsd [rsp], " + reg);
+    write("   add rsp, 8");
     ++m_stack_size;
 }
 
 void pop(const std::string& reg) {
-    m_output << "  pop " << reg << "\n";
+    write( "  pop " + reg);
     if (m_stack_size == 0) {
         std::cerr << "Stack underflow!\n";
         exit(EXIT_FAILURE);
@@ -82,8 +80,8 @@ void pop(const std::string& reg) {
 }
 
 void pop_float(const std::string& reg) {
-    m_output << "   movsd " << reg << ", [rsp]\n";
-    m_output << "   add rsp, 8\n";
+    write( "   movsd " + reg + ", [rsp]");
+    write("   add rsp, 8");
     if (m_stack_size == 0) {
         std::cerr << "Stack underflow!\n";
         exit(EXIT_FAILURE);

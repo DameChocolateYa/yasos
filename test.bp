@@ -1,0 +1,20 @@
+IMPORT <STANDARD>
+use {PRINT, SCANI};
+
+PR = (MSG: STR):
+    "EL INPUT ES: ", MSG, CR;
+ENDFN
+
+SC = ():
+    "PROMPT: ";
+    let MSG: STR = SCANI();
+    PR > MSG: MSG;
+ENDFN
+
+START = ():
+    SC >;
+ENDFN
+
+START >;
+
+END();

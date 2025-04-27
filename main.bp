@@ -1,9 +1,12 @@
-import <standard>
-use {print, scani};
+IMPORT <STANDARD>
+USE {PRINT};
 
-"Prompt: ";
-let input: str = scani();
+FUNC = (arg: str, arg2: str, arg3: str):
+    "", arg, cr;
+    "", arg2, cr;
+    "", arg3, cr;
+ENDFN
 
-"Output: ", input, cr;
+FUNC > arg: "hola", arg2: "España", arg3: "VOX";
 
-end();
+END();

@@ -1,4 +1,5 @@
 #include "standard.hpp"
+#include <string>
 #include <variant>
 
 void handle_end(const NodeStmtCall& expr, Generator* gen) {
@@ -6,9 +7,9 @@ void handle_end(const NodeStmtCall& expr, Generator* gen) {
 
     //gen->m_output << "  mov rdi, rax\n";
     //gen->m_output << "  call free\n";
-    gen->m_output << "  mov rax, 60\n";
+    gen->write("    mov rax, 60");
     if (expr.args.size() == 0) {
-        gen->m_output << "  mov rdi, 0\n";
+        gen->write("  mov rdi, 0");
     }
     else if (expr.args.size() == 1) {
         if (std::holds_alternative<NodeExprIdent>(expr.args[0]->var)) {
@@ -16,7 +17,7 @@ void handle_end(const NodeStmtCall& expr, Generator* gen) {
             gen->pop("rdi");
         }
         else if (std::holds_alternative<NodeExprIntLit>(expr.args[0]->var)) {
-            gen->m_output << "  mov rdi, " << std::get<NodeExprIntLit>(expr.args[0]->var).int_lit.value.value() << "\n";
+            gen->write("  mov rdi, " + std::get<NodeExprIntLit>(expr.args[0]->var).int_lit.value.value());
         }
         else if (std::holds_alternative<NodeExprCall>(expr.args[0]->var)) {
             const auto& call_expr = std::get<NodeExprCall>(expr.args[0]->var);
@@ -28,7 +29,7 @@ void handle_end(const NodeStmtCall& expr, Generator* gen) {
         std::cerr << "Expected optionally 1 arg\n";
         terminate(EXIT_FAILURE);
     }
-    gen->m_output << "  syscall\n";
+    gen->write( "  syscall");
 }
 
 void print(const NodeStmtCall& stmt, Generator* gen, int println = false) {
@@ -63,24 +64,24 @@ void print(const NodeStmtCall& stmt, Generator* gen, int println = false) {
         gen->gen_expr(*arg);
 
         if (print_type != PrintType::Float && print_type != PrintType::CR) {
-            gen->m_output << "  mov rdi, " << static_cast<int>(print_type) << "\n";
+            gen->write("  mov rdi, " + std::to_string(static_cast<int>(print_type)));
             gen->pop("rsi");
-            gen->m_output << "  mov rdx, 0" << "\n";
+            gen->write("  mov rdx, 0");
         }
         else if (print_type == PrintType::CR) {
-            gen->m_output << "  mov rdi, 2\n";
-            gen->m_output << "  mov rdx, 3\n";
+            gen->write("  mov rdi, 2\n");
+            gen->write("  mov rdx, 3\n");
         }
         else {
             gen->pop_float("xmm0");
-            gen->m_output << "  mov rdi, 1\n";
-            gen->m_output << "  mov rdx, 0\n";
+            gen->write("  mov rdi, 1\n");
+            gen->write("  mov rdx, 0\n");
         }
-        gen->m_output << "  call print\n";
+        gen->write("  call print\n");
     }
     if (println) {
-        gen->m_output << "  mov rdx, 3\n"; // Only an emty line for println
-        gen->m_output << "  call print\n";
+        gen->write("  mov rdx, 3\n"); // Only an emty line for println
+        gen->write("  call print\n");
     }
 }
 
@@ -95,12 +96,12 @@ void handle_println(const NodeStmtCall& stmt, Generator* gen) {
 
 void handle_clsterm(const NodeStmtCall& stmt, Generator* gen) {
     check_func_args(stmt.args, {});
-    gen->m_output << "  call clsterm\n";
+    gen->write("  call clsterm\n");
 }
 
 void handle_testret(const NodeExprCall& expr, Generator* gen) {
     check_func_args(expr.args, {});
-    gen->m_output << "  call testret\n";
+    gen->write("  call testret\n");
     gen->push("rax");
 }
 
@@ -110,7 +111,7 @@ void handle_itostr(const NodeExprCall& expr, Generator* gen) {
     gen->gen_expr(*expr.args[0]);
     gen->pop("rdi");
 
-    gen->m_output << "  call itostr\n";
+    gen->write( "  call itostr\n");
     gen->push("rax");
 }
 
@@ -120,14 +121,14 @@ void handle_stoint(const NodeExprCall& expr, Generator* gen) {
     gen->gen_expr(*expr.args[0]);
     gen->pop("rdi");
 
-    gen->m_output << "  call stoint\n";
+    gen->write( "  call stoint\n");
     gen->push("rax");
 }
 
 void handle_scani(const NodeExprCall& expr, Generator* gen) {
     check_func_args(expr.args, {});
 
-    gen->m_output << "  call scani\n";
+    gen->write("  call scani\n");
     gen->push("rax");
 }
 
@@ -139,6 +140,6 @@ void handle_strcmp(const NodeExprCall& expr, Generator* gen) {
     gen->pop("rdi");
     gen->pop("rsi");
 
-    gen->m_output << "  call strcmp\n";
+    gen->write("  call strcmp\n");
     gen->push("rax");
 }

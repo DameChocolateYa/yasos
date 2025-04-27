@@ -1,22 +1,16 @@
 global main
 section .text
-main:
   extern free
-  extern print
-  extern scani
+pr:
+  push rbp
+  mov rbp, rsp
   mov rdi, 2
   mov rdx, 0
   lea rsi, [ rel str_0]
   push rsi
   call print
-  call scani
-  push rax
-  mov rdi, 2
-  mov rdx, 0
-  lea rsi, [ rel str_1]
-  push rsi
-  call print
-  mov rsi, QWORD [rsp + 8]
+
+  mov rsi, QWORD [rsp + 32]
   push rsi
   mov rdi, 2
   pop rsi
@@ -25,10 +19,43 @@ main:
   mov rdi, 2
   mov rdx, 3
   call print
-  mov rax, 60
+  mov rsp, rbp
+  pop rbp
+  ret
+sc:
+  push rbp
+  mov rbp, rsp
+  mov rdi, 2
+  mov rdx, 0
+  lea rsi, [ rel str_1]
+  push rsi
+  call print
+
+  call scani
+
+  push rax
+  mov rsi, QWORD [rsp + 0]
+  push rsi
+  push rax
+  call pr
+  mov rsp, rbp
+  pop rbp
+  ret
+start:
+  push rbp
+  mov rbp, rsp
+  call sc
+  mov rsp, rbp
+  pop rbp
+  ret
+main:
+  extern print
+  extern scani
+  call start
+    mov rax, 60
   mov rdi, 0
   syscall
 
 section .rodata
-str_0: db "Prompt: ", 0
-str_1: db "Output: ", 0
+str_0: db "EL INPUT ES: ", 0
+str_1: db "PROMPT: ", 0

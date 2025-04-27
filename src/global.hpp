@@ -9,6 +9,19 @@
 
 #define __LOG_FILE__ "log.txt"
 
+enum ArgType {
+    NoArg,
+    None,
+    Integer,
+    String,
+    Float,
+    OptionalInteger,
+    OptionalString,
+    OptionalFloat,
+    VariableValue,
+    NxtUndefNum
+};
+
 extern std::ofstream file;
 
 inline void init_debug() {

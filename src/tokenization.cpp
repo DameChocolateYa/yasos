@@ -164,6 +164,11 @@ std::vector<Token> Tokenizer::tokenize() {
                 buf.clear();
                 continue;
             }
+            else if (buf == "endfn") {
+                tokens.push_back({.type = TokenType::endfn});
+                buf.clear();
+                continue;
+            }
             else {
                 tokens.push_back({.type = TokenType::ident, .value = buf});
                 buf.clear();

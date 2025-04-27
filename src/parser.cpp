@@ -1,4 +1,5 @@
 #include "parser.hpp"
+#include "global.hpp"
 #include "tokenization.hpp"
 #include <cstdlib>
 
@@ -153,6 +154,81 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         }
 
         return NodeStmt{.var = stmt_var};
+    }
+
+    else if (peek().has_value() && peek().value().type == TokenType::ident && peek(1).has_value() && peek(1).value().type == TokenType::eq && peek(2).has_value() && peek(2).value().type == TokenType::open_paren) {
+        Token name = consume();
+        consume(); // =
+        consume(); // (
+        std::vector<CustomFuncArgs> args;
+
+        while (peek().has_value() && peek().value().type != TokenType::close_paren) {
+            if (peek().has_value() && peek().value().type == TokenType::ident && peek(1).has_value() && peek(1).value().type == TokenType::dp &&
+                peek(2).has_value() && (peek(2).value().type == TokenType::str_type || peek(2).value().type == TokenType::int_type)) {
+                    std::string arg_name = consume().value.value();
+                    consume();
+                    Token arg_type_tok = consume();
+                    ArgType arg_type;
+                    if (arg_type_tok.type == TokenType::str_type) arg_type = ArgType::String;
+                    else if (arg_type_tok.type == TokenType::int_type) arg_type = ArgType::Integer;
+
+                    args.push_back({.name = arg_name, .arg_type = arg_type});
+
+                    if (peek().has_value() && peek().value().type == TokenType::comma) {
+                        consume();
+                        continue;
+                    }
+                    else if (peek().has_value() && peek().value().type == TokenType::close_paren) {
+                        break;
+                    }
+                    else {
+                        std::cerr << "Expected ')'\n";
+                        terminate(EXIT_FAILURE);
+                    }
+            }
+            else {
+                std::cerr << "Malformed expression in function declaration\n";
+                terminate(EXIT_FAILURE);
+            }
+        }
+        consume(); // )
+        if (!peek().has_value() || peek().value().type != TokenType::dp) { // :
+            std::cerr << "Expected ':'\n";
+            terminate(EXIT_FAILURE);
+        }
+        consume(); // :
+        return NodeStmt{NodeStmtDefFunc{.name = name, .args = args}};
+    }
+    else if (peek().has_value() && peek().value().type == TokenType::ident && peek(1).has_value() && peek(1).value().type == TokenType::r_arrow) {
+        Token name = consume();
+        consume();
+
+        std::vector<Token> arg_names;
+        std::vector<NodeExpr> arg_values;
+        while (peek().has_value() && peek().value().type != TokenType::semi) {
+            Token ident = consume();
+            NodeExpr expr;
+            consume();
+            if (auto e = parse_expr()) {
+                expr = e.value();
+            }
+            arg_names.push_back(ident);
+            arg_values.push_back(expr);
+
+            if (peek().has_value() && peek().value().type == TokenType::comma) {
+                consume();
+                continue;
+            }
+            else if (peek().has_value() && peek().value().type == TokenType::semi) {
+                break;
+            }
+            else {
+                std::cerr << "Expected ';'\n";
+            }
+        }
+        consume(); // ;
+
+        return NodeStmt{.var = NodeStmtCallCustomFunc{.name = name, .arg_names = arg_names, .arg_values = arg_values}};
     }
 
     else if (peek().has_value() && peek().value().type == TokenType::ident &&
@@ -457,6 +533,15 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         consume();
 
         return NodeStmt{.var = use};
+    }
+    else if (peek().has_value() && peek().value().type == TokenType::ident && peek(1).has_value() && peek(1).value().type == TokenType::dp) {
+        Token name = consume();
+        consume();
+        return NodeStmt{.var = NodeStmtDefFunc{.name = name}};
+    }
+    else if (peek().has_value() && peek().value().type == TokenType::endfn) {
+        consume();
+        return NodeStmt{.var = NodeStmtEndfn{}};
     }
 
     else {

@@ -53,7 +53,8 @@ enum class TokenType {
     bang_eq,
     none,
     no_arg,
-    cr
+    cr,
+    endfn
 };
 
 struct Token {
