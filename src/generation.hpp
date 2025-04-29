@@ -39,23 +39,26 @@ private:
 
 public:
 Mode current_mode = Mode::Global;
-std::stringstream function_buffer;
+std::string current_func = "";
+std::stringstream function_buffer, main_buffer;
 
 struct Var {
     size_t stack_loc;
     VarType type;
+    std::string name;
 };
 
 const NodeProg m_prog;
 std::stringstream m_output;
 size_t m_stack_size = 0;
 std::unordered_map<std::string, Var> m_vars;
+std::unordered_map<std::string, std::vector<Var>> m_fnc_args;
 std::vector<std::string> m_string_literals;
 std::vector<float> m_float_literals;
 
 inline void write(const std::string& output) {
-    if (current_mode == Mode::Function) m_output << output << "\n";
-    else function_buffer << output << "\n";
+    if (current_mode == Mode::Function) function_buffer << output << "\n";
+    else main_buffer << output << "\n";
 }
 
 void push(const std::string& reg) {

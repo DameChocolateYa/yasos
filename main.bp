@@ -1,12 +1,1 @@
-IMPORT <STANDARD>
-USE {PRINT};
 
-FUNC = (arg: str, arg2: str, arg3: str):
-    "", arg, cr;
-    "", arg2, cr;
-    "", arg3, cr;
-ENDFN
-
-FUNC > arg: "hola", arg2: "España", arg3: "VOX";
-
-END();

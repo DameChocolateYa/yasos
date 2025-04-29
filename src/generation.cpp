@@ -1,7 +1,11 @@
 #include "generation.hpp"
+#include <array>
+#include <cinttypes>
 #include <cstdlib>
 #include <functional>
+#include <iostream>
 #include <string>
+#include <sys/types.h>
 #include <variant>
 
 #include "functions/standard.hpp"
@@ -103,7 +107,7 @@ void Generator::gen_expr(const NodeExpr& expr) {
 
         void operator()(const NodeExprIntLit& expr_int_lit) const {
             gen->write("  mov rax, " + expr_int_lit.int_lit.value.value());
-            gen->push("rax");
+            //gen->push("rax");
         }
 
         void operator()(const NodeExprBinary& expr_bin) const {
@@ -180,7 +184,7 @@ void Generator::gen_expr(const NodeExpr& expr) {
                 std::cerr << "Unsupported binary operator\n";
                 terminate(EXIT_FAILURE);
             }
-            gen->push("rax");
+            //gen->push("rax");
         }
         void operator()(const NodeExprBinaryAssign& expr_bin_assign) const {
             const std::string& op = expr_bin_assign.op_token.value.value();
@@ -214,7 +218,7 @@ void Generator::gen_expr(const NodeExpr& expr) {
             }
 
             gen->write("  mov QWORD [ rsp + " + std::to_string(offset_bytes) + "], rax");
-            gen->push("rax");
+            //gen->push("rax");
         }
         void operator()(const NodeExprUnaryIncDec& expr_unary_operator) const {
             const std::string& op = expr_unary_operator.op_token.value.value();
@@ -235,14 +239,30 @@ void Generator::gen_expr(const NodeExpr& expr) {
                 terminate(EXIT_FAILURE);
             }
             gen->write("  mov QWORD [ rsp + " + std::to_string(offset_bytes) + "], rax");
-            gen->push("rax");
+            //gen->push("rax");
         };
 
         void operator()(const NodeExprIdent& expr_ident) const {
+            if (gen->current_mode == Mode::Function) {
+                for (const auto& fnc : gen->m_fnc_args) {
+                    if (fnc.first == gen->current_func) {
+                        for (const auto& var : fnc.second) {
+                            if (var.name == expr_ident.ident.value.value()) {
+                                gen->write("  mov rsi, QWORD [rbp + " + std::to_string(var.stack_loc) + "]");
+                                gen->write("  mov rax, rsi");
+                                gen->push("rax");
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
             const std::string& var_name = expr_ident.ident.value.value();
             size_t offset_bytes = gen->get_var(var_name);
+            //std::cerr << gen->m_vars.at(var_name).stack_loc << "\n";
             gen->write("  mov rsi, QWORD [rsp + " + std::to_string(offset_bytes) + "]");
-            gen->push("rsi");
+            gen->write("  mov rax, rsi");
+            gen->push("rax");
         }
 
         void operator()(const NodeExprStrLit& expr_str_lit) const {
@@ -304,7 +324,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             if (gen->m_vars.contains(name)) {
                 auto& var = gen->m_vars.find(name)->second;
                 gen->m_vars.erase(name);
-                gen->m_vars.insert({name, Var{.stack_loc = gen->m_stack_size - 1, .type = var.type}});
+                gen->m_vars.insert({name, Var{.stack_loc = gen->m_stack_size - 1, .type = var.type, .name = name}});
                 return;
             }
 
@@ -318,7 +338,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                     terminate(EXIT_FAILURE);
             }
 
-            gen->m_vars.insert({name, Var{.stack_loc = gen->m_stack_size - 1, .type = var_type}});
+            gen->m_vars.insert({name, Var{.stack_loc = gen->m_stack_size - 1, .type = var_type, .name = name}});
         }
 
         void operator()(const NodeStmtIf stmt_if) const {
@@ -361,20 +381,36 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             std::string label = "str_" + std::to_string(gen->m_string_literals.size());
             gen->m_string_literals.push_back(stmt_print.str_lit.value.value());
             gen->write("  lea rsi, [ rel " + label + "]");
-            gen->push("rsi");
+            //gen->push("rsi");
             gen->write("  call print\n");
+            //gen->pop("rsi");
 
             if (stmt_print.args.empty()) return;
             for (const auto& arg : stmt_print.args) {
                 PrintType print_type = PrintType::Int;
                 if(std::holds_alternative<NodeExprIdent>(arg.var)) {
                     const auto& name = std::get<NodeExprIdent>(arg.var).ident.value.value();
+                    VarType var_type;
+                    bool local = false;
                     if (!gen->m_vars.contains(name)) {
-                        std::cerr << "Undeclared Indeitifier\n";
+                        if (gen->current_mode == Mode::Function) {
+                            for (const auto& fnc : gen->m_fnc_args) {
+                                if (fnc.first == gen->current_func) {
+                                    for (const auto& var : fnc.second) {
+                                        var_type = var.type;
+                                        local = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else if (!local) {
+                        std::cerr << "Undeclared Indeitifier: " << name << "\n";
                         exit(EXIT_FAILURE);
                     }
-                    auto var_type = gen->m_vars.at(name).type;
+                    if (!local) var_type = gen->m_vars.at(name).type;
                     if (var_type == VarType::Str) print_type = PrintType::Str;
+                    else print_type = PrintType::Int;
                 }
                 else if (std::holds_alternative<NodeExprStrLit>(arg.var)) {
                     print_type = PrintType::Str;
@@ -394,9 +430,12 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 else if (std::holds_alternative<NodeExprCR>(arg.var)) print_type = PrintType::CR;
                 gen->gen_expr(arg);
 
+                if (print_type != PrintType::CR) gen->pop("rsi");
+
                 if (print_type != PrintType::Float && print_type != PrintType::CR) {
                     gen->write("  mov rdi, " + std::to_string(static_cast<int>(print_type)));
-                    gen->pop("rsi");
+                    //gen->m_output << "  mov rsi, rax\n";
+                    //gen->pop("rsi");
                     gen->write("  mov rdx, 0");
                 }
                 else if (print_type == PrintType::CR) {
@@ -411,19 +450,11 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 
         void operator()(const NodeStmtDefFunc& stmt_def_func) const {
             gen->current_mode = Mode::Function;
+            gen->current_func = stmt_def_func.name.value.value();
             gen->write(stmt_def_func.name.value.value() + ":");
             gen->write("  push rbp");
             gen->write("  mov rbp, rsp");
             if (stmt_def_func.args.size() == 0) return;
-
-            for (int i = 0; i < stmt_def_func.args.size(); ++i) {
-                VarType var_type;
-                if (stmt_def_func.args[i].arg_type == ArgType::Integer) var_type = VarType::Int;
-                else if (stmt_def_func.args[i].arg_type == ArgType::String) var_type = VarType::Str;
-
-                // Insert temporal value to avoid 'Undeclared Identifier'
-                gen->m_vars.insert({stmt_def_func.args[i].name, Var{.stack_loc = (gen->m_stack_size - 1) * 4, .type = var_type}});
-            }
         }
 
         void operator()(const NodeStmtEndfn& stmt_end_fn) const {
@@ -431,42 +462,53 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             gen->write("  pop rbp");
             gen->write("  ret");
             gen->current_mode = Mode::Global;
+            gen->current_func = "";
         }
 
         void operator()(const NodeStmtCallCustomFunc& stmt_call_custom_func) const {
             std::vector<NodeExpr> arg_values = stmt_call_custom_func.arg_values;
             std::vector<Token> arg_names = stmt_call_custom_func.arg_names;
 
+            if (arg_values.size() != arg_names.size()) {
+                std::cerr << "FATAL ERROR: cannot handle func args\n";
+                terminate(EXIT_FAILURE);
+            }
+
             int index = 0;
+            int args_index = arg_values.size() + 1;
             std::string reg = ""; // orde: rdi, rsi, rdx, rcx, r8, r9
+            std::vector<Var> args;
             for (const auto& arg : arg_values) {
-                /*switch (reg_index) {
+                switch (index) {
                     case 0: reg = "rdi"; break;
                     case 1: reg = "rsi"; break;
                     case 2: reg = "rdx"; break;
                     case 3: reg = "rcx"; break;
                     case 4: reg = "r8"; break;
                     case 5: reg = "r9"; break;
-                }*/
-                gen->gen_expr(arg);
-                size_t current_stack_loc = gen->m_stack_size;
-
-                //gen->write("  mov " + reg + ", rax");
-                gen->push("rax");
+                }
+                gen->gen_expr(arg); // Returns in rax
+                gen->pop(reg); // Put it in a register
+                gen->push(reg); // push register
 
                 VarType var_type;
                 if (is_int(arg.var)) var_type = VarType::Int;
                 if (is_str(arg.var)) var_type = VarType::Str;
 
                 if (index < arg_values.size()) {
-                    gen->m_vars.insert({arg_names[index].value.value(), Var{.stack_loc = (current_stack_loc) * 8, .type = var_type}});
+                    //gen->m_vars.insert({arg_names[index].value.value(), Var{.stack_loc = (gen->m_stack_size - 1) * 8, .type = var_type}});
+                    //++gen->m_stack_size;
+                    args.push_back({.stack_loc = static_cast<size_t>(args_index) * 8, .type = var_type, .name = arg_names[index].value.value()});
+
                     if (gen->m_vars.find(arg_names[index].value.value()) != gen->m_vars.end()) {
-                        std::cerr << arg_names[index].value.value() << "\n";
-                        std::cerr << gen->m_vars.at(arg_names[index].value.value()).stack_loc << "\n";
+                        //std::cerr << arg_names[index].value.value() << "\n";
+                        //std::cerr << gen->m_vars.at(arg_names[index].value.value()).stack_loc << "\n";
                     }
                 }
                 ++index;
+                --args_index;
             }
+            gen->m_fnc_args.insert({stmt_call_custom_func.name.value.value(), args});
 
             /*for (int i = 0; i < arg_values.size(); ++i) {
                 gen->m_output << "mov " << regs[i] << ", " << gen->get_var(arg_names[i].value.value()) << "\n";
@@ -500,8 +542,9 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
     for (const NodeStmt& stmt : m_prog.stmts) {
         gen_stmt(stmt);
     }
-    m_output << "main:\n";
     m_output << function_buffer.str();
+    m_output << "main:\n";
+    m_output << main_buffer.str();
 
     m_output << "\nsection .rodata\n";
     if (!m_string_literals.empty()) {

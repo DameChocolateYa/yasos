@@ -1,20 +1,16 @@
 IMPORT <STANDARD>
 USE {PRINT};
 
-!-----------------------%
+IMPRIMIR > ARG1: "Hola", ARG2: "Nose";
 
-IMPRIMIR = (MSG: STR):
-	"", MSG, CR;
+IMPRIMIR = (ARG1: STR, ARG2: STR):
+    "", ARG1, CR;
+    LET MSG: STR = "F";
+    !"", MSG, CR;%
+    "", ARG2, CR;
 ENDFN
 
-!-----------------------%
-
-START:
-	IMPRIMIR > MSG: "AH";
-ENDFN
-
-!-----------------------%
-
-START >;
+LET MSGE: STR = "KAK";
+"", MSGE, CR;
 
 END();

@@ -1,5 +1,2 @@
 [DEBUG STARTED]
 
-[src/main.cpp] Success compilation of source file (test.bp)
-
-[DEBUG FINISHED | SUCCESS]
