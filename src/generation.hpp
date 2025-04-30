@@ -53,6 +53,7 @@ std::stringstream m_output;
 size_t m_stack_size = 0;
 std::unordered_map<std::string, Var> m_vars;
 std::unordered_map<std::string, std::vector<Var>> m_fnc_args;
+//std::unordered_map<std::string, std::vector<Var>> m_fnc_ret;
 std::vector<std::string> m_string_literals;
 std::vector<float> m_float_literals;
 

@@ -54,7 +54,9 @@ enum class TokenType {
     none,
     no_arg,
     cr,
-    endfn
+    endfn,
+    ret,
+    mkpub
 };
 
 struct Token {

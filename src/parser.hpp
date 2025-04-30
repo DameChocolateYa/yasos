@@ -118,6 +118,10 @@ struct NodeStmtImport {
     Token to_import;
 };
 
+struct NodeStmtMkpub {
+    std::vector<Token> functions;
+};
+
 struct NodeStmt;
 
 struct NodeStmtIf {
@@ -145,6 +149,10 @@ struct NodeStmtEndfn {
     // We dont need anything here...
 };
 
+struct NodeStmtRet { // Return a value
+    NodeExpr value;
+};
+
 struct NodeStmtCallCustomFunc {
     Token name;
     //std::vector<NodeExpr> args;
@@ -153,7 +161,7 @@ struct NodeStmtCallCustomFunc {
 };
 
 struct NodeStmt {
-    std::variant<NodeStmtVar, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtCallCustomFunc> var;
+    std::variant<NodeStmtVar, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtCallCustomFunc, NodeStmtMkpub> var;
 };
 
 struct NodeProg {

@@ -107,7 +107,7 @@ void Generator::gen_expr(const NodeExpr& expr) {
 
         void operator()(const NodeExprIntLit& expr_int_lit) const {
             gen->write("  mov rax, " + expr_int_lit.int_lit.value.value());
-            //gen->push("rax");
+            gen->push("rax");
         }
 
         void operator()(const NodeExprBinary& expr_bin) const {
@@ -184,7 +184,7 @@ void Generator::gen_expr(const NodeExpr& expr) {
                 std::cerr << "Unsupported binary operator\n";
                 terminate(EXIT_FAILURE);
             }
-            //gen->push("rax");
+            gen->push("rax");
         }
         void operator()(const NodeExprBinaryAssign& expr_bin_assign) const {
             const std::string& op = expr_bin_assign.op_token.value.value();
@@ -218,7 +218,7 @@ void Generator::gen_expr(const NodeExpr& expr) {
             }
 
             gen->write("  mov QWORD [ rsp + " + std::to_string(offset_bytes) + "], rax");
-            //gen->push("rax");
+            gen->push("rax");
         }
         void operator()(const NodeExprUnaryIncDec& expr_unary_operator) const {
             const std::string& op = expr_unary_operator.op_token.value.value();
@@ -239,7 +239,7 @@ void Generator::gen_expr(const NodeExpr& expr) {
                 terminate(EXIT_FAILURE);
             }
             gen->write("  mov QWORD [ rsp + " + std::to_string(offset_bytes) + "], rax");
-            //gen->push("rax");
+            gen->push("rax");
         };
 
         void operator()(const NodeExprIdent& expr_ident) const {
@@ -315,6 +315,29 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             //std::cout << stmt_use.use[0].value.value() << "\n";
             for (int i = 0; i < stmt_use.use.size(); ++i) {
                 gen->write("  extern " + stmt_use.use[i].value.value());
+            }
+        }
+
+        void operator()(const NodeStmtMkpub mkpub) const {
+            if (gen->current_mode == Mode::Function) {
+                std::cerr << "Error: making public a function inside of another function is not allowed\n";
+                terminate(EXIT_FAILURE);
+            }
+            for (const auto& func : mkpub.functions) {
+                bool func_exists = false;
+                for (const auto& mapped_func : gen->m_fnc_args) {
+                    if (mapped_func.first == func.value.value()) {
+                        func_exists = true;
+                    }
+                }
+                if (!func_exists) {
+                    for (const auto& e : gen->m_fnc_args) {
+                        std::cerr << e.first << "\n";
+                    }
+                    std::cerr << "Error: making public an inexistent function (" << func.value.value() << "\n";
+                    terminate(EXIT_FAILURE);
+                }
+                gen->write("  global " + func.value.value());
             }
         }
 
@@ -397,14 +420,17 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                             for (const auto& fnc : gen->m_fnc_args) {
                                 if (fnc.first == gen->current_func) {
                                     for (const auto& var : fnc.second) {
-                                        var_type = var.type;
-                                        local = true;
+                                        if (var.name == name) {
+                                            var_type = var.type;
+                                            local = true;
+                                            break;
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                    else if (!local) {
+                    else if (!local && !gen->m_vars.contains(name)) {
                         std::cerr << "Undeclared Indeitifier: " << name << "\n";
                         exit(EXIT_FAILURE);
                     }
@@ -450,11 +476,24 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 
         void operator()(const NodeStmtDefFunc& stmt_def_func) const {
             gen->current_mode = Mode::Function;
+            
+            std::vector<Var> args;
+            int args_index = stmt_def_func.args.size() + 1;
+            for (int i = 0; i < stmt_def_func.args.size(); ++i) {
+                auto arg = stmt_def_func.args[i];
+                VarType var_type;
+                if (arg.arg_type == ArgType::String) var_type = VarType::Str;
+                if (arg.arg_type == ArgType::Integer) var_type = VarType::Int;
+
+                args.push_back({.stack_loc = static_cast<size_t>(args_index) * 8, .type = var_type, .name = arg.name});
+                --args_index;
+            }
+            gen->m_fnc_args.insert({stmt_def_func.name.value.value(), args});
+
             gen->current_func = stmt_def_func.name.value.value();
             gen->write(stmt_def_func.name.value.value() + ":");
             gen->write("  push rbp");
             gen->write("  mov rbp, rsp");
-            if (stmt_def_func.args.size() == 0) return;
         }
 
         void operator()(const NodeStmtEndfn& stmt_end_fn) const {
@@ -463,6 +502,17 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             gen->write("  ret");
             gen->current_mode = Mode::Global;
             gen->current_func = "";
+        }
+
+        void operator()(const NodeStmtRet& stmt_ret) const {
+            NodeExpr value = stmt_ret.value;
+            gen->gen_expr(value);
+
+            gen->write("  mov rsp, rbp");
+            gen->write("  pop rbp");
+            gen->write("  ret");
+            //gen->current_mode = Mode::Global;
+            //gen->current_func = "";
         }
 
         void operator()(const NodeStmtCallCustomFunc& stmt_call_custom_func) const {
@@ -491,29 +541,9 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 gen->pop(reg); // Put it in a register
                 gen->push(reg); // push register
 
-                VarType var_type;
-                if (is_int(arg.var)) var_type = VarType::Int;
-                if (is_str(arg.var)) var_type = VarType::Str;
-
-                if (index < arg_values.size()) {
-                    //gen->m_vars.insert({arg_names[index].value.value(), Var{.stack_loc = (gen->m_stack_size - 1) * 8, .type = var_type}});
-                    //++gen->m_stack_size;
-                    args.push_back({.stack_loc = static_cast<size_t>(args_index) * 8, .type = var_type, .name = arg_names[index].value.value()});
-
-                    if (gen->m_vars.find(arg_names[index].value.value()) != gen->m_vars.end()) {
-                        //std::cerr << arg_names[index].value.value() << "\n";
-                        //std::cerr << gen->m_vars.at(arg_names[index].value.value()).stack_loc << "\n";
-                    }
-                }
                 ++index;
                 --args_index;
             }
-            gen->m_fnc_args.insert({stmt_call_custom_func.name.value.value(), args});
-
-            /*for (int i = 0; i < arg_values.size(); ++i) {
-                gen->m_output << "mov " << regs[i] << ", " << gen->get_var(arg_names[i].value.value()) << "\n";
-                }*/
-
             gen->write("  call " + stmt_call_custom_func.name.value.value());
         }
 
@@ -537,6 +567,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 [[nodiscard]] std::string Generator::gen_prog() {
     m_output << "global main\nsection .text\n";
     m_output << "  extern free\n";
+    m_output << "  extern print\n";
 
     //m_output << "main:\n";
     for (const NodeStmt& stmt : m_prog.stmts) {

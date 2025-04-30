@@ -169,6 +169,16 @@ std::vector<Token> Tokenizer::tokenize() {
                 buf.clear();
                 continue;
             }
+            else if (buf == "ret") {
+                tokens.push_back({.type = TokenType::ret});
+                buf.clear();
+                continue;
+            }
+            else if (buf == "mkpub") {
+                tokens.push_back({.type = TokenType::mkpub});
+                buf.clear();
+                continue;
+            }
             else {
                 tokens.push_back({.type = TokenType::ident, .value = buf});
                 buf.clear();
