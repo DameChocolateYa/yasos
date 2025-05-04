@@ -101,23 +101,22 @@ void check_func_args(const std::vector<NodeExprPtr>& args, const std::unordered_
     }
 }
 
-void Generator::gen_expr(const NodeExpr& expr) {
+void Generator::gen_expr(const NodeExpr& expr, bool push_result) {
     struct ExprVisitor {
         Generator* gen;
+        bool push_result;
 
         void operator()(const NodeExprIntLit& expr_int_lit) const {
             gen->write("  mov rax, " + expr_int_lit.int_lit.value.value());
-            gen->push("rax");
+            if (push_result) gen->push("rax");
         }
 
         void operator()(const NodeExprBinary& expr_bin) const {
             const std::string& op = expr_bin.op_token.value.value();
 
-            gen->gen_expr(*expr_bin.lhs);
-            gen->gen_expr(*expr_bin.rhs);
-
-            gen->pop("rbx");
-            gen->pop("rax");
+            gen->gen_expr(*expr_bin.rhs, false);
+            gen->write("  mov rbx, rax");
+            gen->gen_expr(*expr_bin.lhs, false);
 
             if (op == "+") {
                 gen->write( "  add rax, rbx");
@@ -184,20 +183,18 @@ void Generator::gen_expr(const NodeExpr& expr) {
                 std::cerr << "Unsupported binary operator\n";
                 terminate(EXIT_FAILURE);
             }
-            gen->push("rax");
+            if (push_result) gen->push("rax");
         }
         void operator()(const NodeExprBinaryAssign& expr_bin_assign) const {
             const std::string& op = expr_bin_assign.op_token.value.value();
             const std::string& var_name = expr_bin_assign.left_token.value.value();
 
+            gen->gen_expr(*expr_bin_assign.right_expr, false);
+
+            gen->write("  mov rbx, rax");
+
             size_t offset_bytes = gen->get_var(var_name);
-            gen->write("  mov rax, QWORD [ rsp + " + std::to_string(offset_bytes) + "]");
-            gen->push("rax");
-
-            gen->gen_expr(*expr_bin_assign.right_expr);
-
-            gen->pop("rbx");
-            gen->pop("rax");
+            gen->write("  mov rax, QWORD [ rsp + " + std::to_string(offset_bytes) + " ]");
 
             if (op == "+=") {
                 gen->write("  add rax, rbx");
@@ -218,7 +215,7 @@ void Generator::gen_expr(const NodeExpr& expr) {
             }
 
             gen->write("  mov QWORD [ rsp + " + std::to_string(offset_bytes) + "], rax");
-            gen->push("rax");
+            //if (push_result) gen->push("rax");
         }
         void operator()(const NodeExprUnaryIncDec& expr_unary_operator) const {
             const std::string& op = expr_unary_operator.op_token.value.value();
@@ -226,7 +223,6 @@ void Generator::gen_expr(const NodeExpr& expr) {
 
             size_t offset_bytes = gen->get_var(var_name);
             gen->write("  mov rax, QWORD [ rsp + " + std::to_string(offset_bytes) + " ]");
-            gen->push("rax");
 
             if (op == "++") {
                 gen->write("  add rax, 1");
@@ -239,7 +235,7 @@ void Generator::gen_expr(const NodeExpr& expr) {
                 terminate(EXIT_FAILURE);
             }
             gen->write("  mov QWORD [ rsp + " + std::to_string(offset_bytes) + "], rax");
-            gen->push("rax");
+            //if (push_result) gen->push("rax");
         };
 
         void operator()(const NodeExprIdent& expr_ident) const {
@@ -248,9 +244,9 @@ void Generator::gen_expr(const NodeExpr& expr) {
                     if (fnc.first == gen->current_func) {
                         for (const auto& var : fnc.second) {
                             if (var.name == expr_ident.ident.value.value()) {
-                                gen->write("  mov rsi, QWORD [rbp + " + std::to_string(var.stack_loc) + "]");
-                                gen->write("  mov rax, rsi");
-                                gen->push("rax");
+                                gen->write("  mov rax, QWORD [rbp + " + std::to_string(var.stack_loc) + "]");
+                                //gen->write("  mov rax, rsi");
+                                if (push_result) gen->push("rax");
                                 return;
                             }
                         }
@@ -260,16 +256,16 @@ void Generator::gen_expr(const NodeExpr& expr) {
             const std::string& var_name = expr_ident.ident.value.value();
             size_t offset_bytes = gen->get_var(var_name);
             //std::cerr << gen->m_vars.at(var_name).stack_loc << "\n";
-            gen->write("  mov rsi, QWORD [rsp + " + std::to_string(offset_bytes) + "]");
-            gen->write("  mov rax, rsi");
-            gen->push("rax");
+            gen->write("  mov rax, QWORD [rsp + " + std::to_string(offset_bytes) + "]");
+            //gen->write("  mov rax, rsi");
+            if (push_result) gen->push("rax");
         }
 
         void operator()(const NodeExprStrLit& expr_str_lit) const {
             std::string label = "str_" + std::to_string(gen->m_string_literals.size());
             gen->m_string_literals.push_back(expr_str_lit.str_lit.value.value());
             gen->write("  lea rax, [ rel " + label + "]");
-            gen->push("rax");
+            if (push_result) gen->push("rax");
         }
 
         void operator()(const NodeExprFloatLit& expr_float_lit) const {
@@ -282,6 +278,44 @@ void Generator::gen_expr(const NodeExpr& expr) {
         void operator()(const NodeExprNone& expr_none) const {}
         void operator()(const NodeExprNoArg& expr_no_arg) const {}
         void operator()(const NodeExprCR& expr_cr) const {}
+
+        void operator()(const NodeExprBoolValue& expr_bool) const {
+            gen->write("  mov rax, " + std::to_string(expr_bool.value));
+            if (push_result) gen->push("rax");
+        }
+
+        void operator()(const NodeExprCallCustomFunc expr_call) const {
+            std::vector<NodeExpr> arg_values = expr_call.arg_values;
+            std::vector<Token> arg_names = expr_call.arg_names;
+
+            if (arg_values.size() != arg_names.size()) {
+                std::cerr << "FATAL ERROR: cannot handle func args\n";
+                terminate(EXIT_FAILURE);
+            }
+
+            int index = 0;
+            int args_index = arg_values.size() + 1;
+            std::string reg = ""; // orde: rdi, rsi, rdx, rcx, r8, r9
+            std::vector<Var> args;
+            for (const auto& arg : arg_values) {
+                switch (index) {
+                    case 0: reg = "rdi"; break;
+                    case 1: reg = "rsi"; break;
+                    case 2: reg = "rdx"; break;
+                    case 3: reg = "rcx"; break;
+                    case 4: reg = "r8"; break;
+                    case 5: reg = "r9"; break;
+                }
+                gen->gen_expr(arg); // Returns in rax
+                gen->pop(reg); // Put it in a register
+                gen->push(reg); // push register
+
+                ++index;
+                --args_index;
+            }
+            gen->write("  call " + expr_call.name.value.value());
+            gen->push("rax");
+        }
 
         void operator()(const NodeExprCall& expr_call) const {
             const std::string& fn = expr_call.name.value.value();
@@ -297,7 +331,7 @@ void Generator::gen_expr(const NodeExpr& expr) {
         }
     };
 
-    ExprVisitor visitor{.gen = this};
+    ExprVisitor visitor{.gen = this, .push_result = push_result};
     std::visit(visitor, expr.var);
 }
 
@@ -342,12 +376,17 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
         }
 
         void operator()(const NodeStmtVar& stmt_var) const {
+            if (gen->current_mode == Mode::Global) {
+                std::cerr << "Variables only can be declared inside of a function\n";
+                terminate(EXIT_FAILURE);
+            }
+
             const std::string& name = stmt_var.ident.value.value();
             gen->gen_expr(stmt_var.expr);
             if (gen->m_vars.contains(name)) {
                 auto& var = gen->m_vars.find(name)->second;
-                gen->m_vars.erase(name);
-                gen->m_vars.insert({name, Var{.stack_loc = gen->m_stack_size - 1, .type = var.type, .name = name}});
+                size_t offset_bytes = gen->get_var(name);
+                gen->write("  mov QWORD [ rsp + " + std::to_string(offset_bytes) + " ], rax");
                 return;
             }
 
@@ -355,6 +394,8 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             switch (stmt_var.type.type) {
                 case TokenType::str_type: var_type = VarType::Str; break;
                 case TokenType::int_type: var_type = VarType::Int; break;
+                case TokenType::_true: var_type = VarType::Int; break;
+                case TokenType::_false: var_type = VarType::Int; break;
                 case TokenType::float_type: var_type = VarType::Float; break;
                 default:
                     std::cerr << "Unknown variable type for: " << name << "\n";
@@ -371,9 +412,8 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             std::string else_label = "else_" + std::to_string(current);
             std::string end_label = "endif" + std::to_string(current);
 
-            gen->gen_expr(stmt_if.condition);
-            gen->pop("rax");
-            gen->write( "  cmp rax, 0\n");
+            gen->gen_expr(stmt_if.condition, false);
+            gen->write( "  cmp rax, 0");
             gen->write("  je " + else_label);
 
             for (const auto& stmt : stmt_if.then_branch) {
@@ -396,6 +436,27 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             }
 
             gen->write(end_label + ":");
+        }
+
+        void operator()(const NodeStmtWhile& stmt_while) const {
+            static int label_counter = 0;
+            int current = ++label_counter;
+
+            std::string start_label = "while_start_" + std::to_string(current);
+            std::string end_label = "while_end_" + std::to_string(current);
+
+            gen->write("  " + start_label + ":");
+
+            gen->gen_expr(stmt_while.condition, false);
+            gen->write("  cmp rax, 0");
+            gen->write("  je " + end_label);
+
+            for (const auto& stmt :  stmt_while.then_branch) {
+                gen->gen_stmt(stmt);
+            }
+
+            gen->write("  jmp " + start_label);
+            gen->write("  " + end_label + ":");
         }
 
         void operator()(const NodeStmtPrint& stmt_print) const {
@@ -441,7 +502,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 else if (std::holds_alternative<NodeExprStrLit>(arg.var)) {
                     print_type = PrintType::Str;
                 }
-                else if (std::holds_alternative<NodeExprIntLit>(arg.var)) print_type = PrintType::Int;
+                else if (std::holds_alternative<NodeExprIntLit>(arg.var) || std::holds_alternative<NodeExprBoolValue>(arg.var)) print_type = PrintType::Int;
                 else if (std::holds_alternative<NodeExprFloatLit>(arg.var)) {
                     print_type = PrintType::Float;
                 }
@@ -476,7 +537,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 
         void operator()(const NodeStmtDefFunc& stmt_def_func) const {
             gen->current_mode = Mode::Function;
-            
+
             std::vector<Var> args;
             int args_index = stmt_def_func.args.size() + 1;
             for (int i = 0; i < stmt_def_func.args.size(); ++i) {
@@ -506,7 +567,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 
         void operator()(const NodeStmtRet& stmt_ret) const {
             NodeExpr value = stmt_ret.value;
-            gen->gen_expr(value);
+            gen->gen_expr(value, false);
 
             gen->write("  mov rsp, rbp");
             gen->write("  pop rbp");
@@ -565,8 +626,8 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 }
 
 [[nodiscard]] std::string Generator::gen_prog() {
-    m_output << "global main\nsection .text\n";
-    m_output << "  extern free\n";
+    m_output << "global " << filename << "\nsection .text\n";
+    //m_output << "  extern free\n";
     m_output << "  extern print\n";
 
     //m_output << "main:\n";
@@ -574,7 +635,8 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
         gen_stmt(stmt);
     }
     m_output << function_buffer.str();
-    m_output << "main:\n";
+    //m_output << "main:\n";
+    m_output << filename << ":\n";
     m_output << main_buffer.str();
 
     m_output << "\nsection .rodata\n";

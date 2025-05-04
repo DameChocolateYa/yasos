@@ -42,6 +42,45 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
         return NodeExpr(NodeExprCall{name, wrapped_args});
 
     }
+    else if (peek().has_value() && peek().value().type == TokenType::get &&
+        peek(1).has_value() && peek(1).value().type == TokenType::ident &&
+        peek(2).has_value() && peek(2).value().type == TokenType::l_arrow) {
+            consume();
+            Token name = consume();
+            consume();
+
+            std::vector<Token> arg_names;
+            std::vector<NodeExpr> arg_values;
+            while (peek().has_value() && peek().value().type != TokenType::r_arrow) {
+                Token ident = consume();
+                NodeExpr expr;
+                consume();
+                if (auto e = parse_expr()) {
+                    expr = e.value();
+                }
+                arg_names.push_back(ident);
+                arg_values.push_back(expr);
+
+                if (peek().has_value() && peek().value().type == TokenType::comma) {
+                    consume();
+                    continue;
+                }
+                else if (peek().has_value() && peek().value().type == TokenType::r_arrow) {
+                    break;
+                }
+                else {
+                    //std::cerr << "Expected ';'\n";
+                    break;
+                }
+            }
+            if (!peek().has_value() || peek().value().type != TokenType::r_arrow) {
+                std::cerr << "Expected '>'\n";
+                terminate(EXIT_FAILURE);
+            }
+            consume(); // <
+
+            return NodeExpr(NodeExprCallCustomFunc{.name = name, .arg_names = arg_names, .arg_values = arg_values});
+        }
     else if (peek().has_value() && peek().value().type == TokenType::int_lit) {
         return NodeExpr(NodeExprIntLit{consume()});
     }
@@ -62,6 +101,14 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
     }
     else if (peek().has_value() && peek().value().type == TokenType::cr) {
         return NodeExpr(NodeExprCR{consume()});
+    }
+    else if (peek().has_value() && peek().value().type == TokenType::_true) {
+        consume();
+        return NodeExpr(NodeExprBoolValue{1});
+    }
+    else if (peek().has_value() && peek().value().type == TokenType::_false) {
+        consume();
+        return NodeExpr(NodeExprBoolValue{0});
     }
     return {};
 }
@@ -149,7 +196,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         if (peek().has_value() && peek().value().type == TokenType::semi) {
             consume();
         } else {
-            std::cerr << "Expected a ';'\n";
+            std::cerr << "Expected ';'\n";
             terminate(EXIT_FAILURE);
         }
 
@@ -199,16 +246,16 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         consume(); // :
         return NodeStmt{NodeStmtDefFunc{.name = name, .args = args}};
     }
-    else if (peek().has_value() && peek().value().type == TokenType::ident && peek(1).has_value() && peek(1).value().type == TokenType::r_arrow) {
+    else if (peek().has_value() && peek().value().type == TokenType::ident && peek(1).has_value() && peek(1).value().type == TokenType::l_arrow) {
         Token name = consume();
-        consume();
+        consume(); // >
 
         std::vector<Token> arg_names;
         std::vector<NodeExpr> arg_values;
-        while (peek().has_value() && peek().value().type != TokenType::semi) {
+        while (peek().has_value() && peek().value().type != TokenType::r_arrow) {
             Token ident = consume();
             NodeExpr expr;
-            consume();
+            consume(); // :
             if (auto e = parse_expr()) {
                 expr = e.value();
             }
@@ -219,12 +266,19 @@ std::optional<NodeStmt> Parser::parse_stmt() {
                 consume();
                 continue;
             }
-            else if (peek().has_value() && peek().value().type == TokenType::semi) {
+            else if (peek().has_value() && peek().value().type == TokenType::r_arrow) {
                 break;
             }
-            else {
-                std::cerr << "Expected ';'\n";
-            }
+        }
+        if (!peek().has_value() || peek().value().type != TokenType::r_arrow) {
+            std::cerr << "Expected '>'\n";
+            terminate(EXIT_FAILURE);
+        }
+        consume(); // <
+
+        if (!peek().has_value() || peek().value().type != TokenType::semi) {
+            std::cerr << "Expected ';'\n";
+            terminate(EXIT_FAILURE);
         }
         consume(); // ;
 
@@ -245,7 +299,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         }
 
         if (!peek().has_value() || peek().value().type != TokenType::semi) {
-            std::cerr << "Expected a ';'\n";
+            std::cerr << "Expected ';'\n";
             terminate(EXIT_FAILURE);
         }
         consume();
@@ -387,7 +441,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         }
 
         if (!peek().has_value() || peek().value().type != TokenType::semi) {
-            std::cerr << "Expected a ';'\n";
+            std::cerr << "Expected ';'\n";
             terminate(EXIT_FAILURE);
         }
         consume();
@@ -416,6 +470,12 @@ std::optional<NodeStmt> Parser::parse_stmt() {
             terminate(EXIT_FAILURE);
         }
         consume(); // )
+
+        if (!peek().has_value() || peek().value().type != TokenType::_then) {
+            std::cerr << "Expected a 'then' after 'if'\n";
+            terminate(EXIT_FAILURE);
+        }
+        consume(); // then
 
         if (!peek().has_value() || peek().value().type != TokenType::l_key) {
             std::cerr << "Expected '{' to start conditional\n";
@@ -486,6 +546,57 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         };
         return NodeStmt{.var=if_stmt};
     }
+    else if (peek().has_value() && peek().value().type == TokenType::_while) {
+        consume(); // while
+        if (!peek().has_value() || peek().value().type != TokenType::open_paren) {
+            std::cerr << "Expected '('\n";
+            terminate(EXIT_FAILURE);
+        }
+        consume(); // (
+
+        auto e = parse_expr();
+        if (!e.has_value()) {
+            std::cerr << "Invalid expression\n";
+            terminate(EXIT_FAILURE);
+        }
+        NodeExpr condition = e.value();
+
+        if (!peek().has_value() || peek().value().type != TokenType::close_paren) {
+            std::cerr << "Expected ')' after while conditional\n";
+            terminate(EXIT_FAILURE);
+        }
+        consume(); // )
+
+        if (!peek().has_value() || peek().value().type != TokenType::_do) {
+            std::cerr << "Expected 'do' after while conditional\n";
+            terminate(EXIT_FAILURE);
+        }
+        consume(); // do
+
+        if (!peek().has_value() || peek().value().type != TokenType::l_key) {
+            std::cerr << "Expected '{' after while conditional\n";
+            terminate(EXIT_FAILURE);
+        }
+        consume(); // {
+
+        std::vector<NodeStmt> then_branch;
+        while (peek().has_value() && peek().value().type != TokenType::r_key) {
+            auto stmt = parse_stmt();
+            if (!stmt.has_value()) {
+                std::cerr << "Invalid statment in 'while' block\n";
+                terminate(EXIT_FAILURE);
+            }
+            then_branch.push_back(stmt.value());
+        }
+
+        if (!peek().has_value() || peek().value().type != TokenType::r_key) {
+            std::cerr << "Expected '}' after while loop\n";
+            terminate(EXIT_FAILURE);
+        }
+        consume(); // {
+
+        return NodeStmt{.var = NodeStmtWhile{.condition = condition, .then_branch = then_branch}};
+    }
 
     else if (peek().has_value() && peek().value().type == TokenType::import &&
                 peek(1).has_value() && peek(1).value().type == TokenType::l_arrow)
@@ -549,7 +660,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
                     std::cerr << "Expected ',' or '}'\n";
                     terminate(EXIT_FAILURE);
                 }
-                
+
             }
             consume();
         }

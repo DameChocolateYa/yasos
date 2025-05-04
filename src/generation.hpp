@@ -48,6 +48,8 @@ struct Var {
     std::string name;
 };
 
+std::string filename;
+
 const NodeProg m_prog;
 std::stringstream m_output;
 size_t m_stack_size = 0;
@@ -95,18 +97,18 @@ void pop_float(const std::string& reg) {
 
 size_t get_var(const std::string& var_name) {
     if (!m_vars.contains(var_name)) {
-        std::cerr << "Error trying to get an undeclared variable\n";
+        std::cerr << "Error trying to get an undeclared variable (" << var_name << ")\n";
         exit(EXIT_FAILURE);
     }
     size_t offset_bytes = (m_stack_size - m_vars.at(var_name).stack_loc - 1) * 8; // this should be the var pos
     return offset_bytes;
 }
 
-    inline explicit Generator(NodeProg root) : m_prog(std::move(root)) {}
+    inline explicit Generator(NodeProg root, std::string filename) : m_prog(std::move(root)), filename(filename) {}
 
     std::vector<std::string> libraries;
 
-    void gen_expr(const NodeExpr& expr);
+    void gen_expr(const NodeExpr& expr, bool push_result=true);
     void gen_stmt(const NodeStmt& stmt);
     [[nodiscard]] std::string gen_prog();
 };

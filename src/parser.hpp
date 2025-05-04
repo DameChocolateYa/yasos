@@ -74,6 +74,21 @@ struct NodeExprCR {
     Token token;
 };
 
+struct CustomFuncArgs {
+    std::string name;
+    ArgType arg_type;
+};
+
+struct NodeExprCallCustomFunc {
+    Token name;
+    std::vector<Token> arg_names;
+    std::vector<NodeExpr> arg_values;
+};
+
+struct NodeExprBoolValue {
+    int value;
+};
+
 struct NodeExpr {
     std::variant<
         NodeExprIntLit,
@@ -86,7 +101,9 @@ struct NodeExpr {
         NodeExprUnaryIncDec,
         NodeExprNoArg,
         NodeExprNone,
-        NodeExprCR
+        NodeExprCR,
+        NodeExprCallCustomFunc,
+        NodeExprBoolValue
     > var;
 
     NodeExpr() = default;
@@ -130,14 +147,14 @@ struct NodeStmtIf {
     std::optional<std::variant<std::shared_ptr<NodeStmtIf>, std::vector<NodeStmt>>> else_branch;
 };
 
+struct NodeStmtWhile {
+    NodeExpr condition;
+    std::vector<NodeStmt> then_branch;
+};
+
 struct NodeStmtPrint {
     Token str_lit;
     std::vector<NodeExpr> args;
-};
-
-struct CustomFuncArgs {
-    std::string name;
-    ArgType arg_type;
 };
 
 struct NodeStmtDefFunc {
@@ -161,7 +178,7 @@ struct NodeStmtCallCustomFunc {
 };
 
 struct NodeStmt {
-    std::variant<NodeStmtVar, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtCallCustomFunc, NodeStmtMkpub> var;
+    std::variant<NodeStmtVar, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtCallCustomFunc, NodeStmtMkpub> var;
 };
 
 struct NodeProg {

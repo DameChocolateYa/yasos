@@ -1,23 +1,9 @@
-IMPORT <STANDARD>
+import <standard>
 
-FUNC = (NUM1: INT, NUM2: INT):
-	LET X: INT = NUM1 ADD NUM2;
-	X MULING 2;
-	INC X;
-	X MULING 2;
-	
-	IF (X GT 15) {
-		"", X, " ES MAYOR QUE 15", CR;
-	}
-	ELSE {
-		"", X, " ES MENOR QUE 15", CR;
-	}
-ENDFN
+start = ():
+    "", true, cr;
+endfn
 
-START = ():
-	FUNC > NUM1: 2, NUM2: 1;
-ENDFN
+start<>;
 
-START >;
-
-END();
+end();

@@ -1,0 +1,7 @@
+import <standard>
+
+sumar = (num1: int, num2: int):
+    ret num1 + num2;
+endfn
+
+mkpub sumar;

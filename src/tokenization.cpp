@@ -99,6 +99,11 @@ std::vector<Token> Tokenizer::tokenize() {
                 buf.clear();
                 continue;
             }
+            else if (buf == "then") {
+                tokens.push_back({.type = TokenType::_then});
+                buf.clear();
+                continue;
+            }
             else if (buf == "and") {
                 tokens.push_back({.type = TokenType::_and, .value="&&"});
                 buf.clear();
@@ -176,6 +181,31 @@ std::vector<Token> Tokenizer::tokenize() {
             }
             else if (buf == "mkpub") {
                 tokens.push_back({.type = TokenType::mkpub});
+                buf.clear();
+                continue;
+            }
+            else if (buf == "get") {
+                tokens.push_back({.type = TokenType::get});
+                buf.clear();
+                continue;
+            }
+            else if (buf == "while") {
+                tokens.push_back({.type = TokenType::_while});
+                buf.clear();
+                continue;
+            }
+            else if (buf == "do") {
+                tokens.push_back({.type = TokenType::_do});
+                buf.clear();
+                continue;
+            }
+            else if (buf == "true") {
+                tokens.push_back({.type = TokenType::_true});
+                buf.clear();
+                continue;
+            }
+            else if (buf == "false") {
+                tokens.push_back({.type = TokenType::_false});
                 buf.clear();
                 continue;
             }

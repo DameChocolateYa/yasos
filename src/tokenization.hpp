@@ -56,7 +56,13 @@ enum class TokenType {
     cr,
     endfn,
     ret,
-    mkpub
+    mkpub,
+    get,
+    _while,
+    _do,
+    _true,
+    _false,
+    _then
 };
 
 struct Token {
