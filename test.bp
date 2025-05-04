@@ -1,7 +1,13 @@
 import <standard>
+use {scani, strcmp};
 
 start = ():
-    "", true, cr;
+    while (true) do {
+        let msg: str = scani();
+        if (strcmp(msg, "stop")) then {
+            stop;
+        }
+    }
 endfn
 
 start<>;

@@ -59,10 +59,12 @@ enum class TokenType {
     mkpub,
     get,
     _while,
+    _stop,
     _do,
     _true,
     _false,
-    _then
+    _then,
+    _unload
 };
 
 struct Token {

@@ -110,6 +110,7 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
         consume();
         return NodeExpr(NodeExprBoolValue{0});
     }
+
     return {};
 }
 
@@ -702,6 +703,58 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         consume();
 
         return NodeStmt{.var = NodeStmtRet{.value = expr}};
+    }
+    else if (peek().has_value() && peek().value().type == TokenType::_unload) {
+        consume(); // unload
+        std::vector<Token> vars;
+
+        if (peek().has_value() && peek().value().type == TokenType::l_key) {
+            consume(); // {
+            while (peek().has_value() && peek().value().type != TokenType::r_key) {
+                if (!peek().has_value() || peek().value().type != TokenType::ident) {
+                    std::cerr << "Expected a variable in list to unload\n";
+                    terminate(EXIT_FAILURE);
+                }
+                vars.push_back(consume());
+
+                if (peek().has_value() && peek().value().type == TokenType::comma) {
+                    consume();
+                    continue;
+                }
+                else break;
+            }
+            if (!peek().has_value() || peek().value().type != TokenType::r_key) {
+                std::cerr << "Expected '}' or ',' after identifier\n";
+                terminate(EXIT_FAILURE);
+            }
+            consume();
+        }
+        else {
+            if (!peek().has_value() || peek().value().type != TokenType::ident) {
+                std::cerr << "Expected variable to unload\n";
+                terminate(EXIT_FAILURE);
+            }
+            vars.push_back(consume());
+        }
+
+        if (!peek().has_value() || peek().value().type != TokenType::semi) {
+            std::cerr << "Expected ';'\n";
+            terminate(EXIT_FAILURE);
+        }
+        consume(); // ;
+
+        return NodeStmt{.var = NodeStmtUnload{.vars = vars}};
+    }
+    else if (peek().has_value() && peek().value().type == TokenType::_stop) {
+        consume(); // stop
+
+        if (!peek().has_value() || peek().value().type != TokenType::semi) {
+            std::cerr << "Expected ';'\n";
+            terminate(EXIT_FAILURE);
+        }
+        consume(); // ;
+
+        return NodeStmt{.var = NodeStmtStop{}};
     }
 
     else {

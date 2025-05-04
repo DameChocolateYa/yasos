@@ -15,6 +15,7 @@ endfn
 start = ():
     "Ponga un num: ";
     let x: int = stoint(scani());
+    x = 3;
     let result: int = get factorial<times: x>;
     "El factorial de ese numero es: ", result, cr;
 endfn

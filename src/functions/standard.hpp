@@ -3,6 +3,8 @@
 #include "../parser.hpp"
 #include "../generation.hpp"
 
+extern int push_result_in_func;
+
 void handle_end(const NodeStmtCall& stmt, Generator* gen);
 void handle_print(const NodeStmtCall& stmt, Generator* gen);
 void handle_println(const NodeStmtCall& stmt, Generator* gen);

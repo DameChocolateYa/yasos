@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
-#include <unordered_map>
 #include <vector>
 #include <optional>
 #include <variant>
@@ -177,8 +176,16 @@ struct NodeStmtCallCustomFunc {
     std::vector<NodeExpr> arg_values;
 };
 
+struct NodeStmtUnload {
+    std::vector<Token> vars;
+};
+
+struct NodeStmtStop {
+    // We dont need anything here...
+};
+
 struct NodeStmt {
-    std::variant<NodeStmtVar, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtCallCustomFunc, NodeStmtMkpub> var;
+    std::variant<NodeStmtVar, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtCallCustomFunc, NodeStmtMkpub, NodeStmtUnload, NodeStmtStop> var;
 };
 
 struct NodeProg {

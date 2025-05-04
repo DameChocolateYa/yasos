@@ -194,6 +194,11 @@ std::vector<Token> Tokenizer::tokenize() {
                 buf.clear();
                 continue;
             }
+            else if (buf == "stop") {
+                tokens.push_back({.type = TokenType::_stop});
+                buf.clear();
+                continue;
+            }
             else if (buf == "do") {
                 tokens.push_back({.type = TokenType::_do});
                 buf.clear();
@@ -206,6 +211,11 @@ std::vector<Token> Tokenizer::tokenize() {
             }
             else if (buf == "false") {
                 tokens.push_back({.type = TokenType::_false});
+                buf.clear();
+                continue;
+            }
+            else if (buf == "unload") {
+                tokens.push_back({.type = TokenType::_unload});
                 buf.clear();
                 continue;
             }

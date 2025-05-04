@@ -4,6 +4,8 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <map>
+#include <stack>
 
 #include "parser.hpp"
 #include "global.hpp"
@@ -53,15 +55,20 @@ std::string filename;
 const NodeProg m_prog;
 std::stringstream m_output;
 size_t m_stack_size = 0;
-std::unordered_map<std::string, Var> m_vars;
+std::map<std::string, Var> m_vars;
 std::unordered_map<std::string, std::vector<Var>> m_fnc_args;
 //std::unordered_map<std::string, std::vector<Var>> m_fnc_ret;
 std::vector<std::string> m_string_literals;
 std::vector<float> m_float_literals;
+std::stack<std::string> stmt_orde;
 
 inline void write(const std::string& output) {
     if (current_mode == Mode::Function) function_buffer << output << "\n";
     else main_buffer << output << "\n";
+}
+
+inline void insert_var(const std::string& name, VarType type) {
+    m_vars.insert({name, Var{.stack_loc = m_stack_size - 1, .type = type, .name = name}});
 }
 
 void push(const std::string& reg) {
@@ -108,7 +115,7 @@ size_t get_var(const std::string& var_name) {
 
     std::vector<std::string> libraries;
 
-    void gen_expr(const NodeExpr& expr, bool push_result=true);
+    void gen_expr(const NodeExpr& expr, bool push_result=true, const std::string& reg = "rax");
     void gen_stmt(const NodeStmt& stmt);
     [[nodiscard]] std::string gen_prog();
 };
