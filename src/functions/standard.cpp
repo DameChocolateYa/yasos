@@ -98,12 +98,12 @@ void handle_println(const NodeStmtCall& stmt, Generator* gen) {
 
 void handle_clsterm(const NodeStmtCall& stmt, Generator* gen) {
     check_func_args(stmt.args, {});
-    gen->write("  call clsterm\n");
+    gen->write("  call clsterm");
 }
 
 void handle_testret(const NodeExprCall& expr, Generator* gen) {
     check_func_args(expr.args, {});
-    gen->write("  call testret\n");
+    gen->write("  call testret");
     if (push_result_in_func) gen->push("rax");
 }
 
@@ -111,8 +111,9 @@ void handle_itostr(const NodeExprCall& expr, Generator* gen) {
     check_func_args(expr.args, {{Integer, Yes}});
 
     gen->gen_expr(*expr.args[0], false, "rdi");
+    gen->write("  mov rdi, rax");
 
-    gen->write( "  call itostr\n");
+    gen->write( "  call itostr");
     if (push_result_in_func) gen->push("rax");
 }
 
@@ -120,15 +121,16 @@ void handle_stoint(const NodeExprCall& expr, Generator* gen) {
     check_func_args(expr.args, {{String, Yes}});
 
     gen->gen_expr(*expr.args[0], false, "rdi");
+    gen->write("  mov rdi, rax");
 
-    gen->write( "  call stoint\n");
+    gen->write( "  call stoint");
     if (push_result_in_func) gen->push("rax");
 }
 
 void handle_scani(const NodeExprCall& expr, Generator* gen) {
     check_func_args(expr.args, {});
 
-    gen->write("  call scani\n");
+    gen->write("  call scani");
     if (push_result_in_func) gen->push("rax");
 }
 
@@ -137,6 +139,6 @@ void handle_strcmp(const NodeExprCall& expr, Generator* gen) {
     gen->gen_expr(*expr.args[0], false, "rsi");
     gen->gen_expr(*expr.args[1], false , "rdi");
 
-    gen->write("  call strcmp\n");
+    gen->write("  call strcmp");
     if (push_result_in_func) gen->push("rax");
 }

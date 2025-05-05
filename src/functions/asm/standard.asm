@@ -139,7 +139,7 @@ clsterm:
     ; rdi = integer to convert
     ; Return in rax a pointer to buffer
 itostr:
-    push rdi              ; We save the original number in the pile
+    mov rax, rdi
 
     mov rdi, 20           ; Save space
     call malloc           ; rax = pointer to buffer
@@ -147,8 +147,6 @@ itostr:
     add rsi, 19           ; We point at the end
     mov byte [rsi], 0     ; Null terminator
     dec rsi
-
-    pop rax               ; We get back the original number we want to convert
 
     mov rcx, 0
     mov rbx, 10
@@ -221,8 +219,6 @@ scani:
 .done:
     mov rax, rsi
     ret
-
-
 
 strcmp:
 .loop:
