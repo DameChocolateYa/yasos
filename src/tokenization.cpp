@@ -199,6 +199,11 @@ std::vector<Token> Tokenizer::tokenize() {
                 buf.clear();
                 continue;
             }
+            else if (buf == "continue") {
+                tokens.push_back({.type = TokenType::_continue});
+                buf.clear();
+                continue;
+            }
             else if (buf == "do") {
                 tokens.push_back({.type = TokenType::_do});
                 buf.clear();

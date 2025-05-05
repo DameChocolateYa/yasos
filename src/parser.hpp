@@ -184,8 +184,12 @@ struct NodeStmtStop {
     // We dont need anything here...
 };
 
+struct NodeStmtContinue {
+    // We dont need anything here...
+};
+
 struct NodeStmt {
-    std::variant<NodeStmtVar, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtCallCustomFunc, NodeStmtMkpub, NodeStmtUnload, NodeStmtStop> var;
+    std::variant<NodeStmtVar, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtCallCustomFunc, NodeStmtMkpub, NodeStmtUnload, NodeStmtStop, NodeStmtContinue> var;
 };
 
 struct NodeProg {

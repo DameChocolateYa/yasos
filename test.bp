@@ -1,18 +1,8 @@
 import <standard>
-use {stoint, scani, clsterm};
 
 start = ():
-	"Msg: ";
-	let msg: str = scani();
-	"Num: ";
-	let x: int = stoint(scani());
-	let i: int = 1;
-
-	clsterm();
-	while (i lte x) do {
-		"", i, ".", msg, cr;
-		inc i;
-	}
+    let x: int = 4;
+    "", x, cr;
 endfn
 
 start<>;

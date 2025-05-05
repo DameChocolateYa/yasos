@@ -449,11 +449,12 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             static int label_counter = 0;
             int current = ++label_counter;
 
-            std::string start_label = "while_start_" + std::to_string(current);
-            std::string end_label = "while_end_" + std::to_string(current);
-            gen->stmt_orde.push(end_label);
+            std::string label = "while_" + std::to_string(current) + "_";
+            std::string start_label = label + "start";
+            std::string end_label = label + "end";
+            gen->stmt_orde.push(label);
 
-            gen->write("" + start_label + ":");
+            gen->write(start_label + ":");
 
             gen->gen_expr(stmt_while.condition, false);
             gen->write("  cmp rax, 0");
@@ -473,13 +474,23 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             gen->write("" + end_label + ":");
         }
 
-        void operator()(const NodeStmtStop& expr_stop) const {
+        void operator()(const NodeStmtStop& stmt_stop) const {
             if (gen->stmt_orde.empty()) {
-                std::cerr << "Cant stop an inexistent statment\n";
+                std::cerr << "Cant stop an inexistent loop\n";
                 terminate(EXIT_FAILURE);
             }
-            gen->write("  jmp " + gen->stmt_orde.top());
+            std::string end_label = gen->stmt_orde.top() + "end";
+            gen->write("  jmp " + end_label);
             gen->stmt_orde.pop();
+        }
+
+        void operator()(const NodeStmtContinue& stmt_continue) const {
+            if (gen->stmt_orde.empty()) {
+                std::cerr << "Cant use 'continue' in an inexistent loop\n";
+                terminate(EXIT_FAILURE);
+            }
+            std::string start_label = gen->stmt_orde.top() + "start";
+            gen->write("  jmp " + start_label);
         }
 
         void operator()(const NodeStmtPrint& stmt_print) const {
@@ -514,7 +525,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                             }
                         }
                     }
-                    else if (!local && !gen->m_vars.contains(name)) {
+                    if (!local && !gen->m_vars.contains(name)) {
                         std::cerr << "Undeclared Indeitifier: " << name << "\n";
                         exit(EXIT_FAILURE);
                     }

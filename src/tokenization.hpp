@@ -60,6 +60,7 @@ enum class TokenType {
     get,
     _while,
     _stop,
+    _continue,
     _do,
     _true,
     _false,

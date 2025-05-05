@@ -756,6 +756,17 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
         return NodeStmt{.var = NodeStmtStop{}};
     }
+    else if (peek().has_value() && peek().value().type == TokenType::_continue) {
+        consume(); // continue
+
+        if (!peek().has_value() || peek().value().type != TokenType::semi) {
+            std::cerr << "Expected ';'\n";
+            terminate(EXIT_FAILURE);
+        }
+        consume(); // ;
+
+        return NodeStmt{.var = NodeStmtContinue{}};
+    }
 
     else {
         return {};
