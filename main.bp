@@ -8,6 +8,7 @@ factorial = (times: int):
         x muling t sub 1;
         dec t;
     }
+    unload t;
 
     ret x;
 endfn

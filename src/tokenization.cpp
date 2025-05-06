@@ -387,6 +387,16 @@ std::vector<Token> Tokenizer::tokenize() {
             tokens.push_back({.type = TokenType::r_key});
             continue;
         }
+        else if (peek().value() == '[') {
+            consume();
+            tokens.push_back({.type = TokenType::l_bracket});
+            continue;
+        }
+        else if (peek().value() == ']') {
+            consume();
+            tokens.push_back({.type = TokenType::r_bracket});
+            continue;
+        }
 
         else if (std::isspace(peek().value())) {
             consume();

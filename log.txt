@@ -1,5 +1,6 @@
 [DEBUG STARTED]
 
+[src/parser.hpp] Added Binary Expression Node: type '<='
 [src/main.cpp] Compiled: test.bp
 [src/main.cpp] Build complete: Executable 'out'
 

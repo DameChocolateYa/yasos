@@ -149,6 +149,8 @@ struct NodeStmtIf {
 struct NodeStmtWhile {
     NodeExpr condition;
     std::vector<NodeStmt> then_branch;
+    std::vector<NodeStmt> bfw; // before while
+    std::vector<NodeStmt> afi; // after iteration
 };
 
 struct NodeStmtPrint {

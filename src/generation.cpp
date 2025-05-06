@@ -454,23 +454,30 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             std::string end_label = label + "end";
             gen->stmt_orde.push(label);
 
+            size_t stack_start = gen->m_vars.size();
+            for (const auto& stmt : stmt_while.bfw) {
+                gen->gen_stmt(stmt);
+            }
+
             gen->write(start_label + ":");
 
             gen->gen_expr(stmt_while.condition, false);
             gen->write("  cmp rax, 0");
             gen->write("  je " + end_label);
 
-            size_t stack_start = gen->m_vars.size();
             for (const auto& stmt :  stmt_while.then_branch) {
                 gen->gen_stmt(stmt);
             }
 
+            for (const auto& stmt : stmt_while.afi) {
+                gen->gen_stmt(stmt);
+            }
+
+            gen->write("  jmp " + start_label);
             while (gen->m_vars.size() > stack_start) {
                 gen->pop("rax");
                 gen->m_vars.erase(--gen->m_vars.end());
             }
-
-            gen->write("  jmp " + start_label);
             gen->write("" + end_label + ":");
         }
 

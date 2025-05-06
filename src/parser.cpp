@@ -549,6 +549,24 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     }
     else if (peek().has_value() && peek().value().type == TokenType::_while) {
         consume(); // while
+        std::vector<NodeStmt> bfw;
+        std::vector<NodeStmt> afi;
+        /*if (peek().has_value() && peek().value().type == TokenType::l_bracket) {
+            consume(); // [
+            while (peek().has_value() && peek().value().type != TokenType::r_bracket) {
+                auto stmt = parse_stmt();
+                if (!stmt.has_value()) {
+                    std::cerr << "Invalid statment in 'while' inline\n";
+                    terminate(EXIT_FAILURE);
+                }
+                bfw.push_back(stmt.value());
+            }
+            if (!peek().has_value() || peek().value().type != TokenType::r_bracket) {
+                std::cerr << "Expected ']'\n";
+                terminate(EXIT_FAILURE);
+            }
+            consume(); // ]
+        }*/
         if (!peek().has_value() || peek().value().type != TokenType::open_paren) {
             std::cerr << "Expected '('\n";
             terminate(EXIT_FAILURE);
@@ -567,6 +585,23 @@ std::optional<NodeStmt> Parser::parse_stmt() {
             terminate(EXIT_FAILURE);
         }
         consume(); // )
+
+        /*if (peek().has_value() && peek().value().type == TokenType::l_bracket) {
+            consume(); // [
+            while (peek().has_value() && peek().value().type != TokenType::r_bracket) {
+                auto stmt = parse_stmt();
+                if (!stmt.has_value()) {
+                    std::cerr << "Invalid statment in 'while' inline\n";
+                    terminate(EXIT_FAILURE);
+                }
+                afi.push_back(stmt.value());
+            }
+            if (!peek().has_value() || peek().value().type != TokenType::r_bracket) {
+                std::cerr << "Expected ']'\n";
+                terminate(EXIT_FAILURE);
+            }
+            consume(); // ]
+        }*/
 
         if (!peek().has_value() || peek().value().type != TokenType::_do) {
             std::cerr << "Expected 'do' after while conditional\n";
@@ -596,7 +631,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         }
         consume(); // {
 
-        return NodeStmt{.var = NodeStmtWhile{.condition = condition, .then_branch = then_branch}};
+        return NodeStmt{.var = NodeStmtWhile{.condition = condition, .then_branch = then_branch, .bfw = bfw, .afi = afi}};
     }
 
     else if (peek().has_value() && peek().value().type == TokenType::import &&

@@ -30,7 +30,9 @@ enum class TokenType {
     r_arrow,
     l_key,
     r_key,
-    plus, // 20
+    l_bracket,
+    r_bracket,
+    plus,
     minus,
     star,
     slash,
