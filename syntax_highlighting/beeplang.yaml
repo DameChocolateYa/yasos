@@ -1,0 +1,27 @@
+filetype: beeplang
+
+detect:
+  filename: "\\.bp$"
+
+rules:
+  - statement: "\\b(endfn|if|gt|gte|lt|lte|eq|neq|else|elif|do|while|then|import|use|mkpub|add|sub|mul|div|adding|subing|muling|diving|inc|dec|end|cr|let|stop|continue|ret|get)\\b"
+  - constant.string:
+        start: "\""
+        end: "\""
+        skip: "\\\\."
+        rules:
+            - constant.specialChar: "\\\\([\"'abfnrtv\\\\]|[0-3]?[0-7]{1,2}|x[0-9A-Fa-f]{1,2}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})"
+  - comment:
+        start: "!"
+        end: "%"
+        rules:
+            - todo: "(TODO|XXX|FIXME|NOTE):?"
+
+  - type: "\\b(int|str|float)\\b"
+
+  - constant.number: "(\\b([1-9][0-9]*|0[0-7]*|0[Xx][0-9A-Fa-f]+|0[Bb][01]+)([Uu][Ll]?[Ll]?|[Ll][Ll]?[Uu]?)?\\b)"
+
+  - constant.bool: "(\\b(true|false|none|TRUE|FALSE)\\b)"
+
+  - symbol.operator: "[-+*/%=<>.:;,~&|^!?]|\\b(offsetof|sizeof)\\b"
+  - symbol.brackets: "[(){}]|\\[|\\]"
