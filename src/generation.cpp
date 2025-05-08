@@ -274,7 +274,10 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
             gen->push_float("xmm0");
         }
 
-        void operator()(const NodeExprNone& expr_none) const {}
+        void operator()(const NodeExprNone& expr_none) const {
+            gen->write("  mov " + reg + ", 0x7FFFFFFF"); // -500 = none value
+            if (push_result) gen->push(reg);
+        }
         void operator()(const NodeExprNoArg& expr_no_arg) const {}
         void operator()(const NodeExprCR& expr_cr) const {}
 
@@ -384,7 +387,11 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             const std::string& name = stmt_var.ident.value.value();
             gen->gen_expr(stmt_var.expr, false);
             if (gen->m_vars.contains(name)) {
-                auto& var = gen->m_vars.find(name)->second;
+                if (!stmt_var.is_mutable) {
+                    std::cerr << "Cannot modify a constant\n";
+                    terminate(EXIT_FAILURE);
+                }
+
                 size_t offset_bytes = gen->get_var(name);
                 gen->write("  mov QWORD [ rsp + " + std::to_string(offset_bytes) + " ], rax");
                 return;

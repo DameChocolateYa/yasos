@@ -19,6 +19,11 @@ std::vector<Token> Tokenizer::tokenize() {
                 buf.clear();
                 continue;
             }
+            else if (buf == "cnst") {
+                tokens.push_back({.type = TokenType::cnst});
+                buf.clear();
+                continue;
+            }
             else if (buf == "str") {
                 tokens.push_back({.type = TokenType::str_type});
                 buf.clear();

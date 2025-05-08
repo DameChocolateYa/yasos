@@ -171,12 +171,13 @@ std::optional<NodeExpr> Parser::parse_expr() {
 }
 
 std::optional<NodeStmt> Parser::parse_stmt() {
-    if (peek().has_value() && peek().value().type == TokenType::var &&
+    if (peek().has_value() && (peek().value().type == TokenType::var || peek().value().type == TokenType::cnst) &&
         peek(1).has_value() && peek(1).value().type == TokenType::ident &&
         peek(2).has_value() && peek(2).value().type == TokenType::dp &&
         peek(3).has_value() &&
         peek(4).has_value() && peek(4).value().type == TokenType::eq)
     {
+        int mut = peek().value().type == TokenType::var ? true : false;
         consume();
         Token ident = consume();
         consume();
@@ -193,6 +194,8 @@ std::optional<NodeStmt> Parser::parse_stmt() {
             terminate(EXIT_FAILURE);
         }
         stmt_var.expr = expr.value();
+
+        stmt_var.is_mutable = mut;
 
         if (peek().has_value() && peek().value().type == TokenType::semi) {
             consume();

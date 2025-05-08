@@ -119,6 +119,7 @@ struct NodeStmtVar {
     Token ident;
     Token type;
     NodeExpr expr;
+    int is_mutable;
 };
 
 struct NodeStmtCall {

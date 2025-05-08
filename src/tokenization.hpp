@@ -17,6 +17,7 @@ enum class TokenType {
     close_paren,
     ident,
     var,
+    cnst,
     eq,
     str_type,
     int_type,
