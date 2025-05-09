@@ -388,8 +388,8 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             gen->gen_expr(stmt_var.expr, false);
             if (gen->m_vars.contains(name)) {
                 if (!stmt_var.is_mutable) {
-                    std::cerr << "Cannot modify a constant\n";
-                    terminate(EXIT_FAILURE);
+                    /*std::cerr << "Cannot modify a constant (" + name + ")\n";
+                    terminate(EXIT_FAILURE);*/
                 }
 
                 size_t offset_bytes = gen->get_var(name);

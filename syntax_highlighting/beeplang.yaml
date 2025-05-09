@@ -4,7 +4,7 @@ detect:
   filename: "\\.bp$"
 
 rules:
-  - statement: "\\b(endfn|if|gt|gte|lt|lte|eq|neq|else|elif|do|while|then|import|use|mkpub|add|sub|mul|div|adding|subing|muling|diving|inc|dec|end|cr|let|cnst|stop|continue|ret|get|unload)\\b"
+  - statement: "\\b(endfn|if|gt|gte|lt|lte|eq|neq|else|elif|do|while|then|import|use|mkpub|add|sub|mul|div|adding|subing|muling|diving|inc|dec|end|cr|ln|let|cnst|stop|continue|ret|get|unload)\\b"
   - constant.string:
         start: "\""
         end: "\""

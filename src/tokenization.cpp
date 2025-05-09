@@ -169,7 +169,7 @@ std::vector<Token> Tokenizer::tokenize() {
                 buf.clear();
                 continue;
             }
-            else if (buf == "cr") {
+            else if (buf == "cr" || buf == "ln") {
                 tokens.push_back({.type = TokenType::cr});
                 buf.clear();
                 continue;
