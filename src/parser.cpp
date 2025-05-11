@@ -2,6 +2,7 @@
 #include "global.hpp"
 #include "tokenization.hpp"
 #include <cstdlib>
+#include <memory>
 
 std::optional<NodeExpr> Parser::parse_primary_expr() {
     if (peek().has_value() && peek().value().type == TokenType::ident &&
@@ -81,6 +82,57 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
 
             return NodeExpr(NodeExprCallCustomFunc{.name = name, .arg_names = arg_names, .arg_values = arg_values});
         }
+    else if (peek().has_value() && peek().value().type == TokenType::open_paren) {
+        consume(); // (
+
+        auto inner_expr = parse_expr();
+        if (!inner_expr.has_value()) {
+            std::cerr << "Invalid expression\n";
+            terminate(EXIT_FAILURE);
+        }
+        if (!peek().has_value() || peek().value().type != TokenType::close_paren) {
+            std::cerr << "Expected ')'\n";
+            terminate(EXIT_FAILURE);
+        }
+        consume(); // )
+        
+        return inner_expr;
+    }
+    else if (peek().has_value() && peek().value().type == TokenType::get &&
+            peek(1).has_value() && peek(1).value().type == TokenType::ident
+            && peek(2).has_value() && peek(2).value().type == TokenType::dot) {
+        consume(); // get
+        Token ident = consume();
+        consume(); // .
+        Token property = consume();
+
+        int is_func = false;
+        std::vector<NodeExprPtr> args;
+        if (peek().has_value() && peek().value().type == TokenType::open_paren) {
+            consume(); // (
+            is_func = true;
+            while (peek().has_value() && peek().value().type != TokenType::close_paren) {
+                auto e = parse_primary_expr();
+                if (!e.has_value()) {
+                    std::cerr << "Invalid expression in property args\n";
+                    terminate(EXIT_FAILURE);
+                }
+                args.push_back(std::make_shared<NodeExpr>(e.value()));
+
+                if (peek().has_value() && peek().value().type == TokenType::comma) {
+                    consume();
+                    continue;
+                }
+            }
+            if (!peek().has_value() || peek().value().type != TokenType::close_paren) {
+                std::cerr << "Expected ')'\n";
+                terminate(EXIT_FAILURE);
+            }
+            consume();
+        }
+
+        return NodeExpr(NodeExprProperty{.ident = ident, .property = property, .is_func = is_func, .args = args});
+    }
     else if (peek().has_value() && peek().value().type == TokenType::int_lit) {
         return NodeExpr(NodeExprIntLit{consume()});
     }
@@ -804,6 +856,46 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         consume(); // ;
 
         return NodeStmt{.var = NodeStmtContinue{}};
+    }
+    else if (peek().has_value() && peek().value().type == TokenType::get &&
+            peek(2).has_value() && peek(2).value().type == TokenType::ident
+            && peek(3).has_value() && peek(2).value().type == TokenType::dot) {
+        consume(); // get
+        Token ident = consume();
+        consume(); // .
+        Token property = consume();
+
+        int is_func = false;
+        std::vector<NodeExprPtr> args;
+        if (peek().has_value() && peek().value().type == TokenType::open_paren) {
+            is_func = true;
+            while (peek().has_value() && peek().value().type != TokenType::close_paren) {
+                auto e = parse_expr();
+                if (!e.has_value()) {
+                    std::cerr << "Invalid Expression\n";
+                    terminate(EXIT_FAILURE);
+                }
+                args.push_back(std::make_shared<NodeExpr>(e.value()));
+
+                if (peek().has_value() && peek().value().type == TokenType::comma) {
+                    consume();
+                    continue;
+                }
+            }
+            if (!peek().has_value() || peek().value().type != TokenType::close_paren) {
+                std::cerr << "Expected ')'\n";
+                terminate(EXIT_FAILURE);
+            }
+            consume();
+        }
+
+        if (!peek().has_value() || peek().value().type != TokenType::semi) {
+            std::cerr << "Expected ';'\n";
+            terminate(EXIT_FAILURE);
+        }
+        consume();
+
+        return NodeStmt{.var = NodeStmtProperty{.ident = ident, .property = property, .is_func = is_func, .args = args}};
     }
 
     else {

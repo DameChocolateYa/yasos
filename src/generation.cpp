@@ -27,6 +27,9 @@ std::unordered_map<std::string, std::function<void(const NodeStmtCall&, Generato
 std::unordered_map<std::string, std::function<void(const NodeExprCall&, Generator*)>> function_ret_handlers;
 std::vector<Func> decfuncs;
 
+std::unordered_map<std::string, std::function<void(const NodeExprProperty&, Generator*, int)>> str_ret_property;
+std::unordered_map<std::string, std::function<void(const NodeStmtProperty&, Generator*, int)>> str_property;
+
 void initialize_func_map() {
     function_handlers["end"] = &handle_end;
     function_handlers["print"] = &handle_print;
@@ -40,6 +43,16 @@ void initialize_func_ret_map() {
     function_ret_handlers["stoint"] = &handle_stoint;
     function_ret_handlers["scani"] = &handle_scani;
     function_ret_handlers["strcmp"] = &handle_strcmp;
+    function_ret_handlers["isnum"] = &handle_isnum;
+}
+
+void initialize_str_property_map() {
+    //
+}
+
+void initialize_str_ret_property_map() {
+    str_ret_property["test"] = &handle_test_str;
+    str_ret_property["strcat"] = &handle_strcat;
 }
 
 static bool is_int(const NodeExpr& expr) { return std::holds_alternative<NodeExprIntLit>(expr.var); }
@@ -113,12 +126,32 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
         void operator()(const NodeExprBinary& expr_bin) const {
             const std::string& op = expr_bin.op_token.value.value();
 
-            gen->gen_expr(*expr_bin.rhs, false);
-            gen->write("  mov rbx, rax");
+            gen->gen_expr(*expr_bin.rhs, false, "rbx");
             gen->gen_expr(*expr_bin.lhs, false);
 
             if (op == "+") {
-                gen->write( "  add rax, rbx");
+                VarType var_type = VarType::Int;
+                if (std::holds_alternative<NodeExprStrLit>(expr_bin.lhs->var)) {
+                    var_type = VarType::Str;
+                } 
+                else if (std::holds_alternative<NodeExprIntLit>(expr_bin.lhs->var)) {
+                    var_type = VarType::Int;
+                }
+                else if (std::holds_alternative<NodeExprIdent>(expr_bin.lhs->var)) {
+                    const std::string& ident = std::get<NodeExprIdent>(expr_bin.lhs->var).ident.value.value();
+                    if (!gen->m_vars.contains(ident)) {
+                        std::cerr << "Undeclared variable\n";
+                        terminate(EXIT_FAILURE);
+                    }
+                    var_type = gen->m_vars.at(ident).type;
+                }
+
+                if (var_type == VarType::Int) gen->write( "  add rax, rbx");
+                else {
+                    gen->write("  mov rdi, rax");
+                    gen->write("  mov rsi, rbx");
+                    gen->call("strcat"); 
+                }
             }
             else if (op == "-") {
                 gen->write("  sub rax, rbx");
@@ -196,7 +229,14 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
             gen->write("  mov rax, QWORD [ rsp + " + std::to_string(offset_bytes) + " ]");
 
             if (op == "+=") {
-                gen->write("  add rax, rbx");
+                VarType var_type = gen->m_vars.at(var_name).type;
+                
+                if (var_type == VarType::Int) gen->write("  add rax, rbx");
+                else {
+                    gen->write("  mov rdi, rax");
+                    gen->write("  mov rsi, rbx");
+                    gen->call("strcat");  
+                }
             }
             else if (op == "-=") {
                 gen->write("  sub rax, rbx");
@@ -330,6 +370,31 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
             else {
                 std::cerr << "Error, unknown func\n";
                 exit(EXIT_FAILURE);
+            }
+        }
+
+        void operator()(const NodeExprProperty& stmt_property) const {
+            const std::string& ident = stmt_property.ident.value.value();
+            const std::string& property = stmt_property.property.value.value();
+
+            if (!gen->m_vars.contains(ident)) {
+                std::cerr << "Unknown variable\n";
+                terminate(EXIT_FAILURE);
+            }
+            VarType var_type = gen->m_vars.at(ident).type;
+
+            switch (var_type) {
+                case VarType::Str: 
+                    auto it = str_ret_property.find(property);
+                    if (it != str_ret_property.end()) {
+                        push_result_in_func = push_result;
+                        it->second(stmt_property, gen, stmt_property.is_func);
+                    }
+                    else {
+                        std::cerr << "Error, unknown func (" << property << ")\n";
+                        exit(EXIT_FAILURE);
+                    }
+                    break;
             }
         }
     };
@@ -514,7 +579,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             gen->m_string_literals.push_back(stmt_print.str_lit.value.value());
             gen->write("  lea rsi, [ rel " + label + "]");
             //gen->push("rsi");
-            gen->write("  call print\n");
+            gen->call("print");
             //gen->pop("rsi");
 
             if (stmt_print.args.empty()) return;
@@ -577,7 +642,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                     gen->write("  mov rdi, 2");
                     gen->write("  mov rdx, 3");
                 }
-                gen->write("  call print");
+                gen->call("print");
             }
         }
 
@@ -681,6 +746,30 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             else {
                 std::cerr << "Error, unknown func\n";
                 exit(EXIT_FAILURE);
+            }
+        }
+
+        void operator()(const NodeStmtProperty& stmt_property) const {
+            const std::string& ident = stmt_property.ident.value.value();
+            const std::string& property = stmt_property.property.value.value();
+
+            if (!gen->m_vars.contains(ident)) {
+                std::cerr << "Unknown variable\n";
+                terminate(EXIT_FAILURE);
+            }
+            VarType var_type = gen->m_vars.at(ident).type;
+
+            switch (var_type) {
+                case VarType::Str: 
+                    auto it = str_property.find(property);
+                    if (it != str_property.end()) {
+                        it->second(stmt_property, gen, stmt_property.is_func);
+                    }
+                    else {
+                        std::cerr << "Error, unknown func\n";
+                        exit(EXIT_FAILURE);
+                    }
+                    break;
             }
         }
     };

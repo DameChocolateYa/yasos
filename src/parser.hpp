@@ -88,6 +88,14 @@ struct NodeExprBoolValue {
     int value;
 };
 
+struct NodeExprProperty {
+    Token ident;
+    Token property;
+
+    int is_func = false;
+    std::vector<NodeExprPtr> args; // optional
+};
+
 struct NodeExpr {
     std::variant<
         NodeExprIntLit,
@@ -102,7 +110,8 @@ struct NodeExpr {
         NodeExprNone,
         NodeExprCR,
         NodeExprCallCustomFunc,
-        NodeExprBoolValue
+        NodeExprBoolValue,
+        NodeExprProperty
     > var;
 
     NodeExpr() = default;
@@ -191,8 +200,16 @@ struct NodeStmtContinue {
     // We dont need anything here...
 };
 
+struct NodeStmtProperty {
+    Token ident;
+    Token property;
+    
+    int is_func = false;
+    std::vector<NodeExprPtr> args; // optional
+};
+
 struct NodeStmt {
-    std::variant<NodeStmtVar, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtCallCustomFunc, NodeStmtMkpub, NodeStmtUnload, NodeStmtStop, NodeStmtContinue> var;
+    std::variant<NodeStmtVar, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtCallCustomFunc, NodeStmtMkpub, NodeStmtUnload, NodeStmtStop, NodeStmtContinue, NodeStmtProperty> var;
 };
 
 struct NodeProg {

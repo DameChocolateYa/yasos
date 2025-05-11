@@ -305,6 +305,11 @@ std::vector<Token> Tokenizer::tokenize() {
             tokens.push_back({.type = TokenType::comma});
             continue;
         }
+        else if (peek().value() == '.') {
+            consume();
+            tokens.push_back({.type = TokenType::dot});
+            continue;
+        }
         else if (peek().value() == '+' && peek(1).has_value() && peek(1).value() == '+') {
             consume(); consume();
             tokens.push_back({.type = TokenType::plusplus, .value="++"});

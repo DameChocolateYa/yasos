@@ -22,7 +22,16 @@ namespace fs = std::filesystem;
 
 std::ofstream file;
 
+int debug_mode_enabled = false;
+std::string func_dir = "/usr/lib/beeplib";
+
 int main(int argc, char** argv) {
+//#define __DEBUG__
+#ifdef __DEBUG__
+    debug_mode_enabled = true;
+    func_dir = "src/functions";
+#endif
+
     bool keep_asm = false;
     std::vector<std::string> input_files;
 
@@ -43,6 +52,8 @@ int main(int argc, char** argv) {
 
     initialize_func_map();
     initialize_func_ret_map();
+    initialize_str_property_map();
+    initialize_str_ret_property_map();
 
     std::vector<std::string> object_files;
     std::vector<std::string> all_libraries;
@@ -115,13 +126,14 @@ int main(int argc, char** argv) {
     for (const auto& obj : object_files) {
         link_command += obj + " ";
     }
-
-    const std::string func_dir = "src/functions/asm/";
+    
+    link_command += "-L" + func_dir + " ";
     for (const auto& lib : all_libraries) {
-        link_command += func_dir + lib + ".o ";
+        link_command += "-l" + lib + " ";
     }
 
-    link_command += "-no-pie";
+    //link_command += "-fPIC";
+    link_command += "-Wl,-rpath=" + func_dir;
 
     if (system(link_command.c_str()) != 0) {
         std::cerr << "Linking failed.\n";

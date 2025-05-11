@@ -71,19 +71,19 @@ void print(const NodeStmtCall& stmt, Generator* gen, int println = false) {
             gen->write("  mov rdx, 0");
         }
         else if (print_type == PrintType::CR) {
-            gen->write("  mov rdi, 2\n");
-            gen->write("  mov rdx, 3\n");
+            gen->write("  mov rdi, 2");
+            gen->write("  mov rdx, 3");
         }
         else {
             gen->pop_float("xmm0");
-            gen->write("  mov rdi, 1\n");
-            gen->write("  mov rdx, 0\n");
+            gen->write("  mov rdi, 1");
+            gen->write("  mov rdx, 0");
         }
-        gen->write("  call print\n");
+        gen->call("print");   
     }
     if (println) {
-        gen->write("  mov rdx, 3\n"); // Only an emty line for println
-        gen->write("  call print\n");
+        gen->write("  mov rdx, 3"); // Only an emty line for println
+        gen->call("print");
     }
 }
 
@@ -98,12 +98,12 @@ void handle_println(const NodeStmtCall& stmt, Generator* gen) {
 
 void handle_clsterm(const NodeStmtCall& stmt, Generator* gen) {
     check_func_args(stmt.args, {});
-    gen->write("  call clsterm");
+    gen->call("clsterm");
 }
 
 void handle_testret(const NodeExprCall& expr, Generator* gen) {
     check_func_args(expr.args, {});
-    gen->write("  call testret");
+    gen->call("testret");
     if (push_result_in_func) gen->push("rax");
 }
 
@@ -113,7 +113,7 @@ void handle_itostr(const NodeExprCall& expr, Generator* gen) {
     gen->gen_expr(*expr.args[0], false, "rdi");
     gen->write("  mov rdi, rax");
 
-    gen->write( "  call itostr");
+    gen->call("itostr");
     if (push_result_in_func) gen->push("rax");
 }
 
@@ -121,24 +121,50 @@ void handle_stoint(const NodeExprCall& expr, Generator* gen) {
     check_func_args(expr.args, {{String, Yes}});
 
     gen->gen_expr(*expr.args[0], false, "rdi");
-    gen->write("  mov rdi, rax");
 
-    gen->write( "  call stoint");
+    gen->call("stoint");
     if (push_result_in_func) gen->push("rax");
 }
 
 void handle_scani(const NodeExprCall& expr, Generator* gen) {
     check_func_args(expr.args, {});
 
-    gen->write("  call scani");
+    gen->call("scani");
     if (push_result_in_func) gen->push("rax");
 }
 
 void handle_strcmp(const NodeExprCall& expr, Generator* gen) {
     check_func_args(expr.args, {{String, Yes}, {String, Yes}});
-    gen->gen_expr(*expr.args[0], false, "rsi");
-    gen->gen_expr(*expr.args[1], false , "rdi");
+    gen->gen_expr(*expr.args[0], false, "rdi");
+    gen->gen_expr(*expr.args[1], false , "rsi");
 
-    gen->write("  call strcmp");
+    gen->call("strcmp");
+    if (push_result_in_func) gen->push("rax");
+}
+
+void handle_isnum(const NodeExprCall& expr, Generator* gen) {
+    check_func_args(expr.args, {{VariableValue, Yes}});
+
+    gen->gen_expr(*expr.args[0], false, "rdi");
+    gen->call("isnum");
+
+    if (push_result_in_func) gen->push("rax");
+}
+
+// String properties
+
+void handle_test_str(const NodeExprProperty& property, Generator* gen, int property_is_func) {
+    gen->call("testret");
+    if (push_result_in_func) gen->push("rax");
+}
+
+void handle_strcat(const NodeExprProperty& property, Generator* gen, int property_is_func) {
+    check_func_args(property.args, {{String, Yes}});
+
+    gen->write("  mov rdi, QWORD [rsp + " + std::to_string(gen->get_var(property.ident.value.value())) + "]");
+    gen->gen_expr(*property.args[0], false, "rsi");
+
+    gen->call("strcat");
+
     if (push_result_in_func) gen->push("rax");
 }

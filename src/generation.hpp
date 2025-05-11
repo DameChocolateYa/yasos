@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <sstream>
 #include <string>
+#include <unistd.h>
 #include <unordered_map>
 #include <map>
 #include <stack>
@@ -17,6 +18,8 @@ static std::string escape_string(const std::string& raw);
 
 void initialize_func_map();
 void initialize_func_ret_map();
+void initialize_str_property_map();
+void initialize_str_ret_property_map();
 
 enum ArgRequired {Yes, No};
 
@@ -93,8 +96,8 @@ void pop(const std::string& reg) {
 }
 
 void pop_float(const std::string& reg) {
-    write( "   movsd " + reg + ", [rsp]");
-    write("   add rsp, 8");
+    write("  movsd " + reg + ", [rsp]");
+    write("  add rsp, 8");
     if (m_stack_size == 0) {
         std::cerr << "Stack underflow!\n";
         exit(EXIT_FAILURE);
@@ -109,6 +112,10 @@ size_t get_var(const std::string& var_name) {
     }
     size_t offset_bytes = (m_stack_size - m_vars.at(var_name).stack_loc - 1) * 8; // this should be the var pos
     return offset_bytes;
+}
+
+inline void call(const std::string& name) {
+    write("  call [rel " + name + " wrt ..got]");
 }
 
     inline explicit Generator(NodeProg root, std::string filename) : m_prog(std::move(root)), filename(filename) {}

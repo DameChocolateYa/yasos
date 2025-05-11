@@ -23,8 +23,10 @@ enum ArgType {
 };
 
 extern std::ofstream file;
+extern int debug_mode_enabled;
 
 inline void init_debug() {
+    if (!debug_mode_enabled) return;
     file = std::ofstream(__LOG_FILE__);
     if (!file.is_open()) {
         std::cerr << "Error trying to open debug file\n";
@@ -34,11 +36,14 @@ inline void init_debug() {
 }
 
 inline void LOG(const std::string& source_file, const std::string& msg) {
+    if (!debug_mode_enabled) return;
     file << "[" << source_file << "] " << msg << "\n";
 }
 
 inline void terminate(int status) {
-    file << "\n[DEBUG FINISHED | " << (status == 0 ? "SUCCESS" : "FAILURE") << "]\n";
-    file.close();
+    if (debug_mode_enabled) {
+        file << "\n[DEBUG FINISHED | " << (status == 0 ? "SUCCESS" : "FAILURE") << "]\n";
+        file.close();
+    }
     exit(status);
 }

@@ -68,7 +68,8 @@ enum class TokenType {
     _true,
     _false,
     _then,
-    _unload
+    _unload,
+    dot
 };
 
 struct Token {

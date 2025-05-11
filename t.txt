@@ -1,0 +1,3 @@
+nasm -f elf64 -o src/functions/asm/standard.o src/functions/asm/standard.asm
+gcc -fPIC -shared -o src/functions/libstandard.so src/functions/asm/standard.o
+sudo cp src/functions/libstandard.so /usr/lib/beeplib/

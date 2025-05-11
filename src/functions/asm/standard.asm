@@ -1,3 +1,5 @@
+default rel
+
 section .data
     fmt_int   db "%d", 0         ; Format for int
     fmt_float db "%f", 0         ; Format for float/double
@@ -21,19 +23,23 @@ section .bss
     scani_buffer resb 100
 
 section .text
-    global print
-    global clsterm
-    global itostr
-    global stoint
-    global scani
-    global strcmp
-    global strdup
-    global waitk
+    global print:function
+    global clsterm:function
+    global itostr:function
+    global stoint:function
+    global scani:function
+    global strcmp:function
+    global strdup:function
+    global waitk:function
+    global isnum:function
+    global testret:function
+
+    global strcat:function
 
     extern printf
     extern sprintf
-    extern testret
     extern malloc
+    extern realloc
     extern strlen
     extern memcpy
 
@@ -75,64 +81,64 @@ print:
     ret
 
 .int:
-    mov rdi, fmt_int
+    lea rdi, [rel fmt_int]
     xor rax, rax
-    call printf
+    call [rel printf wrt ..got]
     extern fflush
     mov rdi, 0
-    call fflush
+    call [rel fflush wrt ..got]
     ret
 
 .float:
     movq xmm0, [rsi]
-    mov rdi, fmt_float
+    lea rdi, [rel fmt_float]
     xor rax, rax
-    call printf
+    call [rel printf wrt ..got]
     ret
 
 .str:
-    mov rdi, fmt_str
+    lea rdi, [rel fmt_str]
     xor rax, rax
-    call printf
+    call [rel printf wrt ..got]
     extern fflush
     mov rdi, 0
-    call fflush
+    call [rel fflush wrt ..got]
     ret
 
 .int_ln:
-    mov rdi, fmt_int_ln
+    lea rdi, [rel fmt_int_ln]
     xor rax, rax
-    call printf
+    call [rel printf wrt ..got]
     ret
 
 .float_ln:
     movq xmm0, [rsi]
-    mov rdi, fmt_float_ln
+    lea rdi, [rel fmt_float_ln]
     xor rax, rax
-    call printf
+    call [rel printf wrt ..got]
     ret
 
 .str_ln:
-    mov rdi, fmt_str_ln
+    lea rdi, [rel fmt_str_ln]
     xor rax, rax
-    call printf
+    call [rel printf wrt ..got]
     extern fflush
     mov rdi, 0
-    call fflush
+    call [rel fflush wrt ..got]
     ret
 
 .ln:
-    mov rdi, fmt_str_ln
+    lea rdi, [rel fmt_str_ln]
     xor rax, rax
-    mov rsi, null_str
-    call printf
+    lea rsi, [rel null_str]
+    call [rel printf wrt ..got]
     ret
 
 
 clsterm:
     mov rax, 1
     mov rdi, 1
-    mov rsi, clear_ansi
+    lea rsi, [rel clear_ansi]
     mov rdx, clear_len
     syscall
 
@@ -141,11 +147,11 @@ clsterm:
 itostr:
     mov rax, rdi
 
-    mov rdi, 20           ; Save space
-    call malloc           ; rax = pointer to buffer
-    mov rsi, rax          ; rsi = pointer at the end of the buffer
-    add rsi, 19           ; We point at the end
-    mov byte [rsi], 0     ; Null terminator
+    mov rdi, 20                 ; Save space
+    call [rel malloc wrt ..got] ; rax = pointer to buffer
+    mov rsi, rax                ; rsi = pointer at the end of the buffer
+    add rsi, 19                 ; We point at the end
+    mov byte [rsi], 0           ; Null terminator
     dec rsi
 
     mov rcx, 0
@@ -194,12 +200,12 @@ stoint:
     ret
 
 testret:
-    lea rax, [test_msg]
+    lea rax, [rel test_msg]
     ret
 
 scani:
     mov rdi, 20
-    call malloc
+    call [rel malloc wrt ..got]
     push rdi
 
     mov rax, 0
@@ -244,18 +250,18 @@ strdup: ; Obsolete function!
     ; Input: rdi = pointer to original string
     ; Output: rax = pointer to duplicated string
 
-    push rdi             ; Save the original pointer
-    call strlen          ; strlen(rdi) → rax
-    inc rax              ; Include null terminator
-    mov rdi, rax         ; malloc(len)
-    call malloc          ; rax = new pointer
+    push rdi                    ; Save the original pointer
+    call [rel strlen wrt ..got] ; strlen(rdi) → rax
+    inc rax                     ; Include null terminator
+    mov rdi, rax                ; malloc(len)
+    call [rel malloc wrt ..got] ; rax = new pointer
 
-    pop rsi              ; rsi = original pointer
-    mov rdi, rax         ; rdi = destination
-    mov rdx, rax         ; Save return in rax (destination)
-    call memcpy          ; Copy the content
+    pop rsi                     ; rsi = original pointer
+    mov rdi, rax                ; rdi = destination
+    mov rdx, rax                ; Save return in rax (destination)
+    call [rel memcpy wrt ..got] ; Copy the content
 
-    mov rax, rdi         ; Return duplicated pointer
+    mov rax, rdi                ; Return duplicated pointer
     ret
 
 waitk:
@@ -265,3 +271,74 @@ waitk:
     lea rsi, [waitk_buffer]
     mov rdx, 1
     syscall
+
+isnum:
+    mov al, byte [rdi]
+    test al, al ; check if rdi is not empty
+    je .no
+
+.loop:
+    mov al, byte [rdi]
+    test al, al ; Are we at the end of the content?
+    je .done
+
+    cmp al, '0'
+    jl .no ; If it is minor than 0x30, it is not a digit
+
+    cmp al, '9'
+    jg .no ; If it is greater than 0x39, it is not a digit
+
+    inc rdi
+    jmp .loop
+
+.done:
+    mov rax, 1 ; If it is between 0x30 and 0x39, it is a num
+    ret
+.no:
+    xor rax, rax
+    ret
+
+; ------------------------------------------
+; void strcat(char* s1, char* s2)
+; Input:
+; rdi = s1
+; rsi = s2
+; ------------------------------------------
+
+strcat:
+    push rsi
+    push rdi
+
+    mov rdi, 180
+    call [rel malloc wrt ..got] ; Save space on a dinamic buffer
+    mov rbx, rax ; the buffer pointer
+
+    pop rdi
+    pop rsi
+
+    xor rcx, rcx ; clean counter for str1
+
+.copy_str1:
+    mov al, [rdi + rcx] ; load current byte
+    cmp al, 0
+    je .done_str1 ; if it is null terminator, end the copy of str1
+
+    mov [rbx + rcx], al ; save in buffer the byte
+    inc rcx
+
+    jmp .copy_str1
+
+.done_str1:
+    xor rdx, rdx ; clean counter for str2
+
+.copy_str2:
+    mov al, [rsi + rdx] ; load current byte
+    mov [rbx + rcx], al ; save in buffer the byte
+    inc rcx
+    inc rdx
+
+    cmp al, 0 ; if it is null terminator, end process
+    jne .copy_str2
+
+    mov rax, rbx ; return result in rax
+    ret

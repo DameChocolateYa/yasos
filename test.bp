@@ -1,0 +1,12 @@
+import <standard>
+use {strcat, scani};
+
+start = ():
+    let string: int = 3 + 4; 
+
+    "", string, ln;
+endfn
+
+start<>;
+
+end();
