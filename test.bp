@@ -1,10 +1,24 @@
 import <standard>
-use {strcat, scani};
+use {len, scani};
 
 start = ():
-    let string: int = 3 + 4; 
+	"Ponga algo: ";
+	let msg: str = scani();
+	let size: int = get msg.len;
 
-    "", string, ln;
+	"El tamaño es: ", size, ln;
+
+    if (size lte 10) then {
+        "Es corto", ln;
+    }
+    if (size gt 10) then {
+        if (size lte 20) then {
+            "Es mediano", ln;
+        }
+    }
+    if (size gt 20) then {
+        "Es largo", ln;
+    }
 endfn
 
 start<>;

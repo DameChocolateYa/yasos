@@ -16,6 +16,8 @@ std::unordered_map<std::string, VarType> known_function_types = {
     {"stoint", VarType::Int},
     {"scani", VarType::Str},
     {"strcmp", VarType::Int},
+    {"cat", VarType::Str},
+    {"len", VarType::Int}
 };
 
 struct Func {
@@ -52,7 +54,8 @@ void initialize_str_property_map() {
 
 void initialize_str_ret_property_map() {
     str_ret_property["test"] = &handle_test_str;
-    str_ret_property["strcat"] = &handle_strcat;
+    str_ret_property["cat"] = &handle_strcat;
+    str_ret_property["len"] = &handle_strlen;
 }
 
 static bool is_int(const NodeExpr& expr) { return std::holds_alternative<NodeExprIntLit>(expr.var); }
@@ -60,6 +63,56 @@ static bool is_str(const NodeExpr& expr) { return std::holds_alternative<NodeExp
 static bool is_float(const NodeExpr& expr) { return std::holds_alternative<NodeExprFloatLit>(expr.var); }
 static bool is_ident(const NodeExpr& expr) { return std::holds_alternative<NodeExprIdent>(expr.var); }
 static bool is_call(const NodeExpr& expr) { return std::holds_alternative<NodeExprCall>(expr.var); }
+
+static VarType check_value(const NodeExpr& expr, Generator* gen) {
+    if (std::holds_alternative<NodeExprIntLit>(expr.var)) return VarType::Int;
+    else if (std::holds_alternative<NodeExprStrLit>(expr.var)) return VarType::Str;
+    else if (std::holds_alternative<NodeExprCall>(expr.var)) {
+        NodeExprCall expr_call = std::get<NodeExprCall>(expr.var);
+        const std::string& name = expr_call.name.value.value();
+        if (!known_function_types.contains(name)) {
+            return VarType::Void;
+        }
+        for (const auto& fnc : known_function_types) {
+            if (fnc.first == name) return fnc.second;
+        }
+    }
+    else if (std::holds_alternative<NodeExprCallCustomFunc>(expr.var)) {
+        NodeExprCallCustomFunc expr_call = std::get<NodeExprCallCustomFunc>(expr.var);
+        const std::string& name = expr_call.name.value.value();
+        if (!gen->m_fnc_rets.contains(name)) {
+            return VarType::Void;
+        }
+        return gen->m_fnc_rets.at(name);
+    }
+    else if (std::holds_alternative<NodeExprIdent>(expr.var)) {
+        NodeExprIdent ident = std::get<NodeExprIdent>(expr.var);
+        const std::string& name = ident.ident.value.value();
+        if (gen->m_vars.contains(name)) {
+            return gen->m_vars.at(name).type;
+        }
+        else {
+            return VarType::Void;
+        }
+    }
+    else if (std::holds_alternative<NodeExprProperty>(expr.var)) {
+        NodeExprProperty expr_property = std::get<NodeExprProperty>(expr.var);
+        const std::string& name = expr_property.property.value.value();
+        if (!known_function_types.contains(name)) {
+            return VarType::Void;
+        }
+        for (const auto& fnc : known_function_types) {
+            if (fnc.first == name) return fnc.second;
+        }
+    }
+    else if (std::holds_alternative<NodeExprBinaryAssign>(expr.var)) {
+        NodeExprBinaryAssign expr_bin = std::get<NodeExprBinaryAssign>(expr.var);
+        return gen->m_vars.at(expr_bin.left_token.value.value()).type;
+    }
+
+    //TODO: properties
+    return VarType::Void;
+}
 
 void check_func_args(const std::vector<NodeExprPtr>& args, const std::unordered_multimap<ArgType, ArgRequired>& required_args) {
     int max_args = 0;
@@ -230,12 +283,12 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
 
             if (op == "+=") {
                 VarType var_type = gen->m_vars.at(var_name).type;
-                
+
                 if (var_type == VarType::Int) gen->write("  add rax, rbx");
                 else {
                     gen->write("  mov rdi, rax");
                     gen->write("  mov rsi, rbx");
-                    gen->call("strcat");  
+                    gen->call("strcat");
                 }
             }
             else if (op == "-=") {
@@ -336,8 +389,8 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
             }
 
             int index = 0;
-            int args_index = arg_values.size() + 1;
-            std::string current_reg = ""; // orde: rdi, rsi, rdx, rcx, r8, r9
+            size_t args_index = arg_values.size() + 1;
+            std::string current_reg; // order: rdi, rsi, rdx, rcx, r8, r9
             std::vector<Var> args;
             for (const auto& arg : arg_values) {
                 switch (index) {
@@ -347,6 +400,7 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
                     case 3: current_reg = "rcx"; break;
                     case 4: current_reg = "r8"; break;
                     case 5: current_reg = "r9"; break;
+                    default: break;
                 }
                 gen->gen_expr(arg); // Returns in rax
                 gen->pop(current_reg); // Put it in a register
@@ -378,13 +432,13 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
             const std::string& property = stmt_property.property.value.value();
 
             if (!gen->m_vars.contains(ident)) {
-                std::cerr << "Unknown variable\n";
+                std::cerr << "Unknown variable: " << ident << "\n";
                 terminate(EXIT_FAILURE);
             }
             VarType var_type = gen->m_vars.at(ident).type;
 
             switch (var_type) {
-                case VarType::Str: 
+                case VarType::Str:
                     auto it = str_ret_property.find(property);
                     if (it != str_ret_property.end()) {
                         push_result_in_func = push_result;
@@ -451,31 +505,31 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 
             const std::string& name = stmt_var.ident.value.value();
             gen->gen_expr(stmt_var.expr, false);
+            VarType value_type = check_value(stmt_var.expr, gen);
+
             if (gen->m_vars.contains(name)) {
                 if (!stmt_var.is_mutable) {
                     /*std::cerr << "Cannot modify a constant (" + name + ")\n";
                     terminate(EXIT_FAILURE);*/
+                }
+                if (gen->m_vars.at(name).type != value_type) {
+                    //std::cerr << static_cast<int>(value_type) << "\n";
+                    std::cerr << "Expected same type in reassigment\n";
+                    terminate(EXIT_FAILURE);
                 }
 
                 size_t offset_bytes = gen->get_var(name);
                 gen->write("  mov QWORD [ rsp + " + std::to_string(offset_bytes) + " ], rax");
                 return;
             }
-
-            VarType var_type;
-            switch (stmt_var.type.type) {
-                case TokenType::str_type: var_type = VarType::Str; break;
-                case TokenType::int_type: var_type = VarType::Int; break;
-                case TokenType::_true: var_type = VarType::Int; break;
-                case TokenType::_false: var_type = VarType::Int; break;
-                case TokenType::float_type: var_type = VarType::Float; break;
-                default:
-                    std::cerr << "Unknown variable type for: " << name << "\n";
-                    terminate(EXIT_FAILURE);
+            if (value_type != stmt_var.type) {
+                std::cerr << "Tried to assign a value of diferent type\n";
+                terminate(EXIT_FAILURE);
             }
+
             gen->push("rax");
             //gen->m_vars.insert({name, Var{.stack_loc = gen->m_stack_size - 1, .type = var_type, .name = name}});
-            gen->insert_var(name, var_type);
+            gen->insert_var(name, value_type);
         }
 
         void operator()(const NodeStmtIf& stmt_if) const {
@@ -495,7 +549,9 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             }
             while (gen->m_vars.size() > stack_start) {
                 gen->pop("rax");
-                gen->m_vars.erase(--gen->m_vars.end());
+                std::string name = gen->m_vars_order.back();
+                gen->m_vars_order.pop_back();
+                gen->m_vars.erase(name);
             }
 
             gen->write("  jmp " + end_label);
@@ -515,6 +571,12 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             }
 
             gen->write(end_label + ":");
+            while (gen->m_vars.size() > stack_start) {
+                gen->pop("rax");
+                std::string name = gen->m_vars_order.back();
+                gen->m_vars_order.pop_back();
+                gen->m_vars.erase(name);
+            }
         }
 
         void operator()(const NodeStmtWhile& stmt_while) const {
@@ -545,12 +607,20 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 gen->gen_stmt(stmt);
             }
 
-            gen->write("  jmp " + start_label);
+             while (gen->m_vars.size() > stack_start) {
+                gen->pop("rax");
+                std::string name = gen->m_vars_order.back();
+                gen->m_vars_order.pop_back();
+                gen->m_vars.erase(name);
+            }
+            gen->write("  jmp " + start_label); 
+            gen->write("" + end_label + ":");
             while (gen->m_vars.size() > stack_start) {
                 gen->pop("rax");
-                gen->m_vars.erase(--gen->m_vars.end());
+                std::string name = gen->m_vars_order.back();
+                gen->m_vars_order.pop_back();
+                gen->m_vars.erase(name);
             }
-            gen->write("" + end_label + ":");
         }
 
         void operator()(const NodeStmtStop& stmt_stop) const {
@@ -663,6 +733,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 --args_index;
             }
             gen->m_fnc_args.insert({stmt_def_func.name.value.value(), args});
+            gen->m_fnc_rets.insert({stmt_def_func.name.value.value(), stmt_def_func.return_type});
 
             gen->current_func = stmt_def_func.name.value.value();
             gen->write(stmt_def_func.name.value.value() + ":");
@@ -702,6 +773,11 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 gen->write("  pop rax");
                 gen->write("  sub rsp, " + std::to_string(offset));
                 gen->m_vars.erase(it);  // borrar sin invalidar iterador de bucle
+                auto& names = gen->m_vars_order;
+                names.erase(
+                    std::remove(names.begin(), names.end(), name),
+                    names.end()
+                ); 
             }
         }
 
@@ -760,7 +836,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             VarType var_type = gen->m_vars.at(ident).type;
 
             switch (var_type) {
-                case VarType::Str: 
+                case VarType::Str:
                     auto it = str_property.find(property);
                     if (it != str_property.end()) {
                         it->second(stmt_property, gen, stmt_property.is_func);

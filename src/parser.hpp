@@ -15,6 +15,7 @@
 #define __FILE__ "src/parser.hpp"
 
 enum class VarType {
+    Void = -1,
     Int = 0,
     Float = 1,
     Str = 2
@@ -126,7 +127,7 @@ struct NodeExit {
 
 struct NodeStmtVar {
     Token ident;
-    Token type;
+    VarType type;
     NodeExpr expr;
     int is_mutable;
 };
@@ -171,6 +172,7 @@ struct NodeStmtPrint {
 struct NodeStmtDefFunc {
     Token name;
     std::vector<CustomFuncArgs> args;
+    VarType return_type;
 };
 
 struct NodeStmtEndfn {

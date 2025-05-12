@@ -236,9 +236,19 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         Token type_token = consume();
         consume();
 
+        VarType type;
+        switch (type_token.type) {
+            case TokenType::int_type:
+                type = VarType::Int;
+                break;
+            case TokenType::str_type:
+                type = VarType::Str;
+                break;
+        }
+
         NodeStmtVar stmt_var;
         stmt_var.ident = ident;
-        stmt_var.type = type_token;
+        stmt_var.type = type;
 
         auto expr = parse_expr();
         if (!expr.has_value()) {
@@ -295,12 +305,32 @@ std::optional<NodeStmt> Parser::parse_stmt() {
             }
         }
         consume(); // )
+
+        VarType return_type = VarType::Void;
+        if (peek().has_value() && peek().value().type == TokenType::minus &&
+            peek(1).has_value() && peek(1).value().type == TokenType::r_arrow) {
+            consume();
+            consume();
+
+            if (!peek().has_value()) {
+                std::cerr << "Expected a type for return specification\n";
+                terminate(EXIT_FAILURE);
+            }
+            if (peek().value().type == TokenType::str_type) return_type = VarType::Str;
+            else if (peek().value().type == TokenType::int_type) return_type = VarType::Int;
+            else {
+                std::cerr << "Unknown return type in specification\n";
+                terminate(EXIT_FAILURE);
+            }
+            consume();
+        }
+
         if (!peek().has_value() || peek().value().type != TokenType::dp) { // :
             std::cerr << "Expected ':'\n";
             terminate(EXIT_FAILURE);
         }
         consume(); // :
-        return NodeStmt{NodeStmtDefFunc{.name = name, .args = args}};
+        return NodeStmt{NodeStmtDefFunc{.name = name, .args = args, .return_type = return_type}};
     }
     else if (peek().has_value() && peek().value().type == TokenType::ident && peek(1).has_value() && peek(1).value().type == TokenType::l_arrow) {
         Token name = consume();
@@ -362,7 +392,6 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
         NodeStmtVar reassignment {
             .ident = ident,
-            .type = Token{.type = TokenType::ident},
             .expr = expr.value()
         };
         return NodeStmt{.var = reassignment};
@@ -391,7 +420,6 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
         NodeStmtVar reassignment {
             .ident = ident,
-            .type = Token{.type = TokenType::ident},
             .expr = NodeExpr(NodeExprBinaryAssign{
                 .left_token = ident,
                 .op_token = op,
@@ -414,7 +442,6 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
         NodeStmtVar reassignment {
             .ident = ident,
-            .type = Token{.type = TokenType::ident},
             .expr = NodeExpr(NodeExprUnaryIncDec{
                 .ident = ident,
                 .op_token = op,
@@ -434,7 +461,6 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
         NodeStmtVar reassignment {
             .ident = ident,
-            .type = Token{.type = TokenType::ident},
             .expr = NodeExpr(NodeExprUnaryIncDec{
                 .ident = ident,
                 .op_token = op,

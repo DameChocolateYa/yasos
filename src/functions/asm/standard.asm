@@ -35,6 +35,7 @@ section .text
     global testret:function
 
     global strcat:function
+    global len:function
 
     extern printf
     extern sprintf
@@ -341,4 +342,16 @@ strcat:
     jne .copy_str2
 
     mov rax, rbx ; return result in rax
+    ret
+
+; rdi = str
+; rax = len
+len:
+    xor rax, rax
+.loop:
+    cmp byte [rdi + rax], 0
+    je .done
+    inc rax
+    jmp .loop
+.done:
     ret

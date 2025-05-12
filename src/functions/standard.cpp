@@ -168,3 +168,12 @@ void handle_strcat(const NodeExprProperty& property, Generator* gen, int propert
 
     if (push_result_in_func) gen->push("rax");
 }
+
+void handle_strlen(const NodeExprProperty& property, Generator* gen, int property_is_func) {
+    check_func_args(property.args, {});
+
+    gen->write("  mov rdi, QWORD [rsp + " + std::to_string(gen->get_var(property.ident.value.value())) + "]");
+    gen->call("len");
+
+    if (push_result_in_func) gen->push("rax");
+}

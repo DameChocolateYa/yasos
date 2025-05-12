@@ -59,7 +59,9 @@ const NodeProg m_prog;
 std::stringstream m_output;
 size_t m_stack_size = 0;
 std::map<std::string, Var> m_vars;
+std::vector<std::string> m_vars_order;
 std::unordered_map<std::string, std::vector<Var>> m_fnc_args;
+std::unordered_map<std::string, VarType> m_fnc_rets;
 //std::unordered_map<std::string, std::vector<Var>> m_fnc_ret;
 std::vector<std::string> m_string_literals;
 std::vector<float> m_float_literals;
@@ -72,6 +74,7 @@ inline void write(const std::string& output) {
 
 inline void insert_var(const std::string& name, VarType type) {
     m_vars.insert({name, Var{.stack_loc = m_stack_size - 1, .type = type, .name = name}});
+    m_vars_order.push_back(name);
 }
 
 void push(const std::string& reg) {
