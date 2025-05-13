@@ -1,6 +1,10 @@
 import <standard>
 use {len, scani};
 
+gsize = (msg: str) -> int:
+	let size: int = msg.len;
+endfn
+
 start = ():
 	"Ponga algo: ";
 	let msg: str = scani();

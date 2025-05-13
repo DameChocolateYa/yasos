@@ -15,6 +15,7 @@ std::unordered_map<std::string, VarType> known_function_types = {
     {"itostr", VarType::Str},
     {"stoint", VarType::Int},
     {"scani", VarType::Str},
+    {"isnum", VarType::Int},
     {"strcmp", VarType::Int},
     {"cat", VarType::Str},
     {"len", VarType::Int}
@@ -192,11 +193,21 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
                 }
                 else if (std::holds_alternative<NodeExprIdent>(expr_bin.lhs->var)) {
                     const std::string& ident = std::get<NodeExprIdent>(expr_bin.lhs->var).ident.value.value();
+                    int is_arg = false;
                     if (!gen->m_vars.contains(ident)) {
-                        std::cerr << "Undeclared variable\n";
-                        terminate(EXIT_FAILURE);
+                        if (gen->current_mode == Mode::Function) {
+                            for (const auto& fnc : gen->m_fnc_args) {
+                                for (const auto& arg : fnc.second) {
+                                    if (arg.name == ident) is_arg = true; var_type = arg.type;
+                                }
+                            }
+                        }
+                        if (!is_arg) {
+                            std::cerr << "Undeclared variable (" << ident << ")\n";
+                            terminate(EXIT_FAILURE);
+                        }
                     }
-                    var_type = gen->m_vars.at(ident).type;
+                    if (!is_arg) var_type = gen->m_vars.at(ident).type;
                 }
 
                 if (var_type == VarType::Int) gen->write( "  add rax, rbx");
@@ -719,6 +730,11 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
         const std::vector<std::string> regs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
         void operator()(const NodeStmtDefFunc& stmt_def_func) const {
+            if (gen->current_mode == Mode::Function) {
+                std::cerr << "Function declaration inside antoher function is not allowed\n";
+                terminate(EXIT_FAILURE);
+            }
+
             gen->current_mode = Mode::Function;
 
             std::vector<Var> args;
