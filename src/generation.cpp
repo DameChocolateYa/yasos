@@ -111,7 +111,6 @@ static VarType check_value(const NodeExpr& expr, Generator* gen) {
         return gen->m_vars.at(expr_bin.left_token.value.value()).type;
     }
 
-    //TODO: properties
     return VarType::Void;
 }
 
