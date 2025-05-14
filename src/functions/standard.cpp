@@ -101,6 +101,13 @@ void handle_clsterm(const NodeStmtCall& stmt, Generator* gen) {
     gen->call("clsterm");
 }
 
+void handle_colorterm(const NodeStmtCall& stmt, Generator* gen) {
+    check_func_args(stmt.args, {});
+
+    gen->gen_expr(*stmt.args[0], false, "rdi");
+    gen->call("colorterm");
+}
+
 void handle_testret(const NodeExprCall& expr, Generator* gen) {
     check_func_args(expr.args, {});
     gen->call("testret");

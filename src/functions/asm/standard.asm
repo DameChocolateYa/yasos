@@ -14,6 +14,16 @@ section .data
     clear_ansi db 27,"[H",27,"[2J"  ; "\033[2J\033[H"   Clear terminal
     clear_len equ $-clear_ansi
 
+    color_red db 27, '[31m', 0
+    color_yellow db 27, '[33m', 0
+    color_purple db 27, '[35m', 0
+    color_reset db 27, '[0m', 0
+
+    red_w db "red", 0
+    yellow_w db "yellow", 0
+    purple_w db "purple", 0
+    reset_w db "reset", 0
+
     test_msg db "BEEP LANG TEST RETURNING A STRING", 0
 
     waitk_buffer db 0
@@ -25,6 +35,7 @@ section .bss
 section .text
     global print:function
     global clsterm:function
+    global colorterm:function
     global itostr:function
     global stoint:function
     global scani:function
@@ -145,6 +156,66 @@ clsterm:
 
     ; rdi = integer to convert
     ; Return in rax a pointer to buffer
+
+colorterm:
+    push rdi
+
+    lea rsi, [rel red_w]
+    call strcmp
+    cmp rax, 1
+    je .red
+
+    lea rsi, [rel yellow_w]
+    call strcmp
+    cmp rax, 1
+    je .yellow
+
+    lea rsi, [rel purple_w]
+    call strcmp
+    cmp rax, 1
+    je .purple
+
+    lea rsi, [rel reset_w]
+    call strcmp
+    cmp rax, 1
+    je .reset
+
+.red:
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel color_red]
+    mov rdx, 5
+    syscall
+    jmp .done
+
+.yellow:
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel color_yellow]
+    mov rdx, 5
+    syscall
+    jmp .done
+
+.purple:
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel color_purple]
+    mov rdx, 5
+    syscall
+    jmp .done
+
+.reset:
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel color_reset]
+    mov rdx, 5
+    syscall
+    jmp .done
+
+.done:
+    pop rdi
+    ret
+
 itostr:
     mov rax, rdi
 
@@ -228,6 +299,9 @@ scani:
     ret
 
 strcmp:
+    push rdi
+    push rsi
+
 .loop:
     mov al, byte [rdi]      ; Load character from s1
     mov bl, byte [rsi]      ; Load character from s2
@@ -241,10 +315,14 @@ strcmp:
 
 .equal:
     mov rax, 1              ; Equal strings → return 1
+    pop rsi
+    pop rdi
     ret
 
 .not_equal:
     xor rax, rax            ; Diferent strings → return 0
+    pop rsi
+    pop rdi
     ret
 
 strdup: ; Obsolete function!

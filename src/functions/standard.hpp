@@ -9,6 +9,7 @@ void handle_end(const NodeStmtCall& stmt, Generator* gen);
 void handle_print(const NodeStmtCall& stmt, Generator* gen);
 void handle_println(const NodeStmtCall& stmt, Generator* gen);
 void handle_clsterm(const NodeStmtCall& stmt, Generator* gen);
+void handle_colorterm(const NodeStmtCall& stmt, Generator* gen);
 
 void handle_testret(const NodeExprCall& expr, Generator* gen);
 void handle_itostr(const NodeExprCall& expr, Generator* gen);

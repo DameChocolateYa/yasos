@@ -1,28 +1,55 @@
 import <standard>
-use {len, scani};
+use {colorterm, strcmp, scani};
 
-gsize = (msg: str) -> int:
-	let size: int = msg.len;
+normal = ():
+	colorterm("red");
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+
+	colorterm("yellow");
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+
+	colorterm("red");
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+endfn
+
+republicain = ():
+	colorterm("red");
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+
+	colorterm("yellow");
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+
+	colorterm("purple");
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
 endfn
 
 start = ():
-	"Ponga algo: ";
+	"n o r: ";
 	let msg: str = scani();
-	let size: int = get msg.len;
-
-	"El tamaño es: ", size, ln;
-
-    if (size lte 10) then {
-        "Es corto", ln;
-    }
-    if (size gt 10) then {
-        if (size lte 20) then {
-            "Es mediano", ln;
-        }
-    }
-    if (size gt 20) then {
-        "Es largo", ln;
-    }
+	if (strcmp(msg, "r")) then {
+		republicain<>;
+	}
+	else {
+		normal<>;
+	}
 endfn
 
 start<>;

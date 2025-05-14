@@ -38,6 +38,7 @@ void initialize_func_map() {
     function_handlers["print"] = &handle_print;
     function_handlers["println"] = &handle_println;
     function_handlers["clsterm"] = &handle_clsterm;
+    function_handlers["colorterm"] = &handle_colorterm;
 }
 
 void initialize_func_ret_map() {
