@@ -15,13 +15,19 @@ section .data
     clear_len equ $-clear_ansi
 
     color_red db 27, '[31m', 0
+    color_green db 27, '[32m', 0
     color_yellow db 27, '[33m', 0
+    color_blue db 27, '[34m', 0
     color_purple db 27, '[35m', 0
+    color_cyan db 27, '[36m', 0
     color_reset db 27, '[0m', 0
 
     red_w db "red", 0
+    green_w db "green", 0
     yellow_w db "yellow", 0
+    blue_w db "blue", 0
     purple_w db "purple", 0
+    cyan_w db "cyan", 0
     reset_w db "reset", 0
 
     test_msg db "BEEP LANG TEST RETURNING A STRING", 0
@@ -165,25 +171,50 @@ colorterm:
     cmp rax, 1
     je .red
 
+    lea rsi, [rel green_w]
+    call strcmp
+    cmp rax, 1
+    je .green
+
     lea rsi, [rel yellow_w]
     call strcmp
     cmp rax, 1
     je .yellow
+
+    lea rsi, [rel blue_w]
+    call strcmp
+    cmp rax, 1
+    je .blue
 
     lea rsi, [rel purple_w]
     call strcmp
     cmp rax, 1
     je .purple
 
+    lea rsi, [rel cyan_w]
+    call strcmp
+    cmp rax, 1
+    je .cyan
+
     lea rsi, [rel reset_w]
     call strcmp
     cmp rax, 1
     je .reset
 
+    jmp .reset
+
 .red:
     mov rax, 1
     mov rdi, 1
     lea rsi, [rel color_red]
+    mov rdx, 5
+    syscall
+    jmp .done
+
+.green:
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel color_green]
     mov rdx, 5
     syscall
     jmp .done
@@ -196,10 +227,26 @@ colorterm:
     syscall
     jmp .done
 
+.blue:
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel color_blue]
+    mov rdx, 5
+    syscall
+    jmp .done
+
 .purple:
     mov rax, 1
     mov rdi, 1
     lea rsi, [rel color_purple]
+    mov rdx, 5
+    syscall
+    jmp .done
+
+.cyan:
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel color_cyan]
     mov rdx, 5
     syscall
     jmp .done
