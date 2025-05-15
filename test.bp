@@ -1,55 +1,42 @@
 import <standard>
-use {colorterm, strcmp, scani};
+use {scani, isnum, stoint, colorterm};
 
-normal = ():
-	colorterm("red");
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
-
+piramide = (rows: int):
 	colorterm("yellow");
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
 
-	colorterm("red");
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
-endfn
+	let i: int = 1;
+	let k: int = 0;
+	while (i lte rows) do {
+		let space: int = 1;
+		let x: int = rows - i;
+		while (space lte x) do {
+			" ";
+			inc space;
+		}
 
-republicain = ():
-	colorterm("red");
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
-
-	colorterm("yellow");
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
-
-	colorterm("purple");
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
-	"VIVAESPAÑAVIVAESPAÑAVIVAESPAÑA", ln;
+		x = 2 * i;
+		x -= 1;
+		while (k neq x) do {
+			"*";
+			inc k;
+		}
+		"", ln;
+		inc i;
+		k = 0;
+	}
 endfn
 
 start = ():
-	"n o r: ";
+	"Tamaño: ";
 	let msg: str = scani();
-	if (strcmp(msg, "r")) then {
-		republicain<>;
+
+	if (isnum(msg) neq 1) then {
+		"ERROR: SE ESPERABA UN NUMERO", ln;
+		end(1);
 	}
-	else {
-		normal<>;
-	}
+
+	let rows: int = stoint(msg);
+	piramide<rows: rows>;
 endfn
 
 start<>;

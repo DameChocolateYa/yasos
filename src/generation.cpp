@@ -93,6 +93,17 @@ static VarType check_value(const NodeExpr& expr, Generator* gen) {
         if (gen->m_vars.contains(name)) {
             return gen->m_vars.at(name).type;
         }
+        else if (gen->current_mode == Mode::Function) {
+            if (!gen->m_fnc_args.contains(gen->current_func)) {
+                return VarType::Void;
+            }
+            for (const auto& arg : gen->m_fnc_args.at(gen->current_func)) {
+                if (arg.name == name) {
+                    return arg.type;
+                }
+            }
+            return VarType::Void;
+        }
         else {
             return VarType::Void;
         }
@@ -109,7 +120,22 @@ static VarType check_value(const NodeExpr& expr, Generator* gen) {
     }
     else if (std::holds_alternative<NodeExprBinaryAssign>(expr.var)) {
         NodeExprBinaryAssign expr_bin = std::get<NodeExprBinaryAssign>(expr.var);
+        if (gen->current_mode == Mode::Function) {
+            if (!gen->m_fnc_args.contains(gen->current_func)) {
+                return VarType::Void;
+            }
+            for (const auto& arg : gen->m_fnc_args.at(gen->current_func)) {
+                if (arg.name == expr_bin.left_token.value.value()) {
+                    return arg.type;
+                }
+            }
+
+        }
+
         return gen->m_vars.at(expr_bin.left_token.value.value()).type;
+    }
+    else if (std::holds_alternative<NodeExprUnaryIncDec>(expr.var)) {
+        return VarType::Int;
     }
 
     return VarType::Void;
@@ -534,8 +560,8 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 return;
             }
             if (value_type != stmt_var.type) {
-                std::cerr << "Tried to assign a value of diferent type\n";
-                terminate(EXIT_FAILURE);
+                //std::cerr << "Tried to assign a value of diferent type\n";
+                //terminate(EXIT_FAILURE);
             }
 
             gen->push("rax");
