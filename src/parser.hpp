@@ -132,6 +132,12 @@ struct NodeStmtVar {
     int is_mutable;
 };
 
+struct NodeStmtVarRe {
+    Token ident;
+    VarType type;
+    NodeExpr expr;
+};
+
 struct NodeStmtCall {
     Token name;
     std::vector<NodeExprPtr> args;
@@ -211,7 +217,7 @@ struct NodeStmtProperty {
 };
 
 struct NodeStmt {
-    std::variant<NodeStmtVar, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtCallCustomFunc, NodeStmtMkpub, NodeStmtUnload, NodeStmtStop, NodeStmtContinue, NodeStmtProperty> var;
+    std::variant<NodeStmtVar, NodeStmtVarRe, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtCallCustomFunc, NodeStmtMkpub, NodeStmtUnload, NodeStmtStop, NodeStmtContinue, NodeStmtProperty> var;
 };
 
 struct NodeProg {

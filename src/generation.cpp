@@ -45,6 +45,7 @@ void initialize_func_ret_map() {
     function_ret_handlers["testret"] = &handle_testret;
     function_ret_handlers["itostr"] = &handle_itostr;
     function_ret_handlers["stoint"] = &handle_stoint;
+    function_ret_handlers["stofl"] = &handle_stofl;
     function_ret_handlers["scani"] = &handle_scani;
     function_ret_handlers["strcmp"] = &handle_strcmp;
     function_ret_handlers["isnum"] = &handle_isnum;
@@ -69,6 +70,7 @@ static bool is_call(const NodeExpr& expr) { return std::holds_alternative<NodeEx
 static VarType check_value(const NodeExpr& expr, Generator* gen) {
     if (std::holds_alternative<NodeExprIntLit>(expr.var)) return VarType::Int;
     else if (std::holds_alternative<NodeExprStrLit>(expr.var)) return VarType::Str;
+    else if (std::holds_alternative<NodeExprFloatLit>(expr.var)) return VarType::Float;
     else if (std::holds_alternative<NodeExprCall>(expr.var)) {
         NodeExprCall expr_call = std::get<NodeExprCall>(expr.var);
         const std::string& name = expr_call.name.value.value();
@@ -133,6 +135,14 @@ static VarType check_value(const NodeExpr& expr, Generator* gen) {
         }
 
         return gen->m_vars.at(expr_bin.left_token.value.value()).type;
+    }
+    else if (std::holds_alternative<NodeExprBinary>(expr.var)) {
+        NodeExprBinary expr_bin = std::get<NodeExprBinary>(expr.var);
+        VarType v1, v2;
+        v1 = check_value(*expr_bin.lhs, gen);
+        v2 = check_value(*expr_bin.rhs, gen);
+        if (v1 == VarType::Float || v2 == VarType::Float) return VarType::Float;
+        else return v1;
     }
     else if (std::holds_alternative<NodeExprUnaryIncDec>(expr.var)) {
         return VarType::Int;
@@ -206,52 +216,52 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
         void operator()(const NodeExprBinary& expr_bin) const {
             const std::string& op = expr_bin.op_token.value.value();
 
-            gen->gen_expr(*expr_bin.rhs, false, "rbx");
-            gen->gen_expr(*expr_bin.lhs, false);
+            VarType v1 = check_value(*expr_bin.lhs, gen);
+            VarType v2 = check_value(*expr_bin.rhs, gen); 
 
-            if (op == "+") {
-                VarType var_type = VarType::Int;
-                if (std::holds_alternative<NodeExprStrLit>(expr_bin.lhs->var)) {
-                    var_type = VarType::Str;
-                } 
-                else if (std::holds_alternative<NodeExprIntLit>(expr_bin.lhs->var)) {
-                    var_type = VarType::Int;
-                }
-                else if (std::holds_alternative<NodeExprIdent>(expr_bin.lhs->var)) {
-                    const std::string& ident = std::get<NodeExprIdent>(expr_bin.lhs->var).ident.value.value();
-                    int is_arg = false;
-                    if (!gen->m_vars.contains(ident)) {
-                        if (gen->current_mode == Mode::Function) {
-                            for (const auto& fnc : gen->m_fnc_args) {
-                                for (const auto& arg : fnc.second) {
-                                    if (arg.name == ident) is_arg = true; var_type = arg.type;
-                                }
-                            }
-                        }
-                        if (!is_arg) {
-                            std::cerr << "Undeclared variable (" << ident << ")\n";
-                            terminate(EXIT_FAILURE);
-                        }
-                    }
-                    if (!is_arg) var_type = gen->m_vars.at(ident).type;
-                }
 
-                if (var_type == VarType::Int) gen->write( "  add rax, rbx");
-                else {
+            if (v1 != VarType::Float && v2 != VarType::Float) {
+                gen->gen_expr(*expr_bin.rhs, false, "rbx");
+                gen->gen_expr(*expr_bin.lhs, false);
+            }
+            else if (v1 == VarType::Int && v2 == VarType::Float) {
+                gen->gen_expr(*expr_bin.lhs, false, "rbx");
+                gen->write("cvtsi2sd xmm0, rbx");
+                gen->gen_expr(*expr_bin.rhs, false, "xmm1");
+            }
+            else if (v1 == VarType::Float && v2 == VarType::Int) {
+                gen->gen_expr(*expr_bin.rhs, false, "rbx");
+                gen->write("cvtsi2sd xmm1, rbx");
+                gen->gen_expr(*expr_bin.lhs, false, "xmm0");
+            }
+            else if (v1 == VarType::Float && v2 == VarType::Float) {
+                gen->gen_expr(*expr_bin.rhs, false, "xmm1");
+                gen->gen_expr(*expr_bin.lhs, false, "xmm0");
+            }
+
+            if (op == "+") { 
+                if (v1 == VarType::Int && v2 == VarType::Int) gen->write( "  add rax, rbx");
+                else if (v1 == VarType::Str) {
                     gen->write("  mov rdi, rax");
                     gen->write("  mov rsi, rbx");
                     gen->call("strcat"); 
                 }
+                else if (v1 == VarType::Float || v2 == VarType::Float) {
+                    gen->write("  addsd xmm0, xmm1");
+                }
             }
             else if (op == "-") {
-                gen->write("  sub rax, rbx");
+                if (v1 == VarType::Int && v2 == VarType::Int) gen->write("  sub rax, rbx");
+                else if (v1 == VarType::Float || v2 == VarType::Float) gen->write("  subsd xmm0, xmm1");
             }
             else if (op == "*") {
-                gen->write("  imul rax, rbx");
+                if (v1 == VarType::Int && v2 == VarType::Int) gen->write("  imul rax, rbx");
+                else if (v1 == VarType::Float || v2 == VarType::Float) gen->write("  mulsd xmm0, xmm1");
             }
             else if (op == "/") {
                 gen->write("  xor rdx, rdx");
-                gen->write("  idiv rbx");
+                if (v1 == VarType::Int && v2 == VarType::Int) gen->write("  idiv rbx");
+                else if (v1 == VarType::Float || v2 == VarType::Float) gen->write("  divsd xmm0, xmm1");
             }
             else if (op == "==") {
                 gen->write("  cmp rax, rbx");
@@ -305,7 +315,10 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
                 std::cerr << "Unsupported binary operator\n";
                 terminate(EXIT_FAILURE);
             }
-            if (push_result) gen->push(reg);
+            if (push_result) {
+                if (v1 != VarType::Float && v2 != VarType::Float) gen->push(reg);
+                else gen->push_float(reg);
+            }
         }
         void operator()(const NodeExprBinaryAssign& expr_bin_assign) const {
             const std::string& op = expr_bin_assign.op_token.value.value();
@@ -373,7 +386,8 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
                     if (fnc.first == gen->current_func) {
                         for (const auto& var : fnc.second) {
                             if (var.name == expr_ident.ident.value.value()) {
-                                gen->write("  mov " + reg + ", QWORD [rbp + " + std::to_string(var.stack_loc) + "]");
+                                if (var.type != VarType::Float) gen->write("  mov " + reg + ", QWORD [rbp + " + std::to_string(var.stack_loc) + "]");
+                                else gen->write("  movsd " + reg + ", QWORD [rbp + " + std::to_string(var.stack_loc) + "]");
                                 //gen->write("  mov rax, rsi");
                                 if (push_result) gen->push(reg);
                                 return;
@@ -385,7 +399,8 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
             const std::string& var_name = expr_ident.ident.value.value();
             size_t offset_bytes = gen->get_var(var_name);
             //std::cerr << gen->m_vars.at(var_name).stack_loc << "\n";
-            gen->write("  mov " + reg + ", QWORD [rsp + " + std::to_string(offset_bytes) + "]");
+            if (gen->m_vars.at(var_name).type != VarType::Float) gen->write("  mov " + reg + ", QWORD [rsp + " + std::to_string(offset_bytes) + "]");
+            else gen->write("  movsd " + reg + ", QWORD [rsp + " + std::to_string(offset_bytes) + "]");
             //gen->write("  mov rax, rsi");
             if (push_result) gen->push(reg);
         }
@@ -399,13 +414,14 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
 
         void operator()(const NodeExprFloatLit& expr_float_lit) const {
             std::string label = "float_" + std::to_string(gen->m_float_literals.size());
-            gen->m_float_literals.push_back((std::stof(expr_float_lit.float_lit.value.value())));
-            gen->write("  movsd xmm0, [ " + label + "]");
-            gen->push_float("xmm0");
+            double val = std::stod(expr_float_lit.float_lit.value.value());  // convierte a double
+            gen->m_float_literals.push_back(val);
+            gen->write("  movsd " + reg + ", [rel " + label + "]");
+            if (push_result) gen->push_float(reg);
         }
 
         void operator()(const NodeExprNone& expr_none) const {
-            gen->write("  mov " + reg + ", 0x7FFFFFFF"); // -500 = none value
+            gen->write("  mov " + reg + ", 0x7FFFFFFF"); // 0x7FFFFFFF = None value
             if (push_result) gen->push(reg);
         }
         void operator()(const NodeExprNoArg& expr_no_arg) const {}
@@ -540,14 +556,38 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 terminate(EXIT_FAILURE);
             }
 
-            const std::string& name = stmt_var.ident.value.value();
-            gen->gen_expr(stmt_var.expr, false);
+            const std::string& name = stmt_var.ident.value.value(); 
             VarType value_type = check_value(stmt_var.expr, gen);
+            if (value_type != VarType::Float) gen->gen_expr(stmt_var.expr, false);
+            else gen->gen_expr(stmt_var.expr, false, "xmm0");
+ 
+            if (value_type != stmt_var.type) {
+                std::cerr << "Tried to assign a value of diferent type\n";
+                terminate(EXIT_FAILURE);
+            }
+            
+            if (stmt_var.type != VarType::Float) gen->push("rax");
+            else gen->push_float("xmm0");
+            //gen->m_vars.insert({name, Var{.stack_loc = gen->m_stack_size - 1, .type = var_type, .name = name}});
+            gen->insert_var(name, value_type, stmt_var.is_mutable);
+        }
+
+        void operator()(const NodeStmtVarRe& stmt_var) const {
+            if (gen->current_mode == Mode::Global) {
+                std::cerr << "Variables only can be redefined inside of a function\n";
+                terminate(EXIT_FAILURE);
+            }
+
+            const std::string& name = stmt_var.ident.value.value(); 
+            VarType value_type = check_value(stmt_var.expr, gen);
+            if (value_type != VarType::Float) gen->gen_expr(stmt_var.expr, false);
+            else gen->gen_expr(stmt_var.expr, false, "xmm0");
 
             if (gen->m_vars.contains(name)) {
-                if (!stmt_var.is_mutable) {
-                    /*std::cerr << "Cannot modify a constant (" + name + ")\n";
-                    terminate(EXIT_FAILURE);*/
+                Var var = gen->m_vars.at(name);
+                if (!var.is_mutable) {
+                    std::cerr << "Cannot modify a constant (" + name + ")\n";
+                    terminate(EXIT_FAILURE);
                 }
                 if (gen->m_vars.at(name).type != value_type) {
                     //std::cerr << static_cast<int>(value_type) << "\n";
@@ -559,14 +599,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 gen->write("  mov QWORD [ rsp + " + std::to_string(offset_bytes) + " ], rax");
                 return;
             }
-            if (value_type != stmt_var.type) {
-                //std::cerr << "Tried to assign a value of diferent type\n";
-                //terminate(EXIT_FAILURE);
-            }
 
-            gen->push("rax");
-            //gen->m_vars.insert({name, Var{.stack_loc = gen->m_stack_size - 1, .type = var_type, .name = name}});
-            gen->insert_var(name, value_type);
         }
 
         void operator()(const NodeStmtIf& stmt_if) const {
@@ -717,7 +750,8 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                     }
                     if (!local) var_type = gen->m_vars.at(name).type;
                     if (var_type == VarType::Str) print_type = PrintType::Str;
-                    else print_type = PrintType::Int;
+                    else if (var_type == VarType::Int) print_type = PrintType::Int;
+                    else if (var_type == VarType::Float) print_type = PrintType::Float;
                 }
                 else if (std::holds_alternative<NodeExprStrLit>(arg.var)) {
                     print_type = PrintType::Str;
@@ -735,15 +769,16 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                     }
                 }
                 else if (std::holds_alternative<NodeExprCR>(arg.var)) print_type = PrintType::CR;
-                gen->gen_expr(arg, false);
-
-                if (print_type != PrintType::CR) gen->write("  mov rsi, rax");
-
                 if (print_type != PrintType::Float && print_type != PrintType::CR) {
+                    gen->gen_expr(arg, false, "rsi");
                     gen->write("  mov rdi, " + std::to_string(static_cast<int>(print_type)));
-                    //gen->m_output << "  mov rsi, rax\n";
-                    //gen->pop("rsi");
                     gen->write("  mov rdx, 0");
+                }
+                else if (print_type == PrintType::Float) {
+                    gen->gen_expr(arg, false, "xmm0");
+                    gen->write("  mov rdi, " + std::to_string(static_cast<int>(print_type))); 
+                    gen->write("  mov rdx, 0");
+
                 }
                 else if (print_type == PrintType::CR) {
                     gen->write("  mov rdi, 2");
@@ -918,7 +953,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
     }
     if (!m_float_literals.empty()) {
         for (size_t i = 0; i < m_float_literals.size(); ++i) {
-            m_output << "float_" << i << ": dq " << m_float_literals[i] << "\n";
+            m_output << "float_" << i << ": dq " << std::to_string(m_float_literals[i]) << "\n"; 
         }
     }
 

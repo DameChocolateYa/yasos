@@ -51,6 +51,7 @@ struct Var {
     size_t stack_loc;
     VarType type;
     std::string name;
+    int is_mutable;
 };
 
 std::string filename;
@@ -72,25 +73,28 @@ inline void write(const std::string& output) {
     else main_buffer << output << "\n";
 }
 
-inline void insert_var(const std::string& name, VarType type) {
-    m_vars.insert({name, Var{.stack_loc = m_stack_size - 1, .type = type, .name = name}});
+inline void insert_var(const std::string& name, VarType type, int is_mutable) {
+    m_vars.insert({name, Var{.stack_loc = m_stack_size - 1, .type = type, .name = name, .is_mutable = is_mutable}});
     m_vars_order.push_back(name);
 }
 
 void push(const std::string& reg) {
-    write("  push " + reg);
+    //write("  push " + reg);
+    write("  sub rsp, 16");
+    write("  mov [rsp], " + reg);
     ++m_stack_size;
 }
 
 void push_float(const std::string& reg) {
-    //m_output << "   sub rsp, 8\n";
-    write("   movsd [rsp], " + reg);
-    write("   add rsp, 8");
+    write("  sub rsp, 16");                          // hacer espacio en la pila
+    write("  movsd [rsp], " + reg);             // guardar el valor float
     ++m_stack_size;
 }
 
 void pop(const std::string& reg) {
-    write( "  pop " + reg);
+    //write( "  pop " + reg);
+    write("  mov " + reg + ", [rsp]");
+    write("  add rsp, 16");
     if (m_stack_size == 0) {
         std::cerr << "Stack underflow!\n";
         exit(EXIT_FAILURE);
@@ -99,10 +103,10 @@ void pop(const std::string& reg) {
 }
 
 void pop_float(const std::string& reg) {
-    write("  movsd " + reg + ", [rsp]");
-    write("  add rsp, 8");
+    write("  movsd " + reg + ", [rsp]");        // cargar el float desde la pila
+    write("  add rsp, 16");                           // limpiar espacio de la pila
     if (m_stack_size == 0) {
-        std::cerr << "Stack underflow!\n";
+        std::cerr << "Float stack underflow!\n";
         exit(EXIT_FAILURE);
     }
     --m_stack_size;
@@ -113,7 +117,7 @@ size_t get_var(const std::string& var_name) {
         std::cerr << "Error trying to get an undeclared variable (" << var_name << ")\n";
         exit(EXIT_FAILURE);
     }
-    size_t offset_bytes = (m_stack_size - m_vars.at(var_name).stack_loc - 1) * 8; // this should be the var pos
+    size_t offset_bytes = (m_stack_size - m_vars.at(var_name).stack_loc - 1) * 16; // this should be the var pos
     return offset_bytes;
 }
 

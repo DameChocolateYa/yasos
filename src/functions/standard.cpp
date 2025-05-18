@@ -133,6 +133,15 @@ void handle_stoint(const NodeExprCall& expr, Generator* gen) {
     if (push_result_in_func) gen->push("rax");
 }
 
+void handle_stofl(const NodeExprCall& expr, Generator* gen) {
+    check_func_args(expr.args, {{String, Yes}});
+
+    gen->gen_expr(*expr.args[0], false, "rdi");
+
+    gen->call("stofl");
+    if (push_result_in_func) gen->push("xmm0");
+}
+
 void handle_scani(const NodeExprCall& expr, Generator* gen) {
     check_func_args(expr.args, {});
 

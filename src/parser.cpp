@@ -244,6 +244,12 @@ std::optional<NodeStmt> Parser::parse_stmt() {
             case TokenType::str_type:
                 type = VarType::Str;
                 break;
+            case TokenType::float_type:
+                type = VarType::Float;
+                break;
+            default:
+                std::cerr << "Invalid type\n";
+                terminate(EXIT_FAILURE);
         }
 
         NodeStmtVar stmt_var;
@@ -277,13 +283,14 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
         while (peek().has_value() && peek().value().type != TokenType::close_paren) {
             if (peek().has_value() && peek().value().type == TokenType::ident && peek(1).has_value() && peek(1).value().type == TokenType::dp &&
-                peek(2).has_value() && (peek(2).value().type == TokenType::str_type || peek(2).value().type == TokenType::int_type)) {
+                peek(2).has_value() && (peek(2).value().type == TokenType::str_type || peek(2).value().type == TokenType::int_type || peek(2).value().type == TokenType::float_type)) {
                     std::string arg_name = consume().value.value();
                     consume();
                     Token arg_type_tok = consume();
                     ArgType arg_type;
                     if (arg_type_tok.type == TokenType::str_type) arg_type = ArgType::String;
                     else if (arg_type_tok.type == TokenType::int_type) arg_type = ArgType::Integer;
+                    else if (arg_type_tok.type == TokenType::float_type) arg_type = ArgType::Float;
 
                     args.push_back({.name = arg_name, .arg_type = arg_type});
 
@@ -318,6 +325,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
             }
             if (peek().value().type == TokenType::str_type) return_type = VarType::Str;
             else if (peek().value().type == TokenType::int_type) return_type = VarType::Int;
+            else if (peek().value().type == TokenType::float_type) return_type = VarType::Float;
             else {
                 std::cerr << "Unknown return type in specification\n";
                 terminate(EXIT_FAILURE);
@@ -390,7 +398,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         }
         consume();
 
-        NodeStmtVar reassignment {
+        NodeStmtVarRe reassignment {
             .ident = ident,
             .expr = expr.value()
         };

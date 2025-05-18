@@ -34,6 +34,8 @@ section .data
 
     waitk_buffer db 0
 
+    float_example dq 3.14
+
 section .bss
     num_buffer resb 100
     scani_buffer resb 100
@@ -44,6 +46,7 @@ section .text
     global colorterm:function
     global itostr:function
     global stoint:function
+    global stofl:function
     global scani:function
     global strcmp:function
     global strdup:function
@@ -63,8 +66,8 @@ section .text
 
 ; Uso:
 ;   rdi = type: 0 = int, 1 = double, 2 = char*
-;   rsi = value (int or pointer or pointer to double)
-;   rdx = line jump: 0 = no, 1 = yes, 3 = ONLY line jump
+;   rsi = value (int or pointer to string)
+;   rdx = line jump: 0 = no, 1 = yes, 3 =  or to floatONLY line jump
 print:
     ; Verify if it's necessary add a line jump (rdx = 1)
     cmp rdx, 3
@@ -108,10 +111,12 @@ print:
     ret
 
 .float:
-    movq xmm0, [rsi]
-    lea rdi, [rel fmt_float]
-    xor rax, rax
+    lea rdi, [rel fmt_float] 
+    mov rax, 1
     call [rel printf wrt ..got]
+    extern fflush
+    mov rdi, 0
+    call [rel fflush wrt ..got]
     ret
 
 .str:
@@ -129,12 +134,15 @@ print:
     call [rel printf wrt ..got]
     ret
 
-.float_ln:
-    movq xmm0, [rsi]
-    lea rdi, [rel fmt_float_ln]
-    xor rax, rax
+.float_ln: 
+    lea rdi, [rel fmt_float_ln] 
+    mov rax, 1
     call [rel printf wrt ..got]
+    extern fflush
+    mov rdi, 0
+    call [rel fflush wrt ..got]
     ret
+
 
 .str_ln:
     lea rdi, [rel fmt_str_ln]
@@ -317,6 +325,9 @@ stoint:
     ret
 .not_digit:
     ret
+
+stofl:
+    ; DE MOMENTO NADA...
 
 testret:
     lea rax, [rel test_msg]
