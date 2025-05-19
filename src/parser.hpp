@@ -26,67 +26,81 @@ using NodeExprPtr = std::shared_ptr<NodeExpr>;
 
 struct NodeExprIntLit {
     Token int_lit;
+    int line;
 };
 
 struct NodeExprIdent {
     Token ident;
+    int line;
 };
 
 struct NodeExprStrLit {
     Token str_lit;
+    int line;
 };
 
 struct NodeExprFloatLit {
     Token float_lit;
+    int line;
 };
 
 struct NodeExprNone {
     Token none;
+    int line;
 };
 
 struct NodeExprNoArg {
     Token no_arg;
+    int line;
 };
 
 struct NodeExprBinary {
     NodeExprPtr lhs;
     Token op_token;
     NodeExprPtr rhs;
+    int line;
 };
 
 struct NodeExprBinaryAssign {
     Token left_token;
     Token op_token;
     NodeExprPtr right_expr;
+    int line;
 };
 
 struct NodeExprUnaryIncDec {
     Token ident;
     Token op_token;
+    int line;
 };
 
 struct NodeExprCall {
     Token name;
     std::vector<NodeExprPtr> args;
+    int line;
 };
 
 struct NodeExprCR {
     Token token;
+    int line;
 };
 
 struct CustomFuncArgs {
     std::string name;
     ArgType arg_type;
+    int line;
 };
 
 struct NodeExprCallCustomFunc {
     Token name;
     std::vector<Token> arg_names;
     std::vector<NodeExpr> arg_values;
+    int line;
 };
 
 struct NodeExprBoolValue {
     int value;
+    int line;
 };
 
 struct NodeExprProperty {
@@ -95,6 +109,8 @@ struct NodeExprProperty {
 
     int is_func = false;
     std::vector<NodeExprPtr> args; // optional
+    
+    int line;
 };
 
 struct NodeExpr {
@@ -119,10 +135,13 @@ struct NodeExpr {
 
     template<typename T>
     NodeExpr(T val) : var(std::move(val)) {}
+
+    int line;
 };
 
 struct NodeExit {
     NodeExpr expr;
+    int line;
 };
 
 struct NodeStmtVar {
@@ -130,29 +149,35 @@ struct NodeStmtVar {
     VarType type;
     NodeExpr expr;
     int is_mutable;
+    int line;
 };
 
 struct NodeStmtVarRe {
     Token ident;
     VarType type;
     NodeExpr expr;
+    int line;
 };
 
 struct NodeStmtCall {
     Token name;
     std::vector<NodeExprPtr> args;
+    int line;
 };
 
 struct NodeStmtUse {
     std::vector<Token> use;
+    int line;
 };
 
 struct NodeStmtImport {
     Token to_import;
+    int line;
 };
 
 struct NodeStmtMkpub {
     std::vector<Token> functions;
+    int line;
 };
 
 struct NodeStmt;
@@ -161,6 +186,7 @@ struct NodeStmtIf {
     NodeExpr condition;
     std::vector<NodeStmt> then_branch;
     std::optional<std::variant<std::shared_ptr<NodeStmtIf>, std::vector<NodeStmt>>> else_branch;
+    int line;
 };
 
 struct NodeStmtWhile {
@@ -168,25 +194,30 @@ struct NodeStmtWhile {
     std::vector<NodeStmt> then_branch;
     std::vector<NodeStmt> bfw; // before while
     std::vector<NodeStmt> afi; // after iteration
+    int line;
 };
 
 struct NodeStmtPrint {
     Token str_lit;
     std::vector<NodeExpr> args;
+    int line;
 };
 
 struct NodeStmtDefFunc {
     Token name;
     std::vector<CustomFuncArgs> args;
     VarType return_type;
+    int line;
 };
 
 struct NodeStmtEndfn {
     // We dont need anything here...
+    int line;
 };
 
 struct NodeStmtRet { // Return a value
     NodeExpr value;
+    int line;
 };
 
 struct NodeStmtCallCustomFunc {
@@ -194,18 +225,22 @@ struct NodeStmtCallCustomFunc {
     //std::vector<NodeExpr> args;
     std::vector<Token> arg_names;
     std::vector<NodeExpr> arg_values;
+    int line;
 };
 
 struct NodeStmtUnload {
     std::vector<Token> vars;
+    int line;
 };
 
 struct NodeStmtStop {
     // We dont need anything here...
+    int line;
 };
 
 struct NodeStmtContinue {
     // We dont need anything here...
+    int line;
 };
 
 struct NodeStmtProperty {
@@ -214,10 +249,13 @@ struct NodeStmtProperty {
     
     int is_func = false;
     std::vector<NodeExprPtr> args; // optional
+    
+    int line;
 };
 
 struct NodeStmt {
     std::variant<NodeStmtVar, NodeStmtVarRe, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtCallCustomFunc, NodeStmtMkpub, NodeStmtUnload, NodeStmtStop, NodeStmtContinue, NodeStmtProperty> var;
+    int line;
 };
 
 struct NodeProg {

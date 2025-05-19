@@ -1,3 +1,4 @@
+#include "error.hpp"
 #include "tokenization.hpp"
 #include "parser.hpp"
 #include "generation.hpp"
@@ -22,10 +23,15 @@ namespace fs = std::filesystem;
 
 std::ofstream file;
 
+std::string current_source_file = "";
+int current_line = 1;
+int compiled_successfully = true;
+
 int debug_mode_enabled = false;
 std::string func_dir = "/usr/lib/beeplib";
 
 int main(int argc, char** argv) {
+    //add_error("PRUEBA");
 //#define __DEBUG__
 #ifdef __DEBUG__
     debug_mode_enabled = true;
@@ -73,9 +79,19 @@ int main(int argc, char** argv) {
             return EXIT_FAILURE;
         }
 
-        std::stringstream buffer;
-        buffer << input_file.rdbuf();
-        std::string source_code = buffer.str();
+        std::stringstream full_source;
+        std::string line;
+
+        current_source_file = filename;
+
+        while (std::getline(input_file, line)) {
+            // Aquí podrías agregar validaciones por línea si lo deseas
+            full_source << line << '\n';
+
+            ++current_line;
+        }
+
+        std::string source_code = full_source.str();
 
         Tokenizer tokenizer(std::move(source_code));
         std::vector<Token> tokens = tokenizer.tokenize();
@@ -102,37 +118,44 @@ int main(int argc, char** argv) {
         asm_out << asm_code;
         asm_out.close();
 
-        std::string assemble_cmd = "nasm -f elf64 -o " + obj_file + " " + asm_file;
-        if (system(assemble_cmd.c_str()) != 0) {
-            std::cerr << "Assembly failed for: " << filename << "\n";
-            return EXIT_FAILURE;
-        }
+        if (compiled_successfully) {
+            std::string assemble_cmd = "nasm -f elf64 -o " + obj_file + " " + asm_file;
+            if (system(assemble_cmd.c_str()) != 0) {
+                std::cerr << "Assembly failed for: " << filename << "\n";
+                return EXIT_FAILURE;
+            }
 
-        if (!keep_asm) {
-            std::remove(asm_file.c_str());
+            if (!keep_asm) {
+                std::remove(asm_file.c_str());
+            }
         }
 
         object_files.push_back(obj_file);
         for (const auto& lib : generator.libraries) {
-            if (seen_libraries.insert(lib).second) {  // true si no existía
+            if (seen_libraries.insert(lib).second) {
                 all_libraries.push_back(lib);
             }
         }
 
         LOG(__FILE__, "Compiled: " + filename);
+        current_line = 1;
+    }
+
+    if (!compiled_successfully) {
+        std::cerr << "\nErrors in compilation\n";
+        exit(1);
     }
 
     std::string link_command = "g++ -o out ";
     for (const auto& obj : object_files) {
         link_command += obj + " ";
     }
-    
+
     link_command += "-L" + func_dir + " ";
     for (const auto& lib : all_libraries) {
         link_command += "-l" + lib + " ";
     }
 
-    //link_command += "-fPIC";
     link_command += "-Wl,-rpath=" + func_dir;
 
     if (system(link_command.c_str()) != 0) {

@@ -69,12 +69,14 @@ enum class TokenType {
     _false,
     _then,
     _unload,
-    dot
+    dot,
+    _err,
 };
 
 struct Token {
     TokenType type;
     std::optional<std::string> value;
+    int line;
 };
 
 class Tokenizer {

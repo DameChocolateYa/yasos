@@ -336,11 +336,13 @@ testret:
 scani:
     mov rdi, 20
     call [rel malloc wrt ..got]
-    push rdi
+    sub rsp, 16
+    mov [rsp], rdi
 
     mov rax, 0
     mov rdi, 0
-    pop rsi
+    mov rsi, [rsp]
+    add rsp, 16
     mov rdx, 100
     syscall
 
@@ -357,8 +359,11 @@ scani:
     ret
 
 strcmp:
-    push rdi
-    push rsi
+    sub rsp, 16
+    mov [rsp], rdi
+    
+    sub rsp, 16
+    mov [rsp], rsi
 
 .loop:
     mov al, byte [rdi]      ; Load character from s1
@@ -373,14 +378,24 @@ strcmp:
 
 .equal:
     mov rax, 1              ; Equal strings → return 1
-    pop rsi
-    pop rdi
+
+    mov rsi, [rsp]
+    add rsp, 16
+
+    mov rdi, [rsp]
+    add rsp, 16
+
     ret
 
 .not_equal:
     xor rax, rax            ; Diferent strings → return 0
-    pop rsi
-    pop rdi
+    
+    mov rsi, [rsp]
+    add rsp, 16
+
+    mov rdi, [rsp]
+    add rsp, 16
+
     ret
 
 strdup: ; Obsolete function!
@@ -443,15 +458,21 @@ isnum:
 ; ------------------------------------------
 
 strcat:
-    push rsi
-    push rdi
+    sub rsp, 16
+    mov [rsp], rsi
+    sub rsp, 16
+    mov [rsp], rdi
+
 
     mov rdi, 180
     call [rel malloc wrt ..got] ; Save space on a dinamic buffer
     mov rbx, rax ; the buffer pointer
 
-    pop rdi
-    pop rsi
+    mov rsi, [rsp]
+    add rsp, 16
+    mov rsi, [rsp]
+    add rsp, 16
+
 
     xor rcx, rcx ; clean counter for str1
 

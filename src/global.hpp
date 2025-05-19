@@ -24,6 +24,9 @@ enum ArgType {
 
 extern std::ofstream file;
 extern int debug_mode_enabled;
+extern std::string current_source_file;
+extern int current_line;
+extern int compiled_successfully;
 
 inline void init_debug() {
     if (!debug_mode_enabled) return;

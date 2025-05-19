@@ -9,6 +9,7 @@
 #include "functions/standard.hpp"
 #include "global.hpp"
 #include "parser.hpp"
+#include "error.hpp"
 
 std::unordered_map<std::string, VarType> known_function_types = {
     {"testret", VarType::Str},
@@ -178,20 +179,17 @@ void check_func_args(const std::vector<NodeExprPtr>& args, const std::unordered_
 
         if (required_arg.first == ArgType::Float) {
             if (!is_float(args[current_arg]->var)) {
-                std::cerr << "Error: argument " << current_arg + 1 << " should be a float\n";
-                exit(EXIT_FAILURE);
+                add_error("argument " + std::to_string(current_arg + 1) + " should be a float", args[0]->line);
             }
         }
         else if (required_arg.first == ArgType::Integer) {
             if (!is_int(args[current_arg]->var)) {
-                std::cerr << "Error: argument " << current_arg + 1 << " should be an integer\n";
-                exit(EXIT_FAILURE);
+                add_error("argument " + std::to_string(current_arg + 1) + " should be a integer", args[0]->line);
             }
         }
         else if (required_arg.first == ArgType::String) {
             if (!is_str(args[current_arg]->var)) {
-                std::cerr << "Error: argument " << current_arg + 1 << " should be a string\n";
-                exit(EXIT_FAILURE);
+                add_error("argument " + std::to_string(current_arg + 1) + " should be a string", args[0]->line);
             }
         }
         else if (std::holds_alternative<NodeExprCall>(args[current_arg]->var)) {
@@ -312,8 +310,7 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
                 gen->write("  movzx rax, al");
             }
             else {
-                std::cerr << "Unsupported binary operator\n";
-                terminate(EXIT_FAILURE);
+                add_error("Unsupported binary operator");
             }
             if (push_result) {
                 if (v1 != VarType::Float && v2 != VarType::Float) gen->push(reg);
@@ -352,8 +349,7 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
                 gen->write("  idiv rbx");
             }
             else {
-                std::cerr << "Invalid assignment operator\n";
-                terminate(EXIT_FAILURE);
+                add_error("Invalid assignment operator", expr_bin_assign.line);
             }
 
             gen->write("  mov QWORD [ rsp + " + std::to_string(offset_bytes) + "], " + reg);
@@ -373,8 +369,7 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
                 gen->write("  sub rax, 1");
             }
             else {
-                std::cerr << "Invalid unary operator\n";
-                terminate(EXIT_FAILURE);
+                add_error("Invalid unary operator", expr_unary_operator.line);
             }
             gen->write("  mov QWORD [ rsp + " + std::to_string(offset_bytes) + "], " + reg);
             //if (push_result) gen->push("rax");
@@ -437,8 +432,7 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
             std::vector<Token> arg_names = expr_call.arg_names;
 
             if (arg_values.size() != arg_names.size()) {
-                std::cerr << "FATAL ERROR: cannot handle func args\n";
-                terminate(EXIT_FAILURE);
+                add_error("Cannot handle func args", expr_call.line);
             }
 
             int index = 0;
@@ -475,8 +469,7 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
                 it->second(expr_call, gen);
             }
             else {
-                std::cerr << "Error, unknown func\n";
-                exit(EXIT_FAILURE);
+                add_error("Unknown function (" + fn + ")", expr_call.line);
             }
         }
 
@@ -485,8 +478,7 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
             const std::string& property = stmt_property.property.value.value();
 
             if (!gen->m_vars.contains(ident)) {
-                std::cerr << "Unknown variable: " << ident << "\n";
-                terminate(EXIT_FAILURE);
+                add_error("Unknown variable (" + ident + ")", stmt_property.line);
             }
             VarType var_type = gen->m_vars.at(ident).type;
 
@@ -498,7 +490,7 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
                         it->second(stmt_property, gen, stmt_property.is_func);
                     }
                     else {
-                        std::cerr << "Error, unknown func (" << property << ")\n";
+                        add_error("Unknown func (" + property, stmt_property.line);
                         exit(EXIT_FAILURE);
                     }
                     break;
@@ -529,8 +521,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 
         void operator()(const NodeStmtMkpub mkpub) const {
             if (gen->current_mode == Mode::Function) {
-                std::cerr << "Error: making public a function inside of another function is not allowed\n";
-                terminate(EXIT_FAILURE);
+                add_error("Making public a function inside of another function is not allowed", mkpub.line);
             }
             for (const auto& func : mkpub.functions) {
                 bool func_exists = false;
@@ -540,11 +531,10 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                     }
                 }
                 if (!func_exists) {
-                    for (const auto& e : gen->m_fnc_args) {
+                    /*for (const auto& e : gen->m_fnc_args) {
                         std::cerr << e.first << "\n";
-                    }
-                    std::cerr << "Error: making public an inexistent function (" << func.value.value() << "\n";
-                    terminate(EXIT_FAILURE);
+                    }*/
+                    add_error("Making public an inexistent function (" + func.value.value() + ")", mkpub.line);
                 }
                 gen->write("  global " + func.value.value());
             }
@@ -552,8 +542,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 
         void operator()(const NodeStmtVar& stmt_var) const {
             if (gen->current_mode == Mode::Global) {
-                std::cerr << "Variables only can be declared inside of a function\n";
-                terminate(EXIT_FAILURE);
+                add_error("Variables only can be declared inside of a function", stmt_var.line);
             }
 
             const std::string& name = stmt_var.ident.value.value(); 
@@ -562,8 +551,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             else gen->gen_expr(stmt_var.expr, false, "xmm0");
  
             if (value_type != stmt_var.type) {
-                std::cerr << "Tried to assign a value of diferent type\n";
-                terminate(EXIT_FAILURE);
+                add_error("Tried to assign a value of diferent type", stmt_var.line);
             }
             
             if (stmt_var.type != VarType::Float) gen->push("rax");
@@ -574,8 +562,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 
         void operator()(const NodeStmtVarRe& stmt_var) const {
             if (gen->current_mode == Mode::Global) {
-                std::cerr << "Variables only can be redefined inside of a function\n";
-                terminate(EXIT_FAILURE);
+                add_error("Variables only can be redefined inside of a function", stmt_var.line);
             }
 
             const std::string& name = stmt_var.ident.value.value(); 
@@ -586,13 +573,11 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             if (gen->m_vars.contains(name)) {
                 Var var = gen->m_vars.at(name);
                 if (!var.is_mutable) {
-                    std::cerr << "Cannot modify a constant (" + name + ")\n";
-                    terminate(EXIT_FAILURE);
+                    add_error("Cannot modify a constant (" + name + ")", stmt_var.line);
                 }
                 if (gen->m_vars.at(name).type != value_type) {
                     //std::cerr << static_cast<int>(value_type) << "\n";
-                    std::cerr << "Expected same type in reassigment\n";
-                    terminate(EXIT_FAILURE);
+                    add_error("Expected same type in reassigment", stmt_var.line);
                 }
 
                 size_t offset_bytes = gen->get_var(name);
@@ -679,7 +664,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 
              while (gen->m_vars.size() > stack_start) {
                 gen->pop("rax");
-                std::string name = gen->m_vars_order.back();
+                std::string name = gen->m_vars_order.back(); 
                 gen->m_vars_order.pop_back();
                 gen->m_vars.erase(name);
             }
@@ -695,8 +680,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 
         void operator()(const NodeStmtStop& stmt_stop) const {
             if (gen->stmt_orde.empty()) {
-                std::cerr << "Cant stop an inexistent loop\n";
-                terminate(EXIT_FAILURE);
+                add_error("Can not stop an inexistent loop", stmt_stop.line);
             }
             std::string end_label = gen->stmt_orde.top() + "end";
             gen->write("  jmp " + end_label);
@@ -705,8 +689,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 
         void operator()(const NodeStmtContinue& stmt_continue) const {
             if (gen->stmt_orde.empty()) {
-                std::cerr << "Cant use 'continue' in an inexistent loop\n";
-                terminate(EXIT_FAILURE);
+                add_error("Can not use 'continue' in an inexistent loop", stmt_continue.line);
             }
             std::string start_label = gen->stmt_orde.top() + "start";
             gen->write("  jmp " + start_label);
@@ -745,8 +728,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                         }
                     }
                     if (!local && !gen->m_vars.contains(name)) {
-                        std::cerr << "Undeclared Indeitifier: " << name << "\n";
-                        exit(EXIT_FAILURE);
+                        add_error("Undeclared Indeitifier: " + name, stmt_print.line);
                     }
                     if (!local) var_type = gen->m_vars.at(name).type;
                     if (var_type == VarType::Str) print_type = PrintType::Str;
@@ -792,8 +774,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 
         void operator()(const NodeStmtDefFunc& stmt_def_func) const {
             if (gen->current_mode == Mode::Function) {
-                std::cerr << "Function declaration inside antoher function is not allowed\n";
-                terminate(EXIT_FAILURE);
+                add_error("Function declaration inside antoher function is not allowed", stmt_def_func.line);
             }
 
             gen->current_mode = Mode::Function;
@@ -842,8 +823,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 std::string name = element.value.value();
                 auto it = gen->m_vars.find(name);
                 if (it == gen->m_vars.end()) {
-                    std::cerr << "Tried to unload an inexistent variable\n";
-                    terminate(EXIT_FAILURE);
+                    add_error("Tried to unload an inexistent variable", stmt_unload.line);
                 }
                 size_t offset = it->second.stack_loc;
                 gen->write("  add rsp, " + std::to_string(offset));
@@ -863,8 +843,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             std::vector<Token> arg_names = stmt_call_custom_func.arg_names;
 
             if (arg_values.size() != arg_names.size()) {
-                std::cerr << "FATAL ERROR: cannot handle func args\n";
-                terminate(EXIT_FAILURE);
+                add_error("Cannot handle func args", stmt_call_custom_func.line);
             }
 
             int index = 0;
@@ -897,8 +876,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 it->second(stmt_call, gen);
             }
             else {
-                std::cerr << "Error, unknown func\n";
-                exit(EXIT_FAILURE);
+                add_error("Unknown function", stmt_call.line);
             }
         }
 
@@ -907,8 +885,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             const std::string& property = stmt_property.property.value.value();
 
             if (!gen->m_vars.contains(ident)) {
-                std::cerr << "Unknown variable\n";
-                terminate(EXIT_FAILURE);
+                add_error("Unknown variable (" + ident + ")", stmt_property.line);
             }
             VarType var_type = gen->m_vars.at(ident).type;
 
@@ -919,8 +896,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                         it->second(stmt_property, gen, stmt_property.is_func);
                     }
                     else {
-                        std::cerr << "Error, unknown func\n";
-                        exit(EXIT_FAILURE);
+                        add_error("Unknown function (" + property + ")", stmt_property.line);
                     }
                     break;
             }

@@ -1,9 +1,11 @@
 #include "tokenization.hpp"
+#include "error.hpp"
 
 std::vector<Token> Tokenizer::tokenize() {
     std::vector<Token> tokens {};
 
     std::string buf = "";
+    int local_lines = 1;
 
     while(peek().has_value()) {
         if (std::isalpha(peek().value())) {
@@ -15,222 +17,222 @@ std::vector<Token> Tokenizer::tokenize() {
                 }
             }
             if (buf == "let") {
-                tokens.push_back({.type = TokenType::var});
+                tokens.push_back({.type = TokenType::var, .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "cnst") {
-                tokens.push_back({.type = TokenType::cnst});
+                tokens.push_back({.type = TokenType::cnst, .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "str") {
-                tokens.push_back({.type = TokenType::str_type});
+                tokens.push_back({.type = TokenType::str_type, .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "int") {
-                tokens.push_back({.type = TokenType::int_type});
+                tokens.push_back({.type = TokenType::int_type, .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "float") {
-                tokens.push_back({.type = TokenType::float_type});
+                tokens.push_back({.type = TokenType::float_type, .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "add") {
-                tokens.push_back({.type = TokenType::plus, .value="+"});
+                tokens.push_back({.type = TokenType::plus, .value="+", .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "sub") {
-                tokens.push_back({.type = TokenType::minus, .value="-"});
+                tokens.push_back({.type = TokenType::minus, .value="-", .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "mul") {
-                tokens.push_back({.type = TokenType::star, .value="*"});
+                tokens.push_back({.type = TokenType::star, .value="*", .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "div") {
-                tokens.push_back({.type = TokenType::slash, .value="/"});
+                tokens.push_back({.type = TokenType::slash, .value="/", .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "adding") {
-                tokens.push_back({.type = TokenType::plus_eq, .value="+="});
+                tokens.push_back({.type = TokenType::plus_eq, .value="+=", .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "subing") { // substracting
-                tokens.push_back({.type = TokenType::minus_eq, .value="-="});
+                tokens.push_back({.type = TokenType::minus_eq, .value="-=", .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "muling") { //multiplicating
-                tokens.push_back({.type = TokenType::star_eq, .value="*="});
+                tokens.push_back({.type = TokenType::star_eq, .value="*=", .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "diving") { // dividing
-                tokens.push_back({.type = TokenType::slash_eq, .value="/="});
+                tokens.push_back({.type = TokenType::slash_eq, .value="/=", .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "inc") {
-                tokens.push_back({.type = TokenType::plusplus, .value="++"});
+                tokens.push_back({.type = TokenType::plusplus, .value="++", .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "dec") {
-                tokens.push_back({.type = TokenType::minusminus, .value="--"});
+                tokens.push_back({.type = TokenType::minusminus, .value="--", .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "if") {
-                tokens.push_back({.type = TokenType::_if, .value="if"});
+                tokens.push_back({.type = TokenType::_if, .value="if", .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "else") {
-                tokens.push_back({.type = TokenType::_else, .value="else"});
+                tokens.push_back({.type = TokenType::_else, .value="else", .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "elif") {
-                tokens.push_back({.type = TokenType::_elif, .value="elif"});
+                tokens.push_back({.type = TokenType::_elif, .value="elif", .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "then") {
-                tokens.push_back({.type = TokenType::_then});
+                tokens.push_back({.type = TokenType::_then, .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "and") {
-                tokens.push_back({.type = TokenType::_and, .value="&&"});
+                tokens.push_back({.type = TokenType::_and, .value="&&", .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "or") {
-                tokens.push_back({.type = TokenType::_or, .value="||"});
+                tokens.push_back({.type = TokenType::_or, .value="||", .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "eq") {
-                tokens.push_back({.type = TokenType::eq_eq, .value="=="});
+                tokens.push_back({.type = TokenType::eq_eq, .value="==", .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "neq") {
-                tokens.push_back({.type = TokenType::bang_eq, .value="!="});
+                tokens.push_back({.type = TokenType::bang_eq, .value="!=", .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "gt") {
-                tokens.push_back({.type = TokenType::gt, .value=">"});
+                tokens.push_back({.type = TokenType::gt, .value=">", .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "gte") {
-                tokens.push_back({.type = TokenType::gte, .value=">="});
+                tokens.push_back({.type = TokenType::gte, .value=">=", .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "lt") {
-                tokens.push_back({.type = TokenType::lt, .value="<"});
+                tokens.push_back({.type = TokenType::lt, .value="<", .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "lte") {
-                tokens.push_back({.type = TokenType::lte, .value="<="});
+                tokens.push_back({.type = TokenType::lte, .value="<=", .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "import") {
-                tokens.push_back({.type = TokenType::import});
+                tokens.push_back({.type = TokenType::import, .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "use") {
-                tokens.push_back({.type = TokenType::use});
+                tokens.push_back({.type = TokenType::use, .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "none" || buf == "None") {
-                tokens.push_back({.type = TokenType::none});
+                tokens.push_back({.type = TokenType::none, .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "NoArg" || buf == "noarg") {
-                tokens.push_back({.type = TokenType::no_arg});
+                tokens.push_back({.type = TokenType::no_arg, .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "cr" || buf == "ln") {
-                tokens.push_back({.type = TokenType::cr});
+                tokens.push_back({.type = TokenType::cr, .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "endfn") {
-                tokens.push_back({.type = TokenType::endfn});
+                tokens.push_back({.type = TokenType::endfn, .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "ret") {
-                tokens.push_back({.type = TokenType::ret});
+                tokens.push_back({.type = TokenType::ret, .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "mkpub") {
-                tokens.push_back({.type = TokenType::mkpub});
+                tokens.push_back({.type = TokenType::mkpub, .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "get") {
-                tokens.push_back({.type = TokenType::get});
+                tokens.push_back({.type = TokenType::get, .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "while") {
-                tokens.push_back({.type = TokenType::_while});
+                tokens.push_back({.type = TokenType::_while, .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "stop") {
-                tokens.push_back({.type = TokenType::_stop});
+                tokens.push_back({.type = TokenType::_stop, .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "continue") {
-                tokens.push_back({.type = TokenType::_continue});
+                tokens.push_back({.type = TokenType::_continue, .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "do") {
-                tokens.push_back({.type = TokenType::_do});
+                tokens.push_back({.type = TokenType::_do, .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "true") {
-                tokens.push_back({.type = TokenType::_true});
+                tokens.push_back({.type = TokenType::_true, .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "false") {
-                tokens.push_back({.type = TokenType::_false});
+                tokens.push_back({.type = TokenType::_false, .line = local_lines});
                 buf.clear();
                 continue;
             }
             else if (buf == "unload") {
-                tokens.push_back({.type = TokenType::_unload});
+                tokens.push_back({.type = TokenType::_unload, .line = local_lines});
                 buf.clear();
                 continue;
             }
             else {
-                tokens.push_back({.type = TokenType::ident, .value = buf});
+                tokens.push_back({.type = TokenType::ident, .value = buf, .line = local_lines});
                 buf.clear();
             }
         }
@@ -256,13 +258,14 @@ std::vector<Token> Tokenizer::tokenize() {
                 } else {
                     // Error léxico: punto sin decimales
                     // Puedes manejarlo como quieras, por ejemplo:
-                    std::cerr << "Error: punto decimal sin dígitos después\n";
+                    add_error("Decimal dot with not digits after");
                 }
             }
 
             tokens.push_back({
                 .type = is_float ? TokenType::float_lit : TokenType::int_lit,
-                .value = buf
+                .value = buf,
+                .line = local_lines
             });
             buf.clear();
         }
@@ -272,97 +275,97 @@ std::vector<Token> Tokenizer::tokenize() {
                 buf.push_back(consume());
             }
             if (!peek().has_value() || peek().value() != '"') {
-                std::cerr << "Undeterminated string literal\n";
+                add_error("Undeterminated string literal");
                 exit(EXIT_FAILURE);
             }
             consume();
 
-            tokens.push_back({.type = TokenType::str_lit, .value = buf});
+            tokens.push_back({.type = TokenType::str_lit, .value = buf, .line = local_lines});
             buf.clear();
         }
         else if (peek().value() == '(') {
             consume();
-            tokens.push_back({.type = TokenType::open_paren});
+            tokens.push_back({.type = TokenType::open_paren, .line = local_lines});
             continue;
         }
         else if (peek().value() == ')') {
             consume();
-            tokens.push_back({.type = TokenType::close_paren});
+            tokens.push_back({.type = TokenType::close_paren, .line = local_lines});
             continue;
         }
         else if (peek().value() == ';') {
             consume();
-            tokens.push_back({.type = TokenType::semi});
+            tokens.push_back({.type = TokenType::semi, .line = local_lines});
             continue;
         }
         else if (peek().value() == ':') {
             consume();
-            tokens.push_back({.type = TokenType::dp});
+            tokens.push_back({.type = TokenType::dp, .line = local_lines});
             continue;
         }
         else if (peek().value() == ',') {
             consume();
-            tokens.push_back({.type = TokenType::comma});
+            tokens.push_back({.type = TokenType::comma, .line = local_lines});
             continue;
         }
         else if (peek().value() == '.') {
             consume();
-            tokens.push_back({.type = TokenType::dot});
+            tokens.push_back({.type = TokenType::dot, .line = local_lines});
             continue;
         }
         else if (peek().value() == '+' && peek(1).has_value() && peek(1).value() == '+') {
             consume(); consume();
-            tokens.push_back({.type = TokenType::plusplus, .value="++"});
+            tokens.push_back({.type = TokenType::plusplus, .value="++", .line = local_lines});
             continue;
         }
         else if (peek().value() == '-' && peek(1).has_value() && peek(1).value() == '-') {
             consume(); consume();
-            tokens.push_back({.type = TokenType::minusminus, .value="--"});
+            tokens.push_back({.type = TokenType::minusminus, .value="--", .line = local_lines});
             continue;
         }
         else if (peek().value() == '+' && peek(1).has_value() && peek(1).value() == '=') {
             consume(); consume();
-            tokens.push_back({.type = TokenType::plus_eq, .value = "+="});
+            tokens.push_back({.type = TokenType::plus_eq, .value = "+=", .line = local_lines});
             continue;
         }
         else if (peek().value() == '-' && peek(1).has_value() && peek(1).value() == '=') {
             consume(); consume();
-            tokens.push_back({.type = TokenType::minus_eq, .value = "-="});
+            tokens.push_back({.type = TokenType::minus_eq, .value = "-=", .line = local_lines});
             continue;
         }
         else if (peek().value() == '*' && peek(1).has_value() && peek(1).value() == '=') {
             consume(); consume();
-            tokens.push_back({.type = TokenType::star_eq, .value = "*="});
+            tokens.push_back({.type = TokenType::star_eq, .value = "*=", .line = local_lines});
             continue;
         }
         else if (peek().value() == '/' && peek(1).has_value() && peek(1).value() == '=') {
             consume(); consume();
-            tokens.push_back({.type = TokenType::slash_eq, .value = "/="});
+            tokens.push_back({.type = TokenType::slash_eq, .value = "/=", .line = local_lines});
             continue;
         }
         else if (peek().value() == '=') {
             consume();
-            tokens.push_back({.type = TokenType::eq});
+            tokens.push_back({.type = TokenType::eq, .line = local_lines});
             continue;
         }
         else if (peek().value() == '+') {
             consume();
-            tokens.push_back({.type = TokenType::plus, .value="+"});
+            tokens.push_back({.type = TokenType::plus, .value="+", .line = local_lines});
             continue;
         }
         else if (peek().value() == '-') {
             consume();
-            tokens.push_back({.type = TokenType::minus, .value="-"});
+            tokens.push_back({.type = TokenType::minus, .value="-", .line = local_lines});
             continue;
         }
         else if (peek().value() == '*') {
             consume();
-            tokens.push_back({.type = TokenType::star, .value="*"});
+            tokens.push_back({.type = TokenType::star, .value="*", .line = local_lines});
             continue;
         }
         else if (peek().value() == '/') {
             consume();
-            tokens.push_back({.type = TokenType::slash, .value="/"});
+            tokens.push_back({.type = TokenType::slash, .value="/", .line = local_lines});
             continue;
         }
         else if (peek().value() == '!') {
@@ -371,7 +374,7 @@ std::vector<Token> Tokenizer::tokenize() {
                 consume(); // ignora todo dentro del comentario
             }
             if (!peek().has_value()) {
-                std::cerr << "Unclosed comment\n";
+                add_error("Unclosed comment");
                 exit(EXIT_FAILURE);
             }
             consume(); // consume '%'
@@ -379,41 +382,45 @@ std::vector<Token> Tokenizer::tokenize() {
         }
         else if (peek().value() == '<') {
             consume();
-            tokens.push_back({.type = TokenType::l_arrow});
+            tokens.push_back({.type = TokenType::l_arrow, .line = local_lines});
             continue;
         }
         else if (peek().value() == '>') {
             consume();
-            tokens.push_back({.type = TokenType::r_arrow});
+            tokens.push_back({.type = TokenType::r_arrow, .line = local_lines});
             continue;
         }
         else if (peek().value() == '{') {
             consume();
-            tokens.push_back({.type = TokenType::l_key});
+            tokens.push_back({.type = TokenType::l_key, .line = local_lines});
             continue;
         }
         else if (peek().value() == '}') {
             consume();
-            tokens.push_back({.type = TokenType::r_key});
+            tokens.push_back({.type = TokenType::r_key, .line = local_lines});
             continue;
         }
         else if (peek().value() == '[') {
             consume();
-            tokens.push_back({.type = TokenType::l_bracket});
+            tokens.push_back({.type = TokenType::l_bracket, .line = local_lines});
             continue;
         }
         else if (peek().value() == ']') {
             consume();
-            tokens.push_back({.type = TokenType::r_bracket});
+            tokens.push_back({.type = TokenType::r_bracket, .line = local_lines});
             continue;
         }
-
+        else if (peek().value() == '\n') {
+            consume();
+            ++local_lines;
+            continue;
+        }
         else if (std::isspace(peek().value())) {
             consume();
             continue;
-        }
+        } 
         else {
-            std::cout << "TOKEN ERROR" << peek().value() << "\n";
+            add_error("TOKEN ERROR" + std::to_string(peek().value()), local_lines);
             exit(EXIT_FAILURE);
         }
     }

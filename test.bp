@@ -1,14 +1,12 @@
 import <standard>
 
 start = ():
-	cnst PI: float = 3.141592;
-	"PI: ", PI, "...", ln;
-	
-	let x: float = PI - 0.141592;
-	"X: ", x, ln;
-
-	let y: float = x / 1.5;
-	"Y: ", y, ln;
+	let x: int = 0;
+	while (x lt 3) do {
+		let y: int = 3;
+		inc x;
+	}
+	"", x, ln;
 endfn
 
 start<>;
