@@ -68,9 +68,9 @@ std::vector<std::string> m_string_literals;
 std::vector<float> m_float_literals;
 std::stack<std::string> stmt_orde;
 
-inline void write(const std::string& output) {
-    if (current_mode == Mode::Function) function_buffer << output << "\n";
-    else main_buffer << output << "\n";
+inline void write(const std::string& output, int newline = true) {
+    if (current_mode == Mode::Function) function_buffer << output << (newline ? "\n" : "");
+    else main_buffer << output << (newline ? "\n" : "");
 }
 
 inline void insert_var(const std::string& name, VarType type, int is_mutable) {
@@ -78,23 +78,23 @@ inline void insert_var(const std::string& name, VarType type, int is_mutable) {
     m_vars_order.push_back(name);
 }
 
-void push(const std::string& reg) {
+void push(const std::string& reg, int newline = true) {
     //write("  push " + reg);
     write("  sub rsp, 16");
-    write("  mov [rsp], " + reg);
+    write("  mov [rsp], " + reg, newline);
     ++m_stack_size;
 }
 
-void push_float(const std::string& reg) {
+void push_float(const std::string& reg, int newline = true) {
     write("  sub rsp, 16");                          // hacer espacio en la pila
-    write("  movsd [rsp], " + reg);             // guardar el valor float
+    write("  movsd [rsp], " + reg, newline);         // guardar el valor float
     ++m_stack_size;
 }
 
-void pop(const std::string& reg) {
+void pop(const std::string& reg, int newline = true) {
     //write( "  pop " + reg);
     write("  mov " + reg + ", [rsp]");
-    write("  add rsp, 16");
+    write("  add rsp, 16", newline);
     if (m_stack_size == 0) {
         std::cerr << "Stack underflow!\n";
         exit(EXIT_FAILURE);
@@ -102,9 +102,9 @@ void pop(const std::string& reg) {
     --m_stack_size;
 }
 
-void pop_float(const std::string& reg) {
+void pop_float(const std::string& reg, int newline = true) {
     write("  movsd " + reg + ", [rsp]");        // cargar el float desde la pila
-    write("  add rsp, 16");                           // limpiar espacio de la pila
+    write("  add rsp, 16", newline);            // limpiar espacio de la pila
     if (m_stack_size == 0) {
         std::cerr << "Float stack underflow!\n";
         exit(EXIT_FAILURE);

@@ -1,12 +1,15 @@
 import <standard>
 
 start = ():
-	let x: int = 0;
-	while (x lt 3) do {
-		let y: int = 3;
-		inc x;
+	let i: int = 0;
+	while (i lt 3) do {
+		let z: int = 3;
+		let y: int = 2;
+		inc i;
+		"Z: ", z, ln;
+		"I: ", i, ln;
 	}
-	"", x, ln;
+	"RESULT: ", i, ln;
 endfn
 
 start<>;

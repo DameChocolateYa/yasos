@@ -554,8 +554,9 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 add_error("Tried to assign a value of diferent type", stmt_var.line);
             }
             
-            if (stmt_var.type != VarType::Float) gen->push("rax");
-            else gen->push_float("xmm0");
+            if (stmt_var.type != VarType::Float) gen->push("rax", false);
+            else gen->push_float("xmm0", false);
+            gen->write("; Creating a new var (" + name + ")");
             //gen->m_vars.insert({name, Var{.stack_loc = gen->m_stack_size - 1, .type = var_type, .name = name}});
             gen->insert_var(name, value_type, stmt_var.is_mutable);
         }
@@ -581,7 +582,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 }
 
                 size_t offset_bytes = gen->get_var(name);
-                gen->write("  mov QWORD [ rsp + " + std::to_string(offset_bytes) + " ], rax");
+                gen->write("  mov QWORD [ rsp + " + std::to_string(offset_bytes) + " ], rax     ; Editing var value (" + name + ")");
                 return;
             }
 
@@ -645,8 +646,8 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 
             size_t stack_start = gen->m_vars.size();
             for (const auto& stmt : stmt_while.bfw) {
-                gen->gen_stmt(stmt);
-            }
+                //gen->gen_stmt(stmt);
+            } 
 
             gen->write(start_label + ":");
 
@@ -659,22 +660,20 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             }
 
             for (const auto& stmt : stmt_while.afi) {
-                gen->gen_stmt(stmt);
+                //gen->gen_stmt(stmt);
             }
 
-             while (gen->m_vars.size() > stack_start) {
+            while (gen->m_vars.size() > stack_start) {
+                int i = gen->m_vars_order.size() - 2;
+                const auto& var_name = gen->m_vars_order[i];
                 gen->pop("rax");
-                std::string name = gen->m_vars_order.back(); 
+                gen->m_vars.erase(var_name);
                 gen->m_vars_order.pop_back();
-                gen->m_vars.erase(name);
             }
-            gen->write("  jmp " + start_label); 
-            gen->write("" + end_label + ":");
+            gen->write("  jmp " + start_label);
+            gen->write(end_label + ":");
             while (gen->m_vars.size() > stack_start) {
                 gen->pop("rax");
-                std::string name = gen->m_vars_order.back();
-                gen->m_vars_order.pop_back();
-                gen->m_vars.erase(name);
             }
         }
 
@@ -780,14 +779,14 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             gen->current_mode = Mode::Function;
 
             std::vector<Var> args;
-            int args_index = stmt_def_func.args.size() + 1;
+            int args_index = stmt_def_func.args.size();
             for (int i = 0; i < stmt_def_func.args.size(); ++i) {
                 auto arg = stmt_def_func.args[i];
                 VarType var_type;
                 if (arg.arg_type == ArgType::String) var_type = VarType::Str;
                 if (arg.arg_type == ArgType::Integer) var_type = VarType::Int;
 
-                args.push_back({.stack_loc = static_cast<size_t>(args_index) * 8, .type = var_type, .name = arg.name});
+                args.push_back({.stack_loc = static_cast<size_t>(args_index) * 16, .type = var_type, .name = arg.name});
                 --args_index;
             }
             gen->m_fnc_args.insert({stmt_def_func.name.value.value(), args});
