@@ -382,8 +382,8 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
                     if (fnc.first == gen->current_func) {
                         for (const auto& var : fnc.second) {
                             if (var.name == expr_ident.ident.value.value()) {
-                                if (var.type != VarType::Float) gen->write("  mov (%rbp + " + std::to_string(var.stack_loc) + "), %" + reg);
-                                else gen->write("  movsd (%rbp + " + std::to_string(var.stack_loc) + "), %" + reg);
+                                if (var.type != VarType::Float) gen->write("  mov " + std::to_string(var.stack_loc) + "(%rbp), %" + reg);
+                                else gen->write("  movsd " + std::to_string(var.stack_loc) + "(%rbp), %" + reg);
                                 //gen->write("  mov rax, rsi");
                                 if (push_result) {
                                     if (var.type != VarType::Float) gen->push(reg);
@@ -450,7 +450,7 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
             }
             gen->write("  call " + expr_call.name.value.value());
             for (const auto& arg : arg_values) {
-                gen->pop("rax");
+                gen->pop("r10");
             }
         }
 
@@ -809,8 +809,8 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             if (check_value(value, gen) != VarType::Float) gen->gen_expr(value, false, "rax");
             else gen->gen_expr(value, false, "xmm0");
 
-            gen->write("  mov rsp, rbp");
-            gen->write("  pop rbp");
+            gen->write("  mov %rbp, %rsp");
+            gen->write("  pop %rbp");
             gen->write("  ret");
             //gen->current_mode = Mode::Global;
             //gen->current_func = "";
@@ -824,9 +824,9 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                     add_error("Tried to unload an inexistent variable", stmt_unload.line);
                 }
                 size_t offset = it->second.stack_loc;
-                gen->write("  add rsp, " + std::to_string(offset));
-                gen->write("  pop rax");
-                gen->write("  sub rsp, " + std::to_string(offset));
+                gen->write("  add $" + std::to_string(offset) + ", %rsp");
+                gen->write("  pop %rax");
+                gen->write("  sub $" + std::to_string(offset) + ", %rsp");
                 gen->m_vars.erase(it);  // borrar sin invalidar iterador de bucle
                 auto& names = gen->m_vars_order;
                 names.erase(
