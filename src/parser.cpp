@@ -459,7 +459,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         }
         consume(); // ;
 
-        NodeStmtVar reassignment {
+        NodeStmtVarRe reassignment {
             .ident = ident,
             .expr = NodeExpr(NodeExprUnaryIncDec{
                 .ident = ident,

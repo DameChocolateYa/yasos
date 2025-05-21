@@ -18,6 +18,7 @@ void handle_stofl(const NodeExprCall& expr, Generator* gen);
 void handle_scani(const NodeExprCall& expr, Generator* gen);
 void handle_strcmp(const NodeExprCall& expr, Generator* gen);
 void handle_isnum(const NodeExprCall& expr, Generator* gen);
+void handle_isfloat(const NodeExprCall& expr, Generator* gen);
 
 void handle_test_str(const NodeExprProperty& property, Generator* gen, int property_is_func=false);
 void handle_strcat(const NodeExprProperty& property, Generator* gen, int property_is_func=false); 

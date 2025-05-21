@@ -1,15 +1,31 @@
 import <standard>
+use {scani, stofl, isfloat};
+
+sum = (x: float, y: float) -> float:
+	ret x + y;
+endfn
 
 start = ():
-	let i: int = 0;
-	while (i lt 3) do {
-		let z: int = 3;
-		let y: int = 2;
-		inc i;
-		"Z: ", z, ln;
-		"I: ", i, ln;
+	"Num1 (float): ";
+	let msg: str = scani();
+
+	if (isfloat(msg) neq 1) then {
+		"EXPECTED FLOAT: ", ln;
+		end(1);
 	}
-	"RESULT: ", i, ln;
+	let x: float = stofl(msg);
+
+	"Num2 (float): ";
+	 msg = scani();
+
+	if (isfloat(msg) neq 1) then {
+		"EXPECTED FLOAT: ", ln;
+		end(1);
+	}
+	let y: float = stofl(msg);
+
+	let result: float = get sum<x: x, y: y>;
+	"Result: ", result, ln;
 endfn
 
 start<>;

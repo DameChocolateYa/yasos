@@ -9,7 +9,7 @@ void handle_end(const NodeStmtCall& expr, Generator* gen) {
 
     //gen->m_output << "  mov rdi, rax\n";
     //gen->m_output << "  call free\n";
-    gen->write("    mov rax, 60");
+    gen->write("  mov rax, 60");
     if (expr.args.size() == 0) {
         gen->write("  mov rdi, 0");
     }
@@ -163,6 +163,15 @@ void handle_isnum(const NodeExprCall& expr, Generator* gen) {
 
     gen->gen_expr(*expr.args[0], false, "rdi");
     gen->call("isnum");
+
+    if (push_result_in_func) gen->push("rax");
+}
+
+void handle_isfloat(const NodeExprCall& expr, Generator* gen) {
+    check_func_args(expr.args, {{VariableValue, Yes}});
+
+    gen->gen_expr(*expr.args[0], false, "rdi");
+    gen->call("isfloat");
 
     if (push_result_in_func) gen->push("rax");
 }

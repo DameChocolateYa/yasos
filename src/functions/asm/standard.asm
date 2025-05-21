@@ -52,6 +52,7 @@ section .text
     global strdup:function
     global waitk:function
     global isnum:function
+    global isfloat:function
     global testret:function
 
     global strcat:function
@@ -327,7 +328,88 @@ stoint:
     ret
 
 stofl:
-    ; DE MOMENTO NADA...
+    ; entrada: rdi = puntero a string
+    ; salida: xmm0 = float/double resultante
+
+    ; registros de trabajo:
+    ; rax - parte entera temporal
+    ; rcx - caracter actual
+    ; rbx - parte fraccionaria como float
+    ; rsi - divisor fraccionario (float)
+    
+    xor rax, rax            ; parte entera = 0
+    xor rcx, rcx            ; caracter actual
+    xor rbx, rbx            ; parte fraccionaria = 0.0
+    mov rsi, 1              ; divisor fraccionario
+
+    ; xmm1 = parte fracc, xmm2 = divisor
+    pxor xmm1, xmm1
+    pxor xmm2, xmm2
+
+.parse_int:
+    movzx rcx, byte [rdi]
+    cmp rcx, 0
+    je .combine
+
+    cmp rcx, '.'
+    je .parse_frac
+
+    cmp rcx, '0'
+    jb .done
+    cmp rcx, '9'
+    ja .done
+
+    sub rcx, '0'
+    imul rax, rax, 10
+    add rax, rcx
+
+    inc rdi
+    jmp .parse_int
+
+.parse_frac:
+    inc rdi                 ; avanzar después del '.'
+    mov rsi, 10
+    cvtsi2sd xmm1, rbx      ; inicializar xmm1 a 0.0
+    cvtsi2sd xmm2, rsi      ; divisor inicial = 10.0
+
+.next_frac_digit:
+    movzx rcx, byte [rdi]
+    cmp rcx, 0
+    je .combine
+
+    cmp rcx, '0'
+    jb .combine
+    cmp rcx, '9'
+    ja .combine
+
+    sub rcx, '0'
+
+    ; convertir el dígito a float
+    mov rdx, rcx
+    cvtsi2sd xmm3, rdx
+
+    ; dividir por divisor
+    divsd xmm3, xmm2
+
+    ; sumar a parte fracc
+    addsd xmm1, xmm3
+
+    ; multiplicar divisor por 10
+    mov rdx, 10
+    imul rsi, rsi, 10
+    cvtsi2sd xmm2, rsi
+
+    inc rdi
+    jmp .next_frac_digit
+
+.combine:
+    ; convertir parte entera (rax) a float
+    cvtsi2sd xmm0, rax
+    ; sumar parte fracc (xmm1)
+    addsd xmm0, xmm1
+.done:
+    ret
+
 
 testret:
     lea rax, [rel test_msg]
@@ -448,6 +530,46 @@ isnum:
     ret
 .no:
     xor rax, rax
+    ret
+;------------------
+isfloat:
+    xor r8, r8 ; Has dot
+
+    mov al, byte [rdi]
+    test al, al
+    je .no
+
+    jmp .loop
+
+.add_dot:
+    mov r8, 1
+    inc rdi
+
+.loop:
+    mov al, byte [rdi]
+    test al, al
+    je .done
+
+    cmp al, '.'
+    je .add_dot
+
+    cmp al, '0'
+    jl .no
+
+    cmp al, '9'
+    jg .no
+
+    inc rdi
+    jmp .loop
+
+.done:
+    cmp r8, 1
+    jne .no
+
+    mov rax, 1
+    ret
+.no:
+    mov rax, 0
     ret
 
 ; ------------------------------------------
