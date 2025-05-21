@@ -38,8 +38,6 @@ std::unordered_map<std::string, std::function<void(const NodeStmtProperty&, Gene
 
 void initialize_func_map() {
     function_handlers["end"] = &handle_end;
-    function_handlers["print"] = &handle_print;
-    function_handlers["println"] = &handle_println;
     function_handlers["clsterm"] = &handle_clsterm;
     function_handlers["colorterm"] = &handle_colorterm;
 }
@@ -210,7 +208,7 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
         std::string reg;
 
         void operator()(const NodeExprIntLit& expr_int_lit) const {
-            gen->write("  mov " + reg + ", " + expr_int_lit.int_lit.value.value());
+            gen->write("  mov $" + expr_int_lit.int_lit.value.value() + ", %" + reg);
             if (push_result) gen->push(reg);
         }
 
@@ -227,12 +225,12 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
             }
             else if (v1 == VarType::Int && v2 == VarType::Float) {
                 gen->gen_expr(*expr_bin.lhs, false, "rbx");
-                gen->write("cvtsi2sd xmm0, rbx");
+                gen->write("cvtsi2sd %rbx, %xmm0");
                 gen->gen_expr(*expr_bin.rhs, false, "xmm1");
             }
             else if (v1 == VarType::Float && v2 == VarType::Int) {
                 gen->gen_expr(*expr_bin.rhs, false, "rbx");
-                gen->write("cvtsi2sd xmm1, rbx");
+                gen->write("cvtsi2sd %rbx, %xmm1");
                 gen->gen_expr(*expr_bin.lhs, false, "xmm0");
             }
             else if (v1 == VarType::Float && v2 == VarType::Float) {
@@ -241,76 +239,76 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
             }
 
             if (op == "+") { 
-                if (v1 == VarType::Int && v2 == VarType::Int) gen->write( "  add rax, rbx");
+                if (v1 == VarType::Int && v2 == VarType::Int) gen->write( "  add %rbx, %rax");
                 else if (v1 == VarType::Str) {
-                    gen->write("  mov rdi, rax");
-                    gen->write("  mov rsi, rbx");
+                    gen->write("  mov %rax, %rdi");
+                    gen->write("  mov %rbx, %rsi");
                     gen->call("strcat"); 
                 }
                 else if (v1 == VarType::Float || v2 == VarType::Float) {
-                    gen->write("  addsd xmm0, xmm1");
+                    gen->write("  addsd %xmm1, %xmm0");
                 }
             }
             else if (op == "-") {
-                if (v1 == VarType::Int && v2 == VarType::Int) gen->write("  sub rax, rbx");
-                else if (v1 == VarType::Float || v2 == VarType::Float) gen->write("  subsd xmm0, xmm1");
+                if (v1 == VarType::Int && v2 == VarType::Int) gen->write("  sub %rbx, %rax");
+                else if (v1 == VarType::Float || v2 == VarType::Float) gen->write("  subsd %xmm1, %xmm0");
             }
             else if (op == "*") {
-                if (v1 == VarType::Int && v2 == VarType::Int) gen->write("  imul rax, rbx");
-                else if (v1 == VarType::Float || v2 == VarType::Float) gen->write("  mulsd xmm0, xmm1");
+                if (v1 == VarType::Int && v2 == VarType::Int) gen->write("  imul %rbx, %rax");
+                else if (v1 == VarType::Float || v2 == VarType::Float) gen->write("  mulsd %xmm1, %xmm0");
             }
             else if (op == "/") {
-                gen->write("  xor rdx, rdx");
-                if (v1 == VarType::Int && v2 == VarType::Int) gen->write("  idiv rbx");
-                else if (v1 == VarType::Float || v2 == VarType::Float) gen->write("  divsd xmm0, xmm1");
+                gen->write("  xor %rdx, %rdx");
+                if (v1 == VarType::Int && v2 == VarType::Int) gen->write("  idiv %rbx");
+                else if (v1 == VarType::Float || v2 == VarType::Float) gen->write("  divsd %xmm1, %xmm0");
             }
             else if (op == "==") {
-                gen->write("  cmp rax, rbx");
-                gen->write("  sete al");
-                gen->write("  movzx rax, al");
+                gen->write("  cmp %rbx, %rax");
+                gen->write("  sete %al");
+                gen->write("  movzx %al, %rax");
             }
             else if (op == "!=") {
-                gen->write("  cmp rax, rbx");
-                gen->write("  setne al");
-                gen->write("  movzx rax, al");
+                gen->write("  cmp %rbx, %rax");
+                gen->write("  setne %al");
+                gen->write("  movzx %al, %rax");
             }
             else if (op == "<") {
-                gen->write("  cmp rax, rbx");
-                gen->write("  setl al");
-                gen->write("  movzx rax, al");
+                gen->write("  cmp %rbx, %rax");
+                gen->write("  setl %al");
+                gen->write("  movzx %al, %rax");
             }
             else if (op == "<=") {
-                gen->write("  cmp rax, rbx");
-                gen->write("  setle al");
-                gen->write("  movzx rax, al");
+                gen->write("  cmp 5rbx, %rax");
+                gen->write("  setle %al");
+                gen->write("  movzx %al, %rax");
             }
             else if (op == ">") {
-                gen->write("  cmp rax, rbx");
-                gen->write("  setg al");
-                gen->write("  movzx rax, al");
+                gen->write("  cmp %rbx, %rax");
+                gen->write("  setg %al");
+                gen->write("  movzx %al, %rax");
             }
             else if (op == ">=") {
-                gen->write("  cmp rax, rbx");
-                gen->write("  setge al");
-                gen->write("  movzx rax, al");
+                gen->write("  cmp %rbx, %rax");
+                gen->write("  setge %al");
+                gen->write("  movzx %al, %rax");
             }
             else if (op == "&&") {
-                gen->write("  cmp rax, 0");
-                gen->write("  setne al");
-                gen->write("  movzx rax, al");
-                gen->write("  cmp rbx, 0");
-                gen->write("  setne bl");
-                gen->write("  and al, bl");
-                gen->write("  movzx rax, al");
+                gen->write("  cmp $0, %rax");
+                gen->write("  setne %al");
+                gen->write("  movzx %al, %rax");
+                gen->write("  cmp $0, %rbx");
+                gen->write("  setne %bl");
+                gen->write("  and %bl, %al");
+                gen->write("  movzx %al, %rax");
             }
             else if (op == "||") {
-                gen->write("  cmp rax, 0");
-                gen->write("  setne al");
-                gen->write("  movzx rax, al");
-                gen->write("  cmp rbx, 0");
-                gen->write("  setne bl");
-                gen->write("  or al, bl");
-                gen->write("  movzx rax, al");
+                gen->write("  cmp $0, %rax");
+                gen->write("  setne %al");
+                gen->write("  movzx %al, %rax");
+                gen->write("  cmp $0, %rbx");
+                gen->write("  setne %bl");
+                gen->write("  or %bl, %al");
+                gen->write("  movzx %al, %rax");
             }
             else {
                 add_error("Unsupported binary operator");
@@ -326,36 +324,36 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
 
             gen->gen_expr(*expr_bin_assign.right_expr, false);
 
-            gen->write("  mov rbx, rax");
+            gen->write("  mov %rax, %rbx");
 
             size_t offset_bytes = gen->get_var(var_name);
-            gen->write("  mov rax, QWORD [ rsp + " + std::to_string(offset_bytes) + " ]");
+            gen->write("  mov " + std::to_string(offset_bytes) + "(%rsp), %rax");
 
             if (op == "+=") {
                 VarType var_type = gen->m_vars.at(var_name).type;
 
-                if (var_type == VarType::Int) gen->write("  add rax, rbx");
+                if (var_type == VarType::Int) gen->write("  add %rbx, %rax");
                 else {
-                    gen->write("  mov rdi, rax");
-                    gen->write("  mov rsi, rbx");
+                    gen->write("  mov %rax, %rdi");
+                    gen->write("  mov %rbx, %rsi");
                     gen->call("strcat");
                 }
             }
             else if (op == "-=") {
-                gen->write("  sub rax, rbx");
+                gen->write("  sub %rbx, %rax");
             }
             else if (op == "*=") {
-                gen->write("  imul rax, rbx");
+                gen->write("  imul %rbx, %rax");
             }
             else if (op == "/=") {
-                gen->write("  xor rdx, rdx\n");
-                gen->write("  idiv rbx");
+                gen->write("  xor %rdx, %rdx");
+                gen->write("  idiv %rbx");
             }
             else {
                 add_error("Invalid assignment operator", expr_bin_assign.line);
             }
 
-            gen->write("  mov QWORD [ rsp + " + std::to_string(offset_bytes) + "], " + reg);
+            gen->write("  mov %" + reg + ", " + std::to_string(offset_bytes) + "(%rsp)");
             //if (push_result) gen->push("rax");
         }
         void operator()(const NodeExprUnaryIncDec& expr_unary_operator) const {
@@ -363,18 +361,18 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
             const std::string& var_name = expr_unary_operator.ident.value.value();
 
             size_t offset_bytes = gen->get_var(var_name);
-            gen->write("  mov rax, QWORD [ rsp + " + std::to_string(offset_bytes) + " ]");
+            gen->write("  mov " + std::to_string(offset_bytes) + "(%rsp), %rax");
 
             if (op == "++") {
-                gen->write("  add rax, 1; Inc in 1 variable (" + var_name + ")");
+                gen->write("  add $1, %rax # Increment in 1 variable (" + var_name + ")");
             }
             else if (op == "--") {
-                gen->write("  sub rax, 1");
+                gen->write("  sub $1, %rax");
             }
             else {
                 add_error("Invalid unary operator", expr_unary_operator.line);
             }
-            gen->write("  mov QWORD [ rsp + " + std::to_string(offset_bytes) + "], " + reg);
+            gen->write("  mov %" + reg + ", " + std::to_string(offset_bytes) + "(%rsp)");
             //if (push_result) gen->push("rax");
         };
 
@@ -384,8 +382,8 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
                     if (fnc.first == gen->current_func) {
                         for (const auto& var : fnc.second) {
                             if (var.name == expr_ident.ident.value.value()) {
-                                if (var.type != VarType::Float) gen->write("  mov " + reg + ", QWORD [rbp + " + std::to_string(var.stack_loc) + "]");
-                                else gen->write("  movsd " + reg + ", QWORD [rbp + " + std::to_string(var.stack_loc) + "]");
+                                if (var.type != VarType::Float) gen->write("  mov (%rbp + " + std::to_string(var.stack_loc) + "), %" + reg);
+                                else gen->write("  movsd (%rbp + " + std::to_string(var.stack_loc) + "), %" + reg);
                                 //gen->write("  mov rax, rsi");
                                 if (push_result) {
                                     if (var.type != VarType::Float) gen->push(reg);
@@ -400,8 +398,8 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
             const std::string& var_name = expr_ident.ident.value.value();
             size_t offset_bytes = gen->get_var(var_name);
             //std::cerr << gen->m_vars.at(var_name).stack_loc << "\n";
-            if (gen->m_vars.at(var_name).type != VarType::Float) gen->write("  mov " + reg + ", QWORD [rsp + " + std::to_string(offset_bytes) + "]");
-            else gen->write("  movsd " + reg + ", QWORD [rsp + " + std::to_string(offset_bytes) + "]");
+            if (gen->m_vars.at(var_name).type != VarType::Float) gen->write("  mov " +  std::to_string(offset_bytes) +" (%rsp), %" + reg);
+            else gen->write("  movsd " + std::to_string(offset_bytes) + "(%rsp), %" + reg);
             //gen->write("  mov rax, rsi");
             if (push_result) {
                 if (gen->m_vars.at(var_name).type != VarType::Float) gen->push(reg);
@@ -412,7 +410,7 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
         void operator()(const NodeExprStrLit& expr_str_lit) const {
             std::string label = "str_" + std::to_string(gen->m_string_literals.size());
             gen->m_string_literals.push_back(expr_str_lit.str_lit.value.value());
-            gen->write("  lea " + reg + ", [ rel " + label + "]");
+            gen->write("  lea " + label + "(%rip), %" + reg);
             if (push_result) gen->push(reg);
         }
 
@@ -420,19 +418,20 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
             std::string label = "float_" + std::to_string(gen->m_float_literals.size());
             double val = std::stod(expr_float_lit.float_lit.value.value());  // convierte a double
             gen->m_float_literals.push_back(val);
-            gen->write("  movsd " + reg + ", [rel " + label + "]");
+            gen->write("  movsd " + label + "(%rip), %" + reg);
+
             if (push_result) gen->push_float(reg);
         }
 
         void operator()(const NodeExprNone& expr_none) const {
-            gen->write("  mov " + reg + ", 0x7FFFFFFF"); // 0x7FFFFFFF = None value
+            gen->write("  mov $0x7FFFFFFF, %" + reg);
             if (push_result) gen->push(reg);
         }
         void operator()(const NodeExprNoArg& expr_no_arg) const {}
         void operator()(const NodeExprCR& expr_cr) const {}
 
         void operator()(const NodeExprBoolValue& expr_bool) const {
-            gen->write("  mov " + reg + ", " + std::to_string(expr_bool.value));
+            gen->write("  mov $" + std::to_string(expr_bool.value) + ", %" + reg);
             if (push_result) gen->push(reg);
         }
 
@@ -510,7 +509,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
         void operator()(const NodeStmtUse& stmt_use) const {
             //std::cout << stmt_use.use[0].value.value() << "\n";
             for (int i = 0; i < stmt_use.use.size(); ++i) {
-                gen->write("  extern " + stmt_use.use[i].value.value());
+                gen->write("  .extern " + stmt_use.use[i].value.value());
             }
         }
 
@@ -531,7 +530,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                     }*/
                     add_error("Making public an inexistent function (" + func.value.value() + ")", mkpub.line);
                 }
-                gen->write("  global " + func.value.value());
+                gen->write("  .globl " + func.value.value());
             }
         }
 
@@ -551,7 +550,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             
             if (stmt_var.type != VarType::Float) gen->push("rax", false);
             else gen->push_float("xmm0", false);
-            gen->write("; Creating a new var (" + name + ")");
+            gen->write(" # Creating a new var (" + name + ")");
             //gen->m_vars.insert({name, Var{.stack_loc = gen->m_stack_size - 1, .type = var_type, .name = name}});
             gen->insert_var(name, value_type, stmt_var.is_mutable);
         }
@@ -581,7 +580,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 }
 
                 size_t offset_bytes = gen->get_var(name);
-                gen->write("  mov QWORD [ rsp + " + std::to_string(offset_bytes) + " ], rax     ; Editing var value (" + name + ")");
+                gen->write("  mov %rax, " + std::to_string(offset_bytes)  + "(%rsp) # Editing var value (" + name + ")");
                 return;
             }
 
@@ -595,7 +594,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             std::string end_label = "endif" + std::to_string(current);
 
             gen->gen_expr(stmt_if.condition, false);
-            gen->write( "  cmp rax, 0");
+            gen->write( "  cmp $0, %rax");
             gen->write("  je " + else_label);
 
             size_t stack_start = gen->m_vars.size();
@@ -649,7 +648,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             gen->write(start_label + ":");
 
             gen->gen_expr(stmt_while.condition, false);
-            gen->write("  cmp rax, 0");
+            gen->write("  cmp $0, %rax");
             gen->write("  je " + end_label);
 
             for (const auto& stmt :  stmt_while.then_branch) {
@@ -693,11 +692,11 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
         }
 
         void operator()(const NodeStmtPrint& stmt_print) const {
-            gen->write("  mov rdi, 2");
-            gen->write("  mov rdx, 0");
+            gen->write("  mov $2, %rdi");
+            gen->write("  mov $0, %rdx");
             std::string label = "str_" + std::to_string(gen->m_string_literals.size());
             gen->m_string_literals.push_back(stmt_print.str_lit.value.value());
-            gen->write("  lea rsi, [rel " + label + "]");
+            gen->write("  lea " + label + "(%rip), %rsi");
             //gen->push("rsi");
             gen->call("print");
             //gen->pop("rsi");
@@ -750,18 +749,18 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 else if (std::holds_alternative<NodeExprCR>(arg.var)) print_type = PrintType::CR;
                 if (print_type != PrintType::Float && print_type != PrintType::CR) {
                     gen->gen_expr(arg, false, "rsi");
-                    gen->write("  mov rdi, " + std::to_string(static_cast<int>(print_type)));
-                    gen->write("  mov rdx, 0");
+                    gen->write("  mov $" + std::to_string(static_cast<int>(print_type)) + ", %rdi");
+                    gen->write("  mov $0, %rdx");
                 }
                 else if (print_type == PrintType::Float) {
                     gen->gen_expr(arg, false, "xmm0");
-                    gen->write("  mov rdi, " + std::to_string(static_cast<int>(print_type))); 
-                    gen->write("  mov rdx, 0");
+                    gen->write("  mov $" + std::to_string(static_cast<int>(print_type)) + ", %rdi");
+                    gen->write("  mov $0, %rdx");
 
                 }
                 else if (print_type == PrintType::CR) {
-                    gen->write("  mov rdi, 2");
-                    gen->write("  mov rdx, 3");
+                    gen->write("  mov $2, %rdi");
+                    gen->write("  mov $3, %rdx");
                 }
                 gen->call("print");
             }
@@ -793,13 +792,13 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 
             gen->current_func = stmt_def_func.name.value.value();
             gen->write(stmt_def_func.name.value.value() + ":");
-            gen->write("  push rbp");
-            gen->write("  mov rbp, rsp");
+            gen->write("  push %rbp");
+            gen->write("  mov %rsp, %rbp");
         }
 
         void operator()(const NodeStmtEndfn& stmt_end_fn) const {
-            gen->write("  mov rsp, rbp");
-            gen->write("  pop rbp");
+            gen->write("  mov %rbp, %rsp");
+            gen->write("  pop %rbp");
             gen->write("  ret");
             gen->current_mode = Mode::Global;
             gen->current_func = "";
@@ -895,9 +894,9 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 }
 
 [[nodiscard]] std::string Generator::gen_prog() {
-    m_output << "global " << filename << "\nsection .text\n";
+    m_output << ".globl " << filename << /*"\nsection .text*/"\n";
     //m_output << "extern free\n";
-    m_output << "extern print\n";
+    m_output << ".extern print\n";
 
     //m_output << "main:\n";
     for (const NodeStmt& stmt : m_prog.stmts) {
@@ -908,15 +907,17 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
     m_output << filename << ":\n";
     m_output << main_buffer.str();
 
-    m_output << "\nsection .rodata\n";
+    //m_output << "\nsection .rodata\n";
     if (!m_string_literals.empty()) {
         for (size_t i = 0; i < m_string_literals.size(); ++i) {
-            m_output << "str_" << i << ": db \"" << escape_string(m_string_literals[i]) << "\", 0\n";
+            m_output << "str_" << i << ":";
+            m_output << " .string \"" << escape_string(m_string_literals[i]) << "\"\n";
         }
     }
     if (!m_float_literals.empty()) {
         for (size_t i = 0; i < m_float_literals.size(); ++i) {
-            m_output << "float_" << i << ": dq " << std::to_string(m_float_literals[i]) << "\n"; 
+            m_output << "float_" << i << ":";
+            m_output << " .double " << m_float_literals[i] << "\n";
         }
     }
 

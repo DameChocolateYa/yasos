@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
         Generator generator(program.value(), gen_name);
         std::string asm_code = generator.gen_prog();
 
-        std::string asm_file = base_name + ".asm";
+        std::string asm_file = base_name + ".s";
         std::string obj_file = base_name + ".o";
 
         std::ofstream asm_out(asm_file);
@@ -119,7 +119,7 @@ int main(int argc, char** argv) {
         asm_out.close();
 
         if (compiled_successfully) {
-            std::string assemble_cmd = "nasm -f elf64 -o " + obj_file + " " + asm_file;
+            std::string assemble_cmd = "as -o " + obj_file + " " + asm_file;
             if (system(assemble_cmd.c_str()) != 0) {
                 std::cerr << "Assembly failed for: " << filename << "\n";
                 return EXIT_FAILURE;

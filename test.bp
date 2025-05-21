@@ -1,31 +1,10 @@
 import <standard>
-use {scani, stofl, isfloat};
-
-sum = (x: float, y: float) -> float:
-	ret x + y;
-endfn
 
 start = ():
-	"Num1 (float): ";
-	let msg: str = scani();
+	cnst pi: float = 3.141592;
+	cnst e: float = 2.728281;
 
-	if (isfloat(msg) neq 1) then {
-		"EXPECTED FLOAT: ", ln;
-		end(1);
-	}
-	let x: float = stofl(msg);
-
-	"Num2 (float): ";
-	 msg = scani();
-
-	if (isfloat(msg) neq 1) then {
-		"EXPECTED FLOAT: ", ln;
-		end(1);
-	}
-	let y: float = stofl(msg);
-
-	let result: float = get sum<x: x, y: y>;
-	"Result: ", result, ln;
+	"Pi: ", pi, "...", ln, "e: ", e, "...", ln;
 endfn
 
 start<>;
