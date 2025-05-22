@@ -278,7 +278,7 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
                 gen->write("  movzx %al, %rax");
             }
             else if (op == "<=") {
-                gen->write("  cmp 5rbx, %rax");
+                gen->write("  cmp %rbx, %rax");
                 gen->write("  setle %al");
                 gen->write("  movzx %al, %rax");
             }
@@ -408,6 +408,14 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
         }
 
         void operator()(const NodeExprStrLit& expr_str_lit) const {
+            for (int i = 0; i < gen->m_string_literals.size(); ++i) {
+                if (gen->m_string_literals[i] == expr_str_lit.str_lit.value.value()) {
+                    gen->write("  lea str_" + std::to_string(i) + "(%rip), %" + reg);
+                    if (push_result) gen->push(reg);
+                    return;
+                }
+            }
+
             std::string label = "str_" + std::to_string(gen->m_string_literals.size());
             gen->m_string_literals.push_back(expr_str_lit.str_lit.value.value());
             gen->write("  lea " + label + "(%rip), %" + reg);
@@ -694,9 +702,18 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
         void operator()(const NodeStmtPrint& stmt_print) const {
             gen->write("  mov $2, %rdi");
             gen->write("  mov $0, %rdx");
-            std::string label = "str_" + std::to_string(gen->m_string_literals.size());
-            gen->m_string_literals.push_back(stmt_print.str_lit.value.value());
-            gen->write("  lea " + label + "(%rip), %rsi");
+            int str_exists = false;
+            for (int i = 0; i < gen->m_string_literals.size(); ++i) {
+                if (gen->m_string_literals[i] == stmt_print.str_lit.value.value()) {
+                    gen->write("  lea str_" + std::to_string(i) + "(%rip), %rsi");
+                    str_exists = true;
+                }
+            }
+            if (!str_exists) {
+                std::string label = "str_" + std::to_string(gen->m_string_literals.size());
+                gen->m_string_literals.push_back(stmt_print.str_lit.value.value());
+                gen->write("  lea " + label + "(%rip), %rsi");
+            }
             //gen->push("rsi");
             gen->call("print");
             //gen->pop("rsi");
