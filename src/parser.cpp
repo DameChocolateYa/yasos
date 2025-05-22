@@ -416,7 +416,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         }
         consume(); // ;
 
-        NodeStmtVar reassignment {
+        NodeStmtVarRe reassignment {
             .ident = ident,
             .expr = NodeExpr(NodeExprBinaryAssign{
                 .left_token = ident,
