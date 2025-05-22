@@ -577,6 +577,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
         if (peek().has_value()) {
             if (peek()->type == TokenType::_elif) {
+                consume();
                 auto maybe_elif = parse_stmt();
                 if (!maybe_elif.has_value() || !std::holds_alternative<NodeStmtIf>(maybe_elif->var)) {
                     add_error("Invalid 'elif' statment", line);

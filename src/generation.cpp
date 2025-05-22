@@ -382,8 +382,8 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
                     if (fnc.first == gen->current_func) {
                         for (const auto& var : fnc.second) {
                             if (var.name == expr_ident.ident.value.value()) {
-                                if (var.type != VarType::Float) gen->write("  mov " + std::to_string(var.stack_loc) + "(%rbp), %" + reg);
-                                else gen->write("  movsd " + std::to_string(var.stack_loc) + "(%rbp), %" + reg);
+                                if (var.type != VarType::Float) gen->write("  mov -" + std::to_string(var.stack_loc) + "(%rbp), %" + reg);
+                                else gen->write("  movsd -" + std::to_string(var.stack_loc) + "(%rbp), %" + reg);
                                 //gen->write("  mov rax, rsi");
                                 if (push_result) {
                                     if (var.type != VarType::Float) gen->push(reg);
@@ -451,15 +451,16 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
                 add_error("Cannot handle func args", expr_call.line);
             }
 
+            std::vector<std::string> regs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+            std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4"};
+            int index = 0;
             for (const auto& arg : arg_values) {
                 VarType var_type = check_value(arg, gen);
-                if (var_type != VarType::Float) gen->gen_expr(arg, true, "rdi");
-                else gen->gen_expr(arg, true, "xmm0");
+                if (var_type != VarType::Float) gen->gen_expr(arg, false, regs[index]);
+                else gen->gen_expr(arg, false, float_regs[index]);
+                ++index;
             }
             gen->write("  call " + expr_call.name.value.value());
-            for (const auto& arg : arg_values) {
-                gen->pop("r10");
-            }
         }
 
         void operator()(const NodeExprCall& expr_call) const {
@@ -784,6 +785,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
         }
 
         const std::vector<std::string> regs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+        const std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm3", "xmm4", "xmm5", "xmm6"};
 
         void operator()(const NodeStmtDefFunc& stmt_def_func) const {
             if (gen->current_mode == Mode::Function) {
@@ -791,9 +793,17 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             }
 
             gen->current_mode = Mode::Function;
-
+            
+            int index = 1;
+            int reg_index = 0;
+            int float_reg_index = 0;
             std::vector<Var> args;
-            int args_index = stmt_def_func.args.size();
+
+            gen->current_func = stmt_def_func.name.value.value();
+            gen->write(stmt_def_func.name.value.value() + ":");
+            gen->write("  push %rbp");
+            gen->write("  mov %rsp, %rbp");
+
             for (int i = 0; i < stmt_def_func.args.size(); ++i) {
                 auto arg = stmt_def_func.args[i];
                 VarType var_type;
@@ -801,16 +811,22 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 if (arg.arg_type == ArgType::Integer) var_type = VarType::Int;
                 if (arg.arg_type == ArgType::Float) var_type = VarType::Float;
 
-                args.push_back({.stack_loc = static_cast<size_t>(args_index) * 16, .type = var_type, .name = arg.name});
-                --args_index;
+                args.push_back({.stack_loc = static_cast<size_t>(index) * 16, .type = var_type, .name = arg.name});
+                if (var_type != VarType::Float) { 
+                    gen->write("  sub $16, %rsp");
+                    gen->write("  mov %" + regs[reg_index] + ", -" + std::to_string(static_cast<size_t>(index) * 16) + "(%rbp)"); 
+                    ++reg_index;
+                }
+                else {
+                    gen->write("  sub $16, %rsp");
+                    gen->write("  movsd %" + float_regs[float_reg_index] + ", -" + std::to_string(static_cast<size_t>(index) * 16) + "(%rbp)");  
+                    ++float_reg_index;
+                }
+
+                ++index;
             }
             gen->m_fnc_args.insert({stmt_def_func.name.value.value(), args});
-            gen->m_fnc_rets.insert({stmt_def_func.name.value.value(), stmt_def_func.return_type});
-
-            gen->current_func = stmt_def_func.name.value.value();
-            gen->write(stmt_def_func.name.value.value() + ":");
-            gen->write("  push %rbp");
-            gen->write("  mov %rsp, %rbp");
+            gen->m_fnc_rets.insert({stmt_def_func.name.value.value(), stmt_def_func.return_type}); 
         }
 
         void operator()(const NodeStmtEndfn& stmt_end_fn) const {
@@ -861,15 +877,25 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 add_error("Cannot handle func args", stmt_call_custom_func.line);
             }
 
+            std::vector<std::string> regs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+            std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4"};
+            int index = 0;
+            int reg_index = 0;
+            int float_reg_index = 0;
+
             for (const auto& arg : arg_values) {
                 VarType var_type = check_value(arg, gen);
-                if (var_type != VarType::Float) gen->gen_expr(arg, true, "rdi");
-                else gen->gen_expr(arg, true, "xmm0");
+                if (var_type != VarType::Float) {
+                    gen->gen_expr(arg, false, regs[reg_index]);
+                    ++reg_index;
+                }
+                else { 
+                    gen->gen_expr(arg, false, float_regs[float_reg_index]);
+                    ++float_reg_index;
+                }
+                ++index;
             }
             gen->write("  call " + stmt_call_custom_func.name.value.value());
-            for (const auto& arg : arg_values) {
-                gen->pop("rax");
-            }
         }
 
         void operator()(const NodeStmtCall& stmt_call) const {

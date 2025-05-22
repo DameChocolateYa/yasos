@@ -31,28 +31,40 @@ int debug_mode_enabled = false;
 std::string func_dir = "/usr/lib/beeplib";
 
 int main(int argc, char** argv) {
-    //add_error("PRUEBA");
-//#define __DEBUG__
 #ifdef __DEBUG__
     debug_mode_enabled = true;
     func_dir = "src/functions";
 #endif
 
     bool keep_asm = false;
+    bool generate_asm_only = false;  // -S
+    bool compile_only = false;       // -c
+    bool generate_shared = false;    // -shared
+    std::string output_file = "out"; // -o
     std::vector<std::string> input_files;
 
     init_debug();
 
     for (int i = 1; i < argc; ++i) {
-        if (strcmp(argv[i], "--preserve-asm") == 0) {
+        std::string arg = argv[i];
+
+        if (arg == "-o" && i + 1 < argc) {
+            output_file = argv[++i];
+        } else if (arg == "-S") {
+            generate_asm_only = true;
+        } else if (arg == "-c") {
+            compile_only = true;
+        } else if (arg == "-shared") {
+            generate_shared = true;
+        } else if (arg == "--preserve-asm") {
             keep_asm = true;
         } else {
-            input_files.emplace_back(argv[i]);
+            input_files.emplace_back(arg);
         }
     }
 
     if (input_files.empty()) {
-        std::cerr << "Usage: beepc [--preserve-asm] <input1.bp> [input2.bp ...]\n";
+        std::cerr << "Usage: beepc [-o output] [-S|-c|-shared] [--preserve-asm] <input1.bp> [input2.bp ...]\n";
         return EXIT_FAILURE;
     }
 
@@ -85,9 +97,7 @@ int main(int argc, char** argv) {
         current_source_file = filename;
 
         while (std::getline(input_file, line)) {
-            // Aquí podrías agregar validaciones por línea si lo deseas
             full_source << line << '\n';
-
             ++current_line;
         }
 
@@ -104,7 +114,6 @@ int main(int argc, char** argv) {
             return EXIT_FAILURE;
         }
 
-        // Name for generator: "main" for first file, base filename for others
         std::string base_name = fs::path(filename).stem().string();
         std::string gen_name = (index == 0) ? "main" : base_name;
 
@@ -118,7 +127,7 @@ int main(int argc, char** argv) {
         asm_out << asm_code;
         asm_out.close();
 
-        if (compiled_successfully) {
+        if (!generate_asm_only && compiled_successfully) {
             std::string assemble_cmd = "as -o " + obj_file + " " + asm_file;
             if (system(assemble_cmd.c_str()) != 0) {
                 std::cerr << "Assembly failed for: " << filename << "\n";
@@ -128,9 +137,14 @@ int main(int argc, char** argv) {
             if (!keep_asm) {
                 std::remove(asm_file.c_str());
             }
+
+            object_files.push_back(obj_file);
         }
 
-        object_files.push_back(obj_file);
+        if (generate_asm_only) {
+            continue;
+        }
+
         for (const auto& lib : generator.libraries) {
             if (seen_libraries.insert(lib).second) {
                 all_libraries.push_back(lib);
@@ -143,10 +157,22 @@ int main(int argc, char** argv) {
 
     if (!compiled_successfully) {
         std::cerr << "\nErrors in compilation\n";
-        exit(1);
+        return EXIT_FAILURE;
     }
 
-    std::string link_command = "g++ -o out ";
+    if (generate_asm_only || compile_only) {
+        LOG(__FILE__, "Compilation finished without linking.");
+        return EXIT_SUCCESS;
+    }
+
+    std::string link_command;
+
+    if (generate_shared) {
+        link_command = "g++ -shared -o " + output_file + " ";
+    } else {
+        link_command = "g++ -o " + output_file + " ";
+    }
+
     for (const auto& obj : object_files) {
         link_command += obj + " ";
     }
@@ -163,7 +189,7 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
 
-    LOG(__FILE__, "Build complete: Executable 'out'");
+    LOG(__FILE__, "Build complete: Output '" + output_file + "'");
     terminate(EXIT_SUCCESS);
     return 0;
 }
