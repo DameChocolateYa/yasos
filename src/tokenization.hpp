@@ -71,6 +71,10 @@ enum class TokenType {
     _unload,
     dot,
     _err,
+    _declmod,
+    _endmod,
+    _umod,
+    _ubeepmod
 };
 
 struct Token {

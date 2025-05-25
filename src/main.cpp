@@ -115,7 +115,8 @@ int main(int argc, char** argv) {
         }
 
         std::string base_name = fs::path(filename).stem().string();
-        std::string gen_name = (index == 0) ? "main" : base_name;
+        //std::string gen_name = (index == 0) ? "main" : base_name;
+        std::string gen_name = base_name;
 
         Generator generator(program.value(), gen_name);
         std::string asm_code = generator.gen_prog();
@@ -174,6 +175,10 @@ int main(int argc, char** argv) {
     }
 
     for (const auto& obj : object_files) {
+        link_command += obj + " ";
+    }
+
+    for (const auto& obj : modules) {
         link_command += obj + " ";
     }
 

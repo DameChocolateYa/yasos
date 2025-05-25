@@ -1,4 +1,5 @@
 #include "generation.hpp"
+#include <algorithm>
 #include <cstdlib>
 #include <functional>
 #include <iostream>
@@ -11,6 +12,12 @@
 #include "parser.hpp"
 #include "error.hpp"
 
+std::vector<std::string> modules;
+
+std::vector<std::string> m_mod;
+std::unordered_map<std::string, std::string> m_fnc_mod;
+std::unordered_map<std::string, VarType> m_fnc_rets;
+
 std::unordered_map<std::string, VarType> known_function_types = {
     {"testret", VarType::Str},
     {"itostr", VarType::Str},
@@ -18,6 +25,7 @@ std::unordered_map<std::string, VarType> known_function_types = {
     {"stofl", VarType::Float},
     {"scani", VarType::Str},
     {"isnum", VarType::Int},
+    {"isint", VarType::Int},
     {"isfloat", VarType::Int},
     {"strcmp", VarType::Int},
     {"cat", VarType::Str},
@@ -45,10 +53,9 @@ void initialize_func_map() {
 void initialize_func_ret_map() {
     function_ret_handlers["testret"] = &handle_testret;
     function_ret_handlers["itostr"] = &handle_itostr;
-    function_ret_handlers["stoint"] = &handle_stoint;
+    //function_ret_handlers["stoint"] = &handle_stoint;
     function_ret_handlers["stofl"] = &handle_stofl;
     function_ret_handlers["scani"] = &handle_scani;
-    function_ret_handlers["strcmp"] = &handle_strcmp;
     function_ret_handlers["isnum"] = &handle_isnum;
     function_ret_handlers["isfloat"] = &handle_isfloat;
 }
@@ -60,7 +67,7 @@ void initialize_str_property_map() {
 void initialize_str_ret_property_map() {
     str_ret_property["test"] = &handle_test_str;
     str_ret_property["cat"] = &handle_strcat;
-    str_ret_property["len"] = &handle_strlen;
+    //str_ret_property["len"] = &handle_strlen;
 }
 
 static bool is_int(const NodeExpr& expr) { return std::holds_alternative<NodeExprIntLit>(expr.var); }
@@ -86,10 +93,13 @@ static VarType check_value(const NodeExpr& expr, Generator* gen) {
     else if (std::holds_alternative<NodeExprCallCustomFunc>(expr.var)) {
         NodeExprCallCustomFunc expr_call = std::get<NodeExprCallCustomFunc>(expr.var);
         const std::string& name = expr_call.name.value.value();
-        if (!gen->m_fnc_rets.contains(name)) {
-            return VarType::Void;
+        if (m_fnc_rets.contains(name)) {
+            return m_fnc_rets.at(name);
         }
-        return gen->m_fnc_rets.at(name);
+        if (known_function_types.contains(name)) {
+            return known_function_types.at(name);
+        }
+        return VarType::Void;
     }
     else if (std::holds_alternative<NodeExprIdent>(expr.var)) {
         NodeExprIdent ident = std::get<NodeExprIdent>(expr.var);
@@ -445,12 +455,6 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
 
         void operator()(const NodeExprCallCustomFunc expr_call) const {
             std::vector<NodeExpr> arg_values = expr_call.arg_values;
-            std::vector<Token> arg_names = expr_call.arg_names;
-
-            if (arg_values.size() != arg_names.size()) {
-                add_error("Cannot handle func args", expr_call.line);
-            }
-
             std::vector<std::string> regs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
             std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4"};
             int index = 0;
@@ -465,14 +469,29 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
 
         void operator()(const NodeExprCall& expr_call) const {
             const std::string& fn = expr_call.name.value.value();
+            std::vector<NodeExprPtr> arg_values = expr_call.args;
+            std::vector<std::string> regs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+            std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4"};
+            int index = 0;
+            int reg_index = 0;
+            int float_reg_index = 0;
 
             auto it = function_ret_handlers.find(fn);
             if (it != function_ret_handlers.end()) {
-                push_result_in_func = push_result;
                 it->second(expr_call, gen);
             }
             else {
-                add_error("Unknown function (" + fn + ")", expr_call.line);
+                for (const auto& arg : arg_values) {
+                    VarType var_type = check_value(*arg, gen);
+                    if (var_type != VarType::Float) gen->gen_expr(*arg, false, regs[index]);
+                    else gen->gen_expr(*arg, false, float_regs[index]);
+                    if (var_type == VarType::Float) ++float_reg_index;
+                    else ++reg_index;
+                    ++index;
+                }
+                gen->write("  mov $" + std::to_string(float_reg_index) + ", %al");
+                gen->call(fn);
+                //add_error("Unknown function (" + fn + ")", expr_call.line);
             }
         }
 
@@ -480,10 +499,21 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
             const std::string& ident = stmt_property.ident.value.value();
             const std::string& property = stmt_property.property.value.value();
 
-            if (!gen->m_vars.contains(ident)) {
-                add_error("Unknown variable (" + ident + ")", stmt_property.line);
+            VarType var_type = VarType::Void; 
+            if (gen->current_mode == Mode::Function) {
+                for (const auto& fnc : gen->m_fnc_args) {
+                    if (fnc.first == gen->current_func) {
+                        for (const auto& arg : fnc.second) {
+                            if (arg.name == ident) var_type = arg.type;
+                        }
+                    }
+                } 
             }
-            VarType var_type = gen->m_vars.at(ident).type;
+            else if (gen->m_vars.contains(ident)) {
+                var_type = gen->m_vars.at(ident).type;
+            }
+            if (var_type == VarType::Void) add_error("Unknown variable (" + ident + ")", stmt_property.line);
+
 
             switch (var_type) {
                 case VarType::Str:
@@ -554,7 +584,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             else gen->gen_expr(stmt_var.expr, false, "xmm0");
  
             if (value_type != stmt_var.type) {
-                add_error("Tried to assign a value of diferent type", stmt_var.line);
+                //add_error("Tried to assign a value of diferent type", stmt_var.line);
             }
             
             if (stmt_var.type != VarType::Float) gen->push("rax", false);
@@ -701,87 +731,25 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
         }
 
         void operator()(const NodeStmtPrint& stmt_print) const {
-            gen->write("  mov $2, %rdi");
-            gen->write("  mov $0, %rdx");
-            int str_exists = false;
-            for (int i = 0; i < gen->m_string_literals.size(); ++i) {
-                if (gen->m_string_literals[i] == stmt_print.str_lit.value.value()) {
-                    gen->write("  lea str_" + std::to_string(i) + "(%rip), %rsi");
-                    str_exists = true;
-                }
-            }
-            if (!str_exists) {
-                std::string label = "str_" + std::to_string(gen->m_string_literals.size());
-                gen->m_string_literals.push_back(stmt_print.str_lit.value.value());
-                gen->write("  lea " + label + "(%rip), %rsi");
-            }
-            //gen->push("rsi");
-            gen->call("print");
-            //gen->pop("rsi");
+            NodeExpr format = stmt_print.str;
+            std::vector<NodeExpr> arg_values = stmt_print.args;
+            std::vector<std::string> regs = {"rsi", "rdx", "rcx", "r8", "r9"};
+            std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4"};
+            int index = 0;
+            int reg_index = 0;
+            int float_reg_index = 0;
 
-            if (stmt_print.args.empty()) return;
-            for (const auto& arg : stmt_print.args) { // NOTE: SPAGHETTI CODE
-                PrintType print_type = PrintType::Int;
-                if(std::holds_alternative<NodeExprIdent>(arg.var)) {
-                    const auto& name = std::get<NodeExprIdent>(arg.var).ident.value.value();
-                    VarType var_type;
-                    bool local = false;
-                    if (!gen->m_vars.contains(name)) {
-                        if (gen->current_mode == Mode::Function) {
-                            for (const auto& fnc : gen->m_fnc_args) {
-                                if (fnc.first == gen->current_func) {
-                                    for (const auto& var : fnc.second) {
-                                        if (var.name == name) {
-                                            var_type = var.type;
-                                            local = true;
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    if (!local && !gen->m_vars.contains(name)) {
-                        add_error("Undeclared Indeitifier: " + name, stmt_print.line);
-                    }
-                    if (!local) var_type = gen->m_vars.at(name).type;
-                    if (var_type == VarType::Str) print_type = PrintType::Str;
-                    else if (var_type == VarType::Int) print_type = PrintType::Int;
-                    else if (var_type == VarType::Float) print_type = PrintType::Float;
-                }
-                else if (std::holds_alternative<NodeExprStrLit>(arg.var)) {
-                    print_type = PrintType::Str;
-                }
-                else if (std::holds_alternative<NodeExprIntLit>(arg.var) || std::holds_alternative<NodeExprBoolValue>(arg.var)) print_type = PrintType::Int;
-                else if (std::holds_alternative<NodeExprFloatLit>(arg.var)) {
-                    print_type = PrintType::Float;
-                }
-                else if (std::holds_alternative<NodeExprCall>(arg.var)) {
-                    const auto& call = std::get<NodeExprCall>(arg.var);
-                    for (const auto& know_return : known_function_types) {
-                        if (know_return.first == call.name.value.value()) {
-                            print_type = static_cast<PrintType>(know_return.second);
-                        }
-                    }
-                }
-                else if (std::holds_alternative<NodeExprCR>(arg.var)) print_type = PrintType::CR;
-                if (print_type != PrintType::Float && print_type != PrintType::CR) {
-                    gen->gen_expr(arg, false, "rsi");
-                    gen->write("  mov $" + std::to_string(static_cast<int>(print_type)) + ", %rdi");
-                    gen->write("  mov $0, %rdx");
-                }
-                else if (print_type == PrintType::Float) {
-                    gen->gen_expr(arg, false, "xmm0");
-                    gen->write("  mov $" + std::to_string(static_cast<int>(print_type)) + ", %rdi");
-                    gen->write("  mov $0, %rdx");
-
-                }
-                else if (print_type == PrintType::CR) {
-                    gen->write("  mov $2, %rdi");
-                    gen->write("  mov $3, %rdx");
-                }
-                gen->call("print");
+            gen->gen_expr(format, false, "rdi");
+            for (const auto& arg : stmt_print.args) {
+                VarType var_type = check_value(arg, gen);
+                if (var_type != VarType::Float) gen->gen_expr(arg, false, regs[index]);
+                else gen->gen_expr(arg, false, float_regs[index]);
+                if (var_type == VarType::Float) ++float_reg_index;
+                else ++reg_index;
+                ++index;
             }
+            gen->write("  mov $" + std::to_string(float_reg_index) + ", %al");
+            gen->call("printbp");
         }
 
         const std::vector<std::string> regs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
@@ -790,6 +758,10 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
         void operator()(const NodeStmtDefFunc& stmt_def_func) const {
             if (gen->current_mode == Mode::Function) {
                 add_error("Function declaration inside antoher function is not allowed", stmt_def_func.line);
+            }
+            if (gen->mod == Mode::Mod) {
+                m_fnc_mod.insert({gen->current_mod, stmt_def_func.name.value.value()});
+                gen->write("  .globl " + stmt_def_func.name.value.value());
             }
 
             gen->current_mode = Mode::Function;
@@ -826,7 +798,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 ++index;
             }
             gen->m_fnc_args.insert({stmt_def_func.name.value.value(), args});
-            gen->m_fnc_rets.insert({stmt_def_func.name.value.value(), stmt_def_func.return_type}); 
+            m_fnc_rets.insert({stmt_def_func.name.value.value(), stmt_def_func.return_type}); 
         }
 
         void operator()(const NodeStmtEndfn& stmt_end_fn) const {
@@ -871,11 +843,6 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 
         void operator()(const NodeStmtCallCustomFunc& stmt_call_custom_func) const {
             std::vector<NodeExpr> arg_values = stmt_call_custom_func.arg_values;
-            std::vector<Token> arg_names = stmt_call_custom_func.arg_names;
-
-            if (arg_values.size() != arg_names.size()) {
-                add_error("Cannot handle func args", stmt_call_custom_func.line);
-            }
 
             std::vector<std::string> regs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
             std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4"};
@@ -900,12 +867,29 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 
         void operator()(const NodeStmtCall& stmt_call) const {
             const std::string& fn = stmt_call.name.value.value();
+            std::vector<NodeExprPtr> arg_values = stmt_call.args;
+            std::vector<std::string> regs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+            std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4"};
+            int index = 0;
+            int reg_index = 0;
+            int float_reg_index = 0;
+
             auto it = function_handlers.find(fn);
             if (it != function_handlers.end()) {
                 it->second(stmt_call, gen);
             }
             else {
-                add_error("Unknown function", stmt_call.line);
+                for (const auto& arg : arg_values) {
+                    VarType var_type = check_value(*arg, gen);
+                    if (var_type != VarType::Float) gen->gen_expr(*arg, false, regs[index]);
+                    else gen->gen_expr(*arg, false, float_regs[index]);
+                    if (var_type == VarType::Float) ++float_reg_index;
+                    else ++reg_index;
+                    ++index;
+                }
+                gen->write("  mov $" + std::to_string(float_reg_index) + ", %al");
+                gen->call(fn);
+                //add_error("Unknown function (" + fn + ")", expr_call.line);
             }
         }
 
@@ -930,6 +914,47 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                     break;
             }
         }
+
+        void operator()(const NodeStmtDeclmod& stmt_declmod) const {
+            const std::string& ident = stmt_declmod.module_name.value.value();
+            gen->mod = Mode::Mod;
+            gen->current_mod = ident;
+            m_mod.push_back(ident);
+        }
+        void operator()(const NodeStmtEndmod& stmt_endmod) const {
+            gen->current_mod = "";
+            gen->mod = Mode::Global;
+        }
+        void operator()(const NodeStmtUmod& stmt_umod) const {
+            const std::string& name = stmt_umod.module_name.value.value();
+            int mod_exists = false;
+            for (int i = 0; i < m_mod.size(); ++i) {
+                if (m_mod[i] == name) mod_exists = true;
+            }
+            if (!mod_exists) {
+                add_error("Module '" + name + "' not found", stmt_umod.line);
+            }
+
+            for (const auto& fnc : m_fnc_mod) {
+                if (fnc.first == name) gen->write("  .extern " + fnc.second);
+            }
+        }
+        void operator()(const NodeStmtUbeepmod& stmt_umod) const {
+            const std::string& name = stmt_umod.module_name.value.value();
+            const std::vector<std::string> beepmodules = {
+                "string",
+                "std"
+            };
+
+            for (const std::string& module : beepmodules) {
+                if (name == module) {
+                    const std::string& loc = "/usr/include/beepc/" + name + ".o";
+                    modules.push_back(loc);
+                    return;
+                }
+            }
+            add_error("Unknown beep module", stmt_umod.line);
+        }
     };
 
     StmtVisitor visitor{.gen = this};
@@ -939,7 +964,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 [[nodiscard]] std::string Generator::gen_prog() {
     m_output << ".globl " << filename << /*"\nsection .text*/"\n";
     //m_output << "extern free\n";
-    m_output << ".extern print\n";
+    m_output << ".extern printbp\n";
 
     //m_output << "main:\n";
     for (const NodeStmt& stmt : m_prog.stmts) {

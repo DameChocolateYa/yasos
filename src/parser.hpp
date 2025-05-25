@@ -93,7 +93,6 @@ struct CustomFuncArgs {
 
 struct NodeExprCallCustomFunc {
     Token name;
-    std::vector<Token> arg_names;
     std::vector<NodeExpr> arg_values;
     int line;
 };
@@ -175,6 +174,25 @@ struct NodeStmtImport {
     int line;
 };
 
+struct NodeStmtDeclmod {
+    Token module_name;
+    int line;
+};
+
+struct NodeStmtEndmod {
+    int line;
+};
+
+struct NodeStmtUmod {
+    Token module_name;
+    int line;
+};
+
+struct NodeStmtUbeepmod {
+    Token module_name;
+    int line;
+};
+
 struct NodeStmtMkpub {
     std::vector<Token> functions;
     int line;
@@ -198,7 +216,7 @@ struct NodeStmtWhile {
 };
 
 struct NodeStmtPrint {
-    Token str_lit;
+    NodeExpr str;
     std::vector<NodeExpr> args;
     int line;
 };
@@ -223,7 +241,6 @@ struct NodeStmtRet { // Return a value
 struct NodeStmtCallCustomFunc {
     Token name;
     //std::vector<NodeExpr> args;
-    std::vector<Token> arg_names;
     std::vector<NodeExpr> arg_values;
     int line;
 };
@@ -254,7 +271,7 @@ struct NodeStmtProperty {
 };
 
 struct NodeStmt {
-    std::variant<NodeStmtVar, NodeStmtVarRe, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtCallCustomFunc, NodeStmtMkpub, NodeStmtUnload, NodeStmtStop, NodeStmtContinue, NodeStmtProperty> var;
+    std::variant<NodeStmtVar, NodeStmtVarRe, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtCallCustomFunc, NodeStmtMkpub, NodeStmtUnload, NodeStmtStop, NodeStmtContinue, NodeStmtProperty, NodeStmtDeclmod, NodeStmtEndmod, NodeStmtUmod, NodeStmtUbeepmod> var;
     int line;
 };
 

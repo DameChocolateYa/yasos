@@ -231,6 +231,26 @@ std::vector<Token> Tokenizer::tokenize() {
                 buf.clear();
                 continue;
             }
+            else if (buf == "declmod") {
+                tokens.push_back({.type = TokenType::_declmod, .line = local_lines});
+                buf.clear();
+                continue;
+            }
+            else if (buf == "endmod") {
+                tokens.push_back({.type = TokenType::_endmod, .line = local_lines});
+                buf.clear();
+                continue;
+            }
+            else if (buf == "umod") {
+                tokens.push_back({.type = TokenType::_umod, .line = local_lines});
+                buf.clear();
+                continue;
+            }
+            else if (buf == "ubeepmod") {
+                tokens.push_back({.type = TokenType::_ubeepmod, .line = local_lines});
+                buf.clear();
+                continue;
+            }
             else {
                 tokens.push_back({.type = TokenType::ident, .value = buf, .line = local_lines});
                 buf.clear();

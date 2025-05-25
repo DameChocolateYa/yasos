@@ -45,10 +45,7 @@ section .text
     global clsterm:function
     global colorterm:function
     global itostr:function
-    global stoint:function
     global stofl:function
-    global scani:function
-    global strcmp:function
     global strdup:function
     global waitk:function
     global isnum:function
@@ -56,7 +53,7 @@ section .text
     global testret:function
 
     global strcat:function
-    global len:function
+    ;global len:function
 
     extern printf
     extern sprintf
@@ -590,7 +587,7 @@ strcat:
     call [rel malloc wrt ..got] ; Save space on a dinamic buffer
     mov rbx, rax ; the buffer pointer
 
-    mov rsi, [rsp]
+    mov rdi, [rsp]
     add rsp, 16
     mov rsi, [rsp]
     add rsp, 16

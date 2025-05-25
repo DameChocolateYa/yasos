@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <vector>
 
 #define __LOG_FILE__ "log.txt"
 
@@ -27,6 +28,7 @@ extern int debug_mode_enabled;
 extern std::string current_source_file;
 extern int current_line;
 extern int compiled_successfully;
+extern std::vector<std::string> modules;
 
 inline void init_debug() {
     if (!debug_mode_enabled) return;

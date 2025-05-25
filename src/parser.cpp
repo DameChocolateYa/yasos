@@ -3,6 +3,7 @@
 #include "error.hpp"
 #include "tokenization.hpp"
 #include <cstdlib>
+#include <execution>
 #include <memory>
 
 std::optional<NodeExpr> Parser::parse_primary_expr() {
@@ -50,16 +51,12 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
             int line = name.line;
             consume();
 
-            std::vector<Token> arg_names;
             std::vector<NodeExpr> arg_values;
             while (peek().has_value() && peek().value().type != TokenType::r_arrow) {
-                Token ident = consume();
                 NodeExpr expr;
-                consume();
                 if (auto e = parse_expr()) {
                     expr = e.value();
                 }
-                arg_names.push_back(ident);
                 arg_values.push_back(expr);
 
                 if (peek().has_value() && peek().value().type == TokenType::comma) {
@@ -79,7 +76,7 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
             }
             consume(); // <
 
-            return NodeExpr(NodeExprCallCustomFunc{.name = name, .arg_names = arg_names, .arg_values = arg_values, .line = line});
+            return NodeExpr(NodeExprCallCustomFunc{.name = name, .arg_values = arg_values, .line = line});
         }
     else if (peek().has_value() && peek().value().type == TokenType::open_paren) {
         int line = peek().value().line;
@@ -337,16 +334,13 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         int line = name.line;
         consume(); // >
 
-        std::vector<Token> arg_names;
         std::vector<NodeExpr> arg_values;
         while (peek().has_value() && peek().value().type != TokenType::r_arrow) {
-            Token ident = consume();
             NodeExpr expr;
-            consume(); // :
             if (auto e = parse_expr()) {
                 expr = e.value();
             }
-            arg_names.push_back(ident);
+
             arg_values.push_back(expr);
 
             if (peek().has_value() && peek().value().type == TokenType::comma) {
@@ -367,7 +361,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         }
         consume(); // ;
 
-        return NodeStmt{.var = NodeStmtCallCustomFunc{.name = name, .arg_names = arg_names, .arg_values = arg_values, .line = line}};
+        return NodeStmt{.var = NodeStmtCallCustomFunc{.name = name, .arg_values = arg_values, .line = line}};
     }
 
     else if (peek().has_value() && peek().value().type == TokenType::ident &&
@@ -510,7 +504,13 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     }
     else if (peek().has_value() && peek().value().type == TokenType::str_lit) {
         int line = peek().value().line;
-        Token str_lit = consume();
+        NodeExpr str;
+        
+        auto tok = peek();
+        if (auto expr = parse_expr()) {
+            str = expr.value();
+        }
+
         std::vector<NodeExpr> args;
         while (auto tok = peek()) {
             if (tok->type != TokenType::comma) break;
@@ -527,7 +527,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         }
         consume();
 
-        return NodeStmt(NodeStmtPrint{str_lit, args, line});
+        return NodeStmt(NodeStmtPrint{str, args, line});
     }
 
     else if (peek().has_value() && peek().value().type == TokenType::_if) {
@@ -903,6 +903,53 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         consume();
 
         return NodeStmt{.var = NodeStmtProperty{.ident = ident, .property = property, .is_func = is_func, .args = args, .line = line}};
+    }
+    else if (peek().has_value() && peek().value().type == TokenType::_declmod) {
+        consume(); // declmod
+        int line = peek().value().line;
+
+        if (!peek().has_value() || peek().value().type != TokenType::ident) {
+            add_error("Expected name of module", line);
+        }
+        Token module_name = consume();
+        
+        return NodeStmt{.var = NodeStmtDeclmod{.module_name = module_name, .line = line}};
+    }
+    else if (peek().has_value() && peek().value().type == TokenType::_endmod) {
+        int line = peek().value().line;
+        consume(); // endmod 
+        
+        return NodeStmt{.var = NodeStmtEndmod{.line = line}};
+    }
+    else if (peek().has_value() && peek().value().type == TokenType::_umod) {
+        consume(); //_umod
+        int line = peek().value().line;
+        if (!peek().has_value() || peek().value().type != TokenType::ident) {
+            add_error("Expected module to import", line);
+        }
+        Token module_name = consume();
+
+        if (!peek().has_value() || peek().value().type != TokenType::semi) {
+            add_error("Expected ';'", line);
+        }
+        consume();
+
+        return NodeStmt{.var = NodeStmtUmod{.module_name = module_name, .line = line}};
+    }
+    else if (peek().has_value() && peek().value().type == TokenType::_ubeepmod) {
+        int line = peek().value().line;
+        consume();
+        if (!peek().has_value() || peek().value().type != TokenType::ident) {
+            add_error("Expected global module to import", line);
+        }
+        Token module_name = consume();
+
+        if (!peek().has_value() || peek().value().type != TokenType::semi) {
+            add_error("Expected ';'", line);
+        }
+        consume();
+
+        return NodeStmt{.var = NodeStmtUbeepmod{.module_name = module_name, .line = line}};
     }
 
     else {
