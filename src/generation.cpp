@@ -19,6 +19,7 @@ std::unordered_map<std::string, std::string> m_fnc_mod;
 std::unordered_map<std::string, VarType> m_fnc_rets;
 
 std::unordered_map<std::string, VarType> known_function_types = {
+    {"sysexc", VarType::Int},
     {"testret", VarType::Str},
     {"itostr", VarType::Str},
     {"stoint", VarType::Int},
@@ -28,7 +29,9 @@ std::unordered_map<std::string, VarType> known_function_types = {
     {"isint", VarType::Int},
     {"isfloat", VarType::Int},
     {"strcmp", VarType::Int},
-    {"cat", VarType::Str},
+    {"strconc", VarType::Str},
+    {"strcut", VarType::Str},
+    {"strsubs", VarType::Str},
     {"len", VarType::Int}
 };
 

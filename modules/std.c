@@ -74,5 +74,6 @@ void cls() {
 }
 
 int sysexc(const char* command) {
+    if (command == NULL) return 1;
     return system(command);
 }

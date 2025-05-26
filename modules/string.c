@@ -7,7 +7,7 @@ int len(const char* s1) {
     return len;
 }
 
-char* cat(const char* s1, const char* s2) {
+char* strconc(const char* s1, const char* s2) {
     if (!s1 || !s2) return NULL;
 
     size_t len1 = strlen(s1);
@@ -19,6 +19,40 @@ char* cat(const char* s1, const char* s2) {
     memcpy(result, s1, len1);
     memcpy(result + len1, s2, len2);
     result[len1 + len2] = '\0';
+
+    return result;
+}
+
+char* strcut(const char* s1, int begin, int end) { 
+    int len = strlen(s1);
+
+    if (begin < 0) begin = 0;
+    if (end > len) end = len;
+    if (begin >= end) return strdup(s1);
+
+    int new_len = len - (end - begin);
+    char* result = (char*)malloc(new_len);
+    if (!result) return NULL;
+
+    strncpy(result, s1, begin);
+
+    strcpy(result + begin, s1 + end);
+
+    return result;
+}
+
+char* strsubs(const char* s1, int begin, int end) {
+    int len = strlen(s1);
+
+    if (begin < 0) begin = 0;
+    if (end > len) end = len;
+    if (begin >= end) return strdup(s1);
+
+    int sub_len = end - begin;
+    char* result = (char*)malloc(sub_len);
+    if (!result) return NULL;
+
+    strncpy(result, s1 + begin, sub_len);
 
     return result;
 }
