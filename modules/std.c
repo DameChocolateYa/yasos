@@ -68,3 +68,11 @@ void waitk() {
 
     ioctl(0, TCSETS, &oldt);  // Restaurar configuración original
 }
+
+void cls() {
+    system("clear");
+}
+
+int sysexc(const char* command) {
+    return system(command);
+}
