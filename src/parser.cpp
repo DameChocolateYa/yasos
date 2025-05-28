@@ -171,7 +171,7 @@ std::optional<NodeExpr> Parser::parse_expr() {
         Token op = maybe_op.value();
         int line = op.line;
         if (op.type == TokenType::plus || op.type == TokenType::minus || op.type == TokenType::star || op.type == TokenType::slash ||
-            op.type == TokenType::eq_eq || op.type == TokenType::lt || op.type == TokenType::lte ||
+            op.type == TokenType::percent || op.type == TokenType::eq_eq || op.type == TokenType::lt || op.type == TokenType::lte ||
             op.type == TokenType::gt || op.type == TokenType::gte || op.type == TokenType::_and || op.type == TokenType::_or ||
             op.type == TokenType::bang_eq) {
             consume(); // the operator

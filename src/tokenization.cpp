@@ -388,16 +388,19 @@ std::vector<Token> Tokenizer::tokenize() {
             tokens.push_back({.type = TokenType::slash, .value="/", .line = local_lines});
             continue;
         }
-        else if (peek().value() == '!') {
+        else if (peek().value() == '%') {
             consume();
-            while (peek().has_value() && peek().value() != '%') {
+            tokens.push_back({.type = TokenType::percent, .value="%", .line = local_lines});
+            continue;
+        }
+        else if (peek().value() == '#') {
+            consume();
+            while (peek().has_value() && peek().value() != '#') {
                 consume(); // ignora todo dentro del comentario
             }
-            if (!peek().has_value()) {
-                add_error("Unclosed comment");
-                exit(EXIT_FAILURE);
+            if (peek().has_value()) {
+                consume(); // consume '#'
             }
-            consume(); // consume '%'
             continue;  // skip a agregar token
         }
         else if (peek().value() == '<') {

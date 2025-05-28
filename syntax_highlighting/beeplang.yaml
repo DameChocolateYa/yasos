@@ -12,8 +12,8 @@ rules:
         rules:
             - constant.specialChar: "\\\\([\"'abfnrtv\\\\]|[0-3]?[0-7]{1,2}|x[0-9A-Fa-f]{1,2}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})"
   - comment:
-        start: "!"
-        end: "%"
+        start: "#"
+        end: "#"
         rules:
             - todo: "(TODO|XXX|FIXME|NOTE):?"
 

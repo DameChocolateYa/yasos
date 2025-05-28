@@ -5,6 +5,9 @@
 #include <unistd.h>
 #include <termios.h>
 #include <sys/ioctl.h>
+#include <time.h>
+#include <stdint.h>
+#include <sys/random.h>
 
 void printbp(const char* format, ...) {
     if (!format) {
@@ -76,4 +79,31 @@ void cls() {
 int sysexc(const char* command) {
     if (command == NULL) return 1;
     return system(command);
+}
+
+void termc(const int color) {
+    if (color >= 0 && color <= 7) {
+        // Set bright text with foreground color
+        printf("\033[1;3%dm", color);
+    } else {
+        // Reset terminal colors
+        printf("\033[0m");
+    }
+}
+
+uint32_t get_secure_random_uint32() {
+    uint32_t num;
+    ssize_t result = getrandom(&num, sizeof(num), 0);
+    if (result != sizeof(num)) {
+        perror("getrandom failed");
+        return 0;
+    }
+    return num;
+}
+
+int randi(int min, int max) {
+    /*unsigned int seed = time(0);
+    int rd_num = rand_r(&seed) % (max - min + 1) + min;*/
+    uint32_t r = get_secure_random_uint32();
+    return (r % (max - min + 1)) + min;
 }

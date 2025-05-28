@@ -61,6 +61,20 @@ int stoint(const char* s1) {
     return atoi(s1);
 }
 
+char* itostr(const int n) {
+    char temp[22];
+    int len = snprintf(temp, sizeof(temp), "%lld", n);
+
+    if (len < 0) return NULL;
+
+    char* buffer = malloc(len);
+    if (!buffer) return NULL;
+
+    memcpy(buffer, temp, len);
+
+    return buffer;
+}
+
 int strcmp(const char* s1, const char* s2) {
     while (*s1 && *s2) {
         if (*s1 != *s2) return 0;
@@ -68,4 +82,20 @@ int strcmp(const char* s1, const char* s2) {
         s2++;
     }
     return *s1 == *s2;  // Ambos deben llegar al final ('\0') al mismo tiempo
+}
+
+char* digtoabc(const int n) {
+    if (n >= 0 && n < 26) {
+        char* res = malloc(2);  // 1 para la letra, 1 para '\0'
+        if (res == NULL) return NULL; // Verificación de malloc
+        res[0] = 'A' + n;
+        res[1] = '\0';
+        return res;
+    } else {
+        char* res = malloc(2);
+        if (res == NULL) return NULL;
+        res[0] = '?';
+        res[1] = '\0';
+        return res;
+    }
 }

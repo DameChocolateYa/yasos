@@ -1,0 +1,17 @@
+import <std>
+import <string>
+
+start = ():
+	while (true) do {
+		let c: int = randi(1, 7);
+		termc(c);
+	
+		let y: int = randi(0, 25);
+		let x: str = digtoabc(y);
+		"%s", x;
+	}
+endfn
+
+start<>;
+
+end();

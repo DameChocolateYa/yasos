@@ -32,7 +32,9 @@ std::unordered_map<std::string, VarType> known_function_types = {
     {"strconc", VarType::Str},
     {"strcut", VarType::Str},
     {"strsubs", VarType::Str},
-    {"len", VarType::Int}
+    {"len", VarType::Int},
+    {"randi", VarType::Int},
+    {"digtoabc", VarType::Str},
 };
 
 struct Func {
@@ -274,6 +276,21 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
                 gen->write("  xor %rdx, %rdx");
                 if (v1 == VarType::Int && v2 == VarType::Int) gen->write("  idiv %rbx");
                 else if (v1 == VarType::Float || v2 == VarType::Float) gen->write("  divsd %xmm1, %xmm0");
+            }
+            else if (op == "%") {
+                if (v1 == VarType::Int && v2 == VarType::Int) {
+                    gen->write("  xor %rdx, %rdx");
+                    gen->write("  idiv %rbx");
+                    gen->write("  mov %rdx, %rax");
+                }
+                else if (v1 == VarType::Float || v2 == VarType::Float) {
+                    gen->write("  movapd %xmm0, %xmm2");        // copia a en xmm2
+                    gen->write("  divsd %xmm1, %xmm0");         // xmm0 = a / b
+                    gen->write("  roundsd $3, %xmm0, %xmm0");   // trunc(a / b)
+                    gen->write("  mulsd %xmm1, %xmm0");         // xmm0 = b * trunc(a / b)
+                    gen->write("  subsd %xmm0, %xmm2");         // xmm2 = a - b * trunc(a / b)
+                    gen->write("  movapd %xmm2, %xmm0");        // resultado final en xmm0
+                }
             }
             else if (op == "==") {
                 gen->write("  cmp %rbx, %rax");
