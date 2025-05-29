@@ -134,6 +134,7 @@ public:
     inline explicit Generator(NodeProg root, std::string filename) : m_prog(std::move(root)), filename(filename) {}
 
     std::vector<std::string> libraries;
+    std::vector<std::string> libpaths;
 
     void gen_expr(const NodeExpr& expr, bool push_result=true, const std::string& reg = "rax");
     void gen_stmt(const NodeStmt& stmt);

@@ -951,7 +951,38 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
         return NodeStmt{.var = NodeStmtUbeepmod{.module_name = module_name, .line = line}};
     }
+    else if (peek().has_value() && peek().value().type == TokenType::_llibrary) {
+        int line = peek().value().line;
+        consume();
 
+        /*if (!peek().has_value() || peek().value().type != TokenType::l_arrow) {
+            add_error("Expected '<'", line);
+        }
+        consume();*/
+
+        if (!peek().has_value() || peek().value().type != TokenType::str_lit) {
+            add_error("Expected library path", line);
+        }
+        Token path = consume();
+
+        return NodeStmt{.var = NodeStmtLlibrary{.name = path, .line = line}};
+    }
+    else if (peek().has_value() && peek().value().type == TokenType::_libpath) {
+        int line = peek().value().line;
+        consume();
+
+        /*if (!peek().has_value() || peek().value().type != TokenType::l_arrow) {
+            add_error("Expected '<'", line);
+        }
+        consume();*/
+
+        if (!peek().has_value() || peek().value().type != TokenType::str_lit) {
+            add_error("Expected library path", line);
+        }
+        Token path = consume();
+
+        return NodeStmt{.var = NodeStmtLibpath{.path = path, .line = line}};
+    }
     else {
         int line = peek().value().line;
         consume();

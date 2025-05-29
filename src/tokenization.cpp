@@ -251,6 +251,16 @@ std::vector<Token> Tokenizer::tokenize() {
                 buf.clear();
                 continue;
             }
+            else if (buf == "llibrary") {
+                tokens.push_back({.type = TokenType::_llibrary, .line = local_lines});
+                buf.clear();
+                continue;
+            }
+            else if (buf == "libpath") {
+                tokens.push_back({.type = TokenType::_libpath, .line = local_lines});
+                buf.clear();
+                continue;
+            }
             else {
                 tokens.push_back({.type = TokenType::ident, .value = buf, .line = local_lines});
                 buf.clear();

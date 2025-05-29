@@ -62,17 +62,44 @@ int stoint(const char* s1) {
 }
 
 char* itostr(const int n) {
-    char temp[22];
-    int len = snprintf(temp, sizeof(temp), "%lld", n);
+    char buf[32];
+    int len = 0;
+    int x = n;
 
-    if (len < 0) return NULL;
+    if (x == 0) {
+        buf[len++] = '0';
+    }
+    else {
+        int negative = 0;
+        if (x < 0) {
+            negative = 1;
+            x = -x;
+        }
 
-    char* buffer = malloc(len);
-    if (!buffer) return NULL;
+        while (x > 0) {
+            buf[len++] = '0' + (x % 10);
+            x /= 10;
+        }
 
-    memcpy(buffer, temp, len);
+        if (negative) {
+            buf[len++] = '-';
+        }
+    }
 
-    return buffer;
+    for (int i = 0; i < len / 2; ++i) {
+        char tmp = buf[i];
+        buf[i] = buf[len - 1 - i];
+        buf[len - 1 - i] = tmp;
+    }
+
+    char* res = (char*)malloc(len);
+    if (!res) return NULL;
+
+    for (int i = 0; i < len; ++i) {
+        res[i] = buf[i];
+    }
+
+    return res;
 }
 
 int strcmp(const char* s1, const char* s2) {
@@ -86,13 +113,13 @@ int strcmp(const char* s1, const char* s2) {
 
 char* digtoabc(const int n) {
     if (n >= 0 && n < 26) {
-        char* res = malloc(2);  // 1 para la letra, 1 para '\0'
+        char* res = (char*)malloc(2);  // 1 para la letra, 1 para '\0'
         if (res == NULL) return NULL; // Verificación de malloc
         res[0] = 'A' + n;
         res[1] = '\0';
         return res;
     } else {
-        char* res = malloc(2);
+        char* res = (char*)malloc(2);
         if (res == NULL) return NULL;
         res[0] = '?';
         res[1] = '\0';

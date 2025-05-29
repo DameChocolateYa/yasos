@@ -75,7 +75,9 @@ enum class TokenType {
     _declmod,
     _endmod,
     _umod,
-    _ubeepmod
+    _ubeepmod,
+    _llibrary,
+    _libpath
 };
 
 struct Token {

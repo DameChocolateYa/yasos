@@ -8,6 +8,18 @@
 #include <time.h>
 #include <stdint.h>
 #include <sys/random.h>
+#include <sys/syscall.h>
+
+#define SYS_fork    57
+#define SYS_execve  59
+#define SYS_wait4   61
+#define SYS_exit    60
+
+long syscall(long number, ...); // prototype to avoi libc warning
+
+const char path[] = "/bin/sh";
+const char arg0[] = "sh";
+const char arg1[] = "-c";
 
 void printbp(const char* format, ...) {
     if (!format) {
@@ -73,12 +85,37 @@ void waitk() {
 }
 
 void cls() {
-    system("clear");
+    printf("\e[1;1H\e[2J");
+    fflush(stdout);
 }
 
 int sysexc(const char* command) {
     if (command == NULL) return 1;
-    return system(command);
+    const char* argv[] = {arg0, arg1, command, NULL};
+    const char term[] = "TERM=linux";
+    const char* envp[] = {term, NULL};
+
+    long pid = syscall(SYS_fork);
+    if (pid == 0) {
+        syscall(SYS_execve, path, argv, envp);
+        syscall(SYS_exit, 1);
+    }
+    else if (pid > 0) {
+        int status;
+        syscall(SYS_wait4, pid, 0, 0, 0);
+
+        if ((status & 0x7f) == 0) {
+            int exit_code = (status >> 8) & 0xff;
+            return exit_code;
+        }
+        else {
+            return 1;
+        }
+    }
+    else {
+        return 1;
+    }
+    return 1;
 }
 
 void termc(const int color) {

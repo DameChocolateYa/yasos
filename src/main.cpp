@@ -75,7 +75,9 @@ int main(int argc, char** argv) {
 
     std::vector<std::string> object_files;
     std::vector<std::string> all_libraries;
+    std::vector<std::string> all_libpaths;
     std::unordered_set<std::string> seen_libraries;
+    std::unordered_set<std::string> seen_libpaths;
 
     for (size_t index = 0; index < input_files.size(); ++index) {
         const auto& filename = input_files[index];
@@ -146,6 +148,12 @@ int main(int argc, char** argv) {
             continue;
         }
 
+        for (const auto& libp : generator.libpaths) {
+            if (seen_libpaths.insert(libp).second) {
+                all_libpaths.push_back(libp);
+            }
+        }
+
         for (const auto& lib : generator.libraries) {
             if (seen_libraries.insert(lib).second) {
                 all_libraries.push_back(lib);
@@ -183,6 +191,9 @@ int main(int argc, char** argv) {
     }
 
     link_command += "-L" + func_dir + " ";
+    for (const auto& libp : all_libpaths) {
+        link_command += "-L" + libp + " ";
+    }
     for (const auto& lib : all_libraries) {
         link_command += "-l" + lib + " ";
     }

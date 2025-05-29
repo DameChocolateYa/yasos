@@ -57,7 +57,6 @@ void initialize_func_map() {
 
 void initialize_func_ret_map() {
     function_ret_handlers["testret"] = &handle_testret;
-    function_ret_handlers["itostr"] = &handle_itostr;
     //function_ret_handlers["stoint"] = &handle_stoint;
     function_ret_handlers["stofl"] = &handle_stofl;
     function_ret_handlers["scani"] = &handle_scani;
@@ -590,6 +589,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                     add_error("Making public an inexistent function (" + func.value.value() + ")", mkpub.line);
                 }
                 gen->write("  .globl " + func.value.value());
+                gen->write("  .type " + func.value.value() + ", @function");
             }
         }
 
@@ -974,6 +974,13 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 }
             }
             add_error("Unknown beep module", stmt_umod.line);
+        }
+
+        void operator()(const NodeStmtLlibrary& stmt_llibrary) const {
+            gen->libraries.push_back(stmt_llibrary.name.value.value());
+        }
+        void operator()(const NodeStmtLibpath& stmt_libpath) const {
+            gen->libpaths.push_back(stmt_libpath.path.value.value());
         }
     };
 
