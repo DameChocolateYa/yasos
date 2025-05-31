@@ -27,6 +27,8 @@ void check_func_args(const std::vector<NodeExprPtr>& args, const std::unordered_
 
 extern std::unordered_map<std::string, VarType> known_function_types;
 
+extern int main_func_declared;
+
 enum class PrintType : int {
     Int = 0,
     Float = 1,

@@ -266,7 +266,13 @@ std::vector<Token> Tokenizer::tokenize() {
                 buf.clear();
             }
         }
-        else if (std::isdigit(peek().value())) {
+        else if (peek().value() == '-' && std::isdigit(peek(1).value())
+            || peek().value() == '+' && std::isdigit(peek(1).value()) 
+            || std::isdigit(peek().value())) {
+            if (peek().value() == '-' || peek().value() == '+') {
+                buf.push_back(consume());
+            }
+
             buf.push_back(consume());  // Primer dígito
             bool is_float = false;
 

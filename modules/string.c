@@ -1,13 +1,16 @@
 #include <stdio.h>
+#define strcat beep_strcat
 #include <string.h>
+#undef strcat
 #include <stdlib.h>
+#include <math.h>
 
 int len(const char* s1) {
     int len = (int)strlen(s1);
     return len;
 }
 
-char* strconc(const char* s1, const char* s2) {
+char* strcat(const char* s1, const char* s2) {
     if (!s1 || !s2) return NULL;
 
     size_t len1 = strlen(s1);
@@ -41,7 +44,7 @@ char* strcut(const char* s1, int begin, int end) {
     return result;
 }
 
-char* strsubs(const char* s1, int begin, int end) {
+char* strsub(const char* s1, int begin, int end) {
     int len = strlen(s1);
 
     if (begin < 0) begin = 0;
@@ -59,6 +62,10 @@ char* strsubs(const char* s1, int begin, int end) {
 
 int stoint(const char* s1) {
     return atoi(s1);
+}
+
+float stofl(const char* s1) {
+    return atof(s1);
 }
 
 char* itostr(const int n) {
@@ -96,6 +103,59 @@ char* itostr(const int n) {
     if (!res) return NULL;
 
     for (int i = 0; i < len; ++i) {
+        res[i] = buf[i];
+    }
+
+    return res;
+}
+
+char* ftostr(double n, int decimals) {
+    char buf[64];
+    int len = 0;
+
+    if (n < 0) {
+        buf[len++] = '-';
+        n = -n;
+    }
+
+    int int_part = (int)n;
+
+    float frac_part = n - int_part;
+
+    char int_buf[32];
+    int int_len = 0;
+    if (int_part == 0) {
+        int_buf[int_len++] = '0';
+    } else {
+        while (int_part > 0) {
+            int_buf[int_len++] = '0' + (int_part % 10);
+            int_part /= 10;
+        }
+
+        for (int i = 0; i < int_len / 2; i++) {
+            char tmp = int_buf[i];
+            int_buf[i] = int_buf[int_len - 1 - i];
+            int_buf[int_len - 1 - i] = tmp;
+        }
+    }
+
+    for (int i = 0; i < int_len; i++) {
+        buf[len++] = int_buf[i];
+    }
+
+    buf[len++] = '.';
+
+    for (int i = 0; i < decimals; i++) {
+        frac_part *= 10;
+        int digit = (int)frac_part;
+        buf[len++] = '0' + digit;
+        frac_part -= digit;
+    }
+
+    char* res = (char*)malloc(len);
+    if (!res) return NULL;
+
+    for (int i = 0; i < len; i++) {
         res[i] = buf[i];
     }
 

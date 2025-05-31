@@ -12,6 +12,8 @@
 #include "parser.hpp"
 #include "error.hpp"
 
+int main_func_declared = false;
+
 std::vector<std::string> modules;
 
 std::vector<std::string> m_mod;
@@ -22,19 +24,28 @@ std::unordered_map<std::string, VarType> known_function_types = {
     {"sysexc", VarType::Int},
     {"testret", VarType::Str},
     {"itostr", VarType::Str},
+    {"ftostr", VarType::Str},
     {"stoint", VarType::Int},
     {"stofl", VarType::Float},
     {"scani", VarType::Str},
     {"isnum", VarType::Int},
     {"isint", VarType::Int},
     {"isfloat", VarType::Int},
+    {"isnum", VarType::Int},
     {"strcmp", VarType::Int},
-    {"strconc", VarType::Str},
+    {"strcat", VarType::Str},
     {"strcut", VarType::Str},
-    {"strsubs", VarType::Str},
+    {"strsub", VarType::Str},
     {"len", VarType::Int},
     {"randi", VarType::Int},
     {"digtoabc", VarType::Str},
+    {"sqrt", VarType::Float},
+    {"round", VarType::Float},
+    {"ceil", VarType::Float},
+    {"floor", VarType::Float},
+    {"pow", VarType::Float},
+    {"fact", VarType::Int},
+    {"log", VarType::Float}
 };
 
 struct Func {
@@ -50,18 +61,18 @@ std::unordered_map<std::string, std::function<void(const NodeExprProperty&, Gene
 std::unordered_map<std::string, std::function<void(const NodeStmtProperty&, Generator*, int)>> str_property;
 
 void initialize_func_map() {
-    function_handlers["end"] = &handle_end;
-    function_handlers["clsterm"] = &handle_clsterm;
-    function_handlers["colorterm"] = &handle_colorterm;
+    //function_handlers["end"] = &handle_end;
+    //function_handlers["clsterm"] = &handle_clsterm;
+    //function_handlers["colorterm"] = &handle_colorterm;
 }
 
 void initialize_func_ret_map() {
     function_ret_handlers["testret"] = &handle_testret;
     //function_ret_handlers["stoint"] = &handle_stoint;
-    function_ret_handlers["stofl"] = &handle_stofl;
-    function_ret_handlers["scani"] = &handle_scani;
-    function_ret_handlers["isnum"] = &handle_isnum;
-    function_ret_handlers["isfloat"] = &handle_isfloat;
+    //function_ret_handlers["stofl"] = &handle_stofl;
+    //function_ret_handlers["scani"] = &handle_scani;
+    //function_ret_handlers["isnum"] = &handle_isnum;
+    //function_ret_handlers["isfloat"] = &handle_isfloat;
 }
 
 void initialize_str_property_map() {
@@ -502,8 +513,8 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
             else {
                 for (const auto& arg : arg_values) {
                     VarType var_type = check_value(*arg, gen);
-                    if (var_type != VarType::Float) gen->gen_expr(*arg, false, regs[index]);
-                    else gen->gen_expr(*arg, false, float_regs[index]);
+                    if (var_type != VarType::Float) gen->gen_expr(*arg, false, regs[reg_index]);
+                    else gen->gen_expr(*arg, false, float_regs[float_reg_index]);
                     if (var_type == VarType::Float) ++float_reg_index;
                     else ++reg_index;
                     ++index;
@@ -762,8 +773,8 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             gen->gen_expr(format, false, "rdi");
             for (const auto& arg : stmt_print.args) {
                 VarType var_type = check_value(arg, gen);
-                if (var_type != VarType::Float) gen->gen_expr(arg, false, regs[index]);
-                else gen->gen_expr(arg, false, float_regs[index]);
+                if (var_type != VarType::Float) gen->gen_expr(arg, false, regs[reg_index]);
+                else gen->gen_expr(arg, false, float_regs[float_reg_index]);
                 if (var_type == VarType::Float) ++float_reg_index;
                 else ++reg_index;
                 ++index;
@@ -782,6 +793,9 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             if (gen->mod == Mode::Mod) {
                 m_fnc_mod.insert({gen->current_mod, stmt_def_func.name.value.value()});
                 gen->write("  .globl " + stmt_def_func.name.value.value());
+            }
+            if (stmt_def_func.name.value.value() == "main" && main_func_declared != -5) {
+                main_func_declared = true;
             }
 
             gen->current_mode = Mode::Function;
@@ -901,8 +915,8 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             else {
                 for (const auto& arg : arg_values) {
                     VarType var_type = check_value(*arg, gen);
-                    if (var_type != VarType::Float) gen->gen_expr(*arg, false, regs[index]);
-                    else gen->gen_expr(*arg, false, float_regs[index]);
+                    if (var_type != VarType::Float) gen->gen_expr(*arg, false, regs[reg_index]);
+                    else gen->gen_expr(*arg, false, float_regs[float_reg_index]);
                     if (var_type == VarType::Float) ++float_reg_index;
                     else ++reg_index;
                     ++index;
@@ -989,18 +1003,22 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 }
 
 [[nodiscard]] std::string Generator::gen_prog() {
-    m_output << ".globl " << filename << /*"\nsection .text*/"\n";
+    //m_output << ".globl " << filename << /*"\nsection .text*/"\n";
     //m_output << "extern free\n";
-    m_output << ".extern printbp\n";
 
     //m_output << "main:\n";
     for (const NodeStmt& stmt : m_prog.stmts) {
         gen_stmt(stmt);
     }
+    if (main_func_declared) {
+        main_func_declared = -5;
+        m_output << ".globl main\n";
+    }
+ 
     m_output << function_buffer.str();
     //m_output << "main:\n";
-    m_output << filename << ":\n";
-    m_output << main_buffer.str();
+    //m_output << filename << ":\n";
+    //m_output << main_buffer.str();
 
     //m_output << "\nsection .rodata\n";
     if (!m_string_literals.empty()) {
