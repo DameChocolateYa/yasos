@@ -61,7 +61,7 @@ std::unordered_map<std::string, std::function<void(const NodeExprProperty&, Gene
 std::unordered_map<std::string, std::function<void(const NodeStmtProperty&, Generator*, int)>> str_property;
 
 void initialize_func_map() {
-    //function_handlers["end"] = &handle_end;
+    function_handlers["end"] = &handle_end;
     //function_handlers["clsterm"] = &handle_clsterm;
     //function_handlers["colorterm"] = &handle_colorterm;
 }
