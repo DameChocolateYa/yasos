@@ -127,6 +127,27 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
 
         return NodeExpr(NodeExprProperty{.ident = ident, .property = property, .is_func = is_func, .args = args, .line = line});
     }
+	else if (peek().has_value() && peek().value().type == TokenType::_gptr) {
+		int line = peek().value().line;
+		consume();
+
+		if (!peek().has_value() || peek().value().type != TokenType::open_paren) {
+			add_error("Expected '('", line);
+		}
+		consume();
+
+		if (!peek().has_value() || peek().value().type != TokenType::ident) {
+			add_error("Expected identifier", line);
+		}
+		Token ident = consume();
+
+		if (!peek().has_value() || peek().value().type != TokenType::close_paren) {
+			add_error("Expected ')'", line);
+		}
+		consume();
+
+		return NodeExpr(NodeExprGetPtr{.ident = ident, .line = line});
+	}
     else if (peek().has_value() && peek().value().type == TokenType::int_lit) {
         return NodeExpr(NodeExprIntLit{consume()});
     }
@@ -218,36 +239,15 @@ std::optional<NodeExpr> Parser::parse_expr() {
 std::optional<NodeStmt> Parser::parse_stmt() {
     if (peek().has_value() && (peek().value().type == TokenType::var || peek().value().type == TokenType::cnst) &&
         peek(1).has_value() && peek(1).value().type == TokenType::ident &&
-        peek(2).has_value() && peek(2).value().type == TokenType::dp &&
-        peek(3).has_value() &&
-        peek(4).has_value() && peek(4).value().type == TokenType::eq)
+        peek(2).has_value() && peek(2).value().type == TokenType::eq)
     {
         int mut = peek().value().type == TokenType::var ? true : false;
         consume();
         Token ident = consume();
         int line = ident.line;
-        consume();
-        Token type_token = consume();
-        consume();
-
-        VarType type;
-        switch (type_token.type) {
-            case TokenType::int_type:
-                type = VarType::Int;
-                break;
-            case TokenType::str_type:
-                type = VarType::Str;
-                break;
-            case TokenType::float_type:
-                type = VarType::Float;
-                break;
-            default:
-                add_error("Invalid type", line);
-        }
-
         NodeStmtVar stmt_var;
         stmt_var.ident = ident;
-        stmt_var.type = type;
+		consume();
 
         auto expr = parse_expr();
         if (!expr.has_value()) {
@@ -276,14 +276,14 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
         while (peek().has_value() && peek().value().type != TokenType::close_paren) {
             if (peek().has_value() && peek().value().type == TokenType::ident && peek(1).has_value() && peek(1).value().type == TokenType::dp &&
-                peek(2).has_value() && (peek(2).value().type == TokenType::str_type || peek(2).value().type == TokenType::int_type || peek(2).value().type == TokenType::float_type)) {
+                peek(2).has_value() && (peek(2).value().type == TokenType::str_type || peek(2).value().type == TokenType::int_type || peek(2).value().type == TokenType::double_type)) {
                     std::string arg_name = consume().value.value();
                     consume();
                     Token arg_type_tok = consume();
                     ArgType arg_type;
                     if (arg_type_tok.type == TokenType::str_type) arg_type = ArgType::String;
                     else if (arg_type_tok.type == TokenType::int_type) arg_type = ArgType::Integer;
-                    else if (arg_type_tok.type == TokenType::float_type) arg_type = ArgType::Float;
+                    else if (arg_type_tok.type == TokenType::double_type) arg_type = ArgType::Float;
 
                     args.push_back({.name = arg_name, .arg_type = arg_type});
 
@@ -316,7 +316,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
             }
             if (peek().value().type == TokenType::str_type) return_type = VarType::Str;
             else if (peek().value().type == TokenType::int_type) return_type = VarType::Int;
-            else if (peek().value().type == TokenType::float_type) return_type = VarType::Float;
+            else if (peek().value().type == TokenType::double_type) return_type = VarType::Float;
             else {
                 add_error("Unknown return type in specification", line);
             }
@@ -983,6 +983,43 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
         return NodeStmt{.var = NodeStmtLibpath{.path = path, .line = line}};
     }
+	else if (peek().has_value() && peek().value().type == TokenType::_sptr) {
+		int line = peek().value().line;
+		consume();
+
+		if (!peek().has_value() || peek().value().type != TokenType::open_paren) {
+			add_error("Expected '('", line);
+		}
+		consume();
+
+		if (!peek().has_value() || peek().value().type != TokenType::ident) {
+			add_error("Expected identifier", line);
+		}
+		Token ident = consume();
+
+		if (!peek().has_value() || peek().value().type != TokenType::comma) {
+			add_error("Expected ','", line);
+		}
+		consume();
+
+		auto e = parse_expr();
+		if (!e.has_value()) {
+			add_error("Expected a expression\n", line);
+		}
+		NodeExpr expr = e.value();
+
+		if (!peek().has_value() || peek().value().type != TokenType::close_paren) {
+			add_error("Expected ')'", line);
+		}
+		consume();
+
+		if (!peek().has_value() || peek().value().type != TokenType::semi) {
+			add_error("Expected ';'", line);
+		}
+		consume();
+
+		return NodeStmt{.var = NodeStmtSetPtr{.ident = ident, .expr = expr, .line = line}};
+	}
     else {
         int line = peek().value().line;
         consume();

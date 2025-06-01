@@ -36,8 +36,8 @@ std::vector<Token> Tokenizer::tokenize() {
                 buf.clear();
                 continue;
             }
-            else if (buf == "float") {
-                tokens.push_back({.type = TokenType::float_type, .line = local_lines});
+            else if (buf == "double") {
+                tokens.push_back({.type = TokenType::double_type, .line = local_lines});
                 buf.clear();
                 continue;
             }
@@ -261,6 +261,16 @@ std::vector<Token> Tokenizer::tokenize() {
                 buf.clear();
                 continue;
             }
+			else if (buf == "gptr") {
+				tokens.push_back({.type = TokenType::_gptr, .line = local_lines});
+				buf.clear();
+				continue;
+			}
+			else if (buf == "sptr") {
+				tokens.push_back({.type = TokenType::_sptr, .line = local_lines});
+				buf.clear();
+				continue;
+			}
             else {
                 tokens.push_back({.type = TokenType::ident, .value = buf, .line = local_lines});
                 buf.clear();

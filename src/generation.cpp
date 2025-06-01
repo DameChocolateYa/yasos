@@ -22,6 +22,7 @@ std::unordered_map<std::string, VarType> m_fnc_rets;
 
 std::unordered_map<std::string, VarType> known_function_types = {
     {"sysexc", VarType::Int},
+	{"nap", VarType::Void},
     {"testret", VarType::Str},
     {"itostr", VarType::Str},
     {"ftostr", VarType::Str},
@@ -38,6 +39,7 @@ std::unordered_map<std::string, VarType> known_function_types = {
     {"strsub", VarType::Str},
     {"len", VarType::Int},
     {"randi", VarType::Int},
+	{"randf", VarType::Float},
     {"digtoabc", VarType::Str},
     {"sqrt", VarType::Float},
     {"round", VarType::Float},
@@ -45,7 +47,13 @@ std::unordered_map<std::string, VarType> known_function_types = {
     {"floor", VarType::Float},
     {"pow", VarType::Float},
     {"fact", VarType::Int},
-    {"log", VarType::Float}
+    {"log", VarType::Float},
+
+	{"openf", VarType::Other},
+	{"closef", VarType::Void},
+	{"isfopen", VarType::Int},
+	{"readf", VarType::Str},
+	{"writef", VarType::Void}
 };
 
 struct Func {
@@ -294,7 +302,7 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
                     gen->write("  mov %rdx, %rax");
                 }
                 else if (v1 == VarType::Float || v2 == VarType::Float) {
-                    gen->write("  movapd %xmm0, %xmm2");        // copia a en xmm2
+                    gen->write("  movsd %xmm0, %xmm2");        // copia a en xmm2
                     gen->write("  divsd %xmm1, %xmm0");         // xmm0 = a / b
                     gen->write("  roundsd $3, %xmm0, %xmm0");   // trunc(a / b)
                     gen->write("  mulsd %xmm1, %xmm0");         // xmm0 = b * trunc(a / b)
@@ -303,9 +311,16 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
                 }
             }
             else if (op == "==") {
-                gen->write("  cmp %rbx, %rax");
-                gen->write("  sete %al");
-                gen->write("  movzx %al, %rax");
+				if (v1 == VarType::Int && v2 == VarType::Int) {
+					gen->write("  cmp %rbx, %rax");
+					gen->write("  sete %al");
+					gen->write("  movzx %al, %rax");
+				}
+				else if (v1 == VarType::Float || v2 == VarType::Float) {
+					gen->write("  ucomisd %xmm1, %xmm0");
+					gen->write("  sete %al");
+					gen->write("  movzx %al, %rax");
+				}
             }
             else if (op == "!=") {
                 gen->write("  cmp %rbx, %rax");
@@ -559,6 +574,35 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
                     break;
             }
         }
+		
+		void operator()(const NodeExprGetPtr& expr_ptr) const {
+			if (gen->m_vars.contains(expr_ptr.ident.value.value())) {	
+				size_t offset_bytes = gen->get_var(expr_ptr.ident.value.value());
+				gen->write("  lea " + std::to_string(offset_bytes) + "(%rsp), %" + reg);
+				if (push_result) gen->push(reg);
+			}
+			else if (gen->current_mode == Mode::Function) {
+                for (const auto& fnc : gen->m_fnc_args) {
+                    if (fnc.first == gen->current_func) {
+                        for (const auto& var : fnc.second) {
+                            if (var.name == expr_ptr.ident.value.value()) {
+                                if (var.type != VarType::Float) gen->write("  lea -" + std::to_string(var.stack_loc) + "(%rbp), %" + reg);
+                                else gen->write("  movsd -" + std::to_string(var.stack_loc) + "(%rbp), %" + reg);
+                                //gen->write("  mov rax, rsi");
+                                if (push_result) {
+                                    if (var.type != VarType::Float) gen->push(reg);
+                                    else gen->push_float(reg);
+                                }
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+			else {
+				add_error("Unexistent variable\n", expr_ptr.line);
+			}	
+		}
     };
 
     ExprVisitor visitor{.gen = this, .push_result = push_result, .reg = reg};
@@ -613,12 +657,14 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             VarType value_type = check_value(stmt_var.expr, gen);
             if (value_type != VarType::Float) gen->gen_expr(stmt_var.expr, false);
             else gen->gen_expr(stmt_var.expr, false, "xmm0");
- 
-            if (value_type != stmt_var.type) {
-                //add_error("Tried to assign a value of diferent type", stmt_var.line);
-            }
+
+			if (value_type == VarType::Other) {
+				gen->push("rax");	
+				gen->insert_var(stmt_var.ident.value.value(), VarType::Other, stmt_var.is_mutable);
+				return;
+			} 
             
-            if (stmt_var.type != VarType::Float) gen->push("rax", false);
+            if (value_type != VarType::Float) gen->push("rax", false);
             else gen->push_float("xmm0", false);
             gen->write(" # Creating a new var (" + name + ")");
             //gen->m_vars.insert({name, Var{.stack_loc = gen->m_stack_size - 1, .type = var_type, .name = name}});
@@ -644,13 +690,15 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 if (!var.is_mutable) {
                     add_error("Cannot modify a constant (" + name + ")", stmt_var.line);
                 }
-                if (gen->m_vars.at(name).type != value_type) {
+                /*if (gen->m_vars.at(name).type != value_type) {
                     //std::cerr << static_cast<int>(value_type) << "\n";
                     add_error("Expected same type in reassigment", stmt_var.line);
-                }
+                }*/
 
                 size_t offset_bytes = gen->get_var(name);
-                gen->write("  mov %rax, " + std::to_string(offset_bytes)  + "(%rsp) # Editing var value (" + name + ")");
+				gen->m_vars.at(name).type = value_type;
+                if (value_type != VarType::Float) gen->write("  mov %rax, " + std::to_string(offset_bytes)  + "(%rsp) # Editing var value (" + name + ")");
+				else gen->write("  movsd %xmm0, " + std::to_string(offset_bytes)  + "(%rsp) # Editing var value (" + name + ")");
                 return;
             }
 
@@ -996,6 +1044,38 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
         void operator()(const NodeStmtLibpath& stmt_libpath) const {
             gen->libpaths.push_back(stmt_libpath.path.value.value());
         }
+
+		void operator()(const NodeStmtSetPtr& stmt_ptr) const {
+			VarType value_type = check_value(stmt_ptr.expr, gen);
+			if (value_type != VarType::Float) gen->gen_expr(stmt_ptr.expr, false, "rax");
+			else gen->gen_expr(stmt_ptr.expr, false, "xmm0");
+
+			if (gen->m_vars.contains(stmt_ptr.ident.value.value())) {	
+				size_t offset_bytes = gen->get_var(stmt_ptr.ident.value.value());
+				if (value_type != VarType::Float) {
+					gen->write("  lea " + std::to_string(offset_bytes) + "(%rsp), %rbx");
+					gen->write("  mov %rax, (%rbx)");
+				}
+			}
+			else if (gen->current_mode == Mode::Function) {
+                for (const auto& fnc : gen->m_fnc_args) {
+                    if (fnc.first == gen->current_func) {
+                        for (const auto& var : fnc.second) {
+                            if (var.name == stmt_ptr.ident.value.value()) {
+                                if (var.type != VarType::Float) {
+									gen->write("  lea -" + std::to_string(var.stack_loc) + "(%rbp), %rbx");
+									gen->write("  mov %rax, (%rbx)");
+								} 
+								return;
+                            }
+                        }
+                    }
+                }
+            }
+			else {
+				add_error("Unexistent variable\n", stmt_ptr.line);
+			}	
+		}
     };
 
     StmtVisitor visitor{.gen = this};

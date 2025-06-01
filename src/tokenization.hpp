@@ -21,7 +21,7 @@ enum class TokenType {
     eq,
     str_type,
     int_type,
-    float_type,
+    double_type,
     dp,
     comment_begin,
     comment_end,
@@ -77,7 +77,9 @@ enum class TokenType {
     _umod,
     _ubeepmod,
     _llibrary,
-    _libpath
+    _libpath,
+	_gptr,
+	_sptr
 };
 
 struct Token {

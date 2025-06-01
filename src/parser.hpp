@@ -18,7 +18,8 @@ enum class VarType {
     Void = -1,
     Int = 0,
     Float = 1,
-    Str = 2
+    Str = 2,
+	Other = 3,
 };
 
 struct NodeExpr;
@@ -112,6 +113,12 @@ struct NodeExprProperty {
     int line;
 };
 
+struct NodeExprGetPtr {
+	Token ident;
+
+	int line;
+};
+
 struct NodeExpr {
     std::variant<
         NodeExprIntLit,
@@ -127,7 +134,8 @@ struct NodeExpr {
         NodeExprCR,
         NodeExprCallCustomFunc,
         NodeExprBoolValue,
-        NodeExprProperty
+        NodeExprProperty,
+		NodeExprGetPtr
     > var;
 
     NodeExpr() = default;
@@ -145,7 +153,6 @@ struct NodeExit {
 
 struct NodeStmtVar {
     Token ident;
-    VarType type;
     NodeExpr expr;
     int is_mutable;
     int line;
@@ -279,8 +286,15 @@ struct NodeStmtLibpath {
     int line;
 };
 
+struct NodeStmtSetPtr {
+	Token ident;
+	NodeExpr expr;
+
+	int line;
+};
+
 struct NodeStmt {
-    std::variant<NodeStmtVar, NodeStmtVarRe, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtCallCustomFunc, NodeStmtMkpub, NodeStmtUnload, NodeStmtStop, NodeStmtContinue, NodeStmtProperty, NodeStmtDeclmod, NodeStmtEndmod, NodeStmtUmod, NodeStmtUbeepmod, NodeStmtLlibrary, NodeStmtLibpath> var;
+    std::variant<NodeStmtVar, NodeStmtVarRe, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtCallCustomFunc, NodeStmtMkpub, NodeStmtUnload, NodeStmtStop, NodeStmtContinue, NodeStmtProperty, NodeStmtDeclmod, NodeStmtEndmod, NodeStmtUmod, NodeStmtUbeepmod, NodeStmtLlibrary, NodeStmtLibpath, NodeStmtSetPtr> var;
     int line;
 };
 

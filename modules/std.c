@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <sys/random.h>
 #include <sys/syscall.h>
+#include "math.h"
 
 #define SYS_fork    57
 #define SYS_execve  59
@@ -177,8 +178,19 @@ uint32_t get_secure_random_uint32() {
 }
 
 int randi(int min, int max) {
-    /*unsigned int seed = time(0);
-    int rd_num = rand_r(&seed) % (max - min + 1) + min;*/
     uint32_t r = get_secure_random_uint32();
     return (r % (max - min + 1)) + min;
+}
+
+double randf(double min, double max, int decimals) {
+	uint32_t r = get_secure_random_uint32();
+	double normalized = (double)r / (double)UINT32_MAX;
+	double scaled = min + normalized * (max - min);
+
+	double factor = pow(10.0, decimals);
+	return round(scaled * factor, decimals) / factor;
+}
+
+void nap(const unsigned int seconds) {
+	sleep(seconds);
 }

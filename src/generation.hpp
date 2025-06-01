@@ -74,6 +74,7 @@ public:
 	//std::unordered_map<std::string, std::vector<Var>> m_fnc_ret;
 	std::vector<std::string> m_string_literals;
 	std::vector<float> m_float_literals;
+	std::vector<std::string> m_structs;
 	std::stack<std::string> stmt_orde; 
 
 	inline void write(const std::string& output, int newline = true) {
