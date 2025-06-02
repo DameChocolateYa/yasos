@@ -53,7 +53,12 @@ std::unordered_map<std::string, VarType> known_function_types = {
 	{"closef", VarType::Void},
 	{"isfopen", VarType::Int},
 	{"readf", VarType::Str},
-	{"writef", VarType::Void}
+	{"writef", VarType::Void},
+    {"makedir", VarType::Int},
+    {"makedirs", VarType::Int},
+    {"removef", VarType::Int},
+    {"removedir", VarType::Int},
+    {"removedirr", VarType::Int}
 };
 
 struct Func {

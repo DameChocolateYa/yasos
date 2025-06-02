@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
     }
 
     if (input_files.empty()) {
-        std::cerr << "Usage: beepc [-o output] [-S|-c|-shared] [--preserve-asm] <input1.bp> [input2.bp ...]\n";
+        std::cerr << "Usage: yasos [-o output] [-S|-c|-shared] [--preserve-asm] <input1.ys> [input2.ys ...]\n";
         return EXIT_FAILURE;
     }
 
@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
     for (size_t index = 0; index < input_files.size(); ++index) {
         const auto& filename = input_files[index];
 
-        if (!filename.ends_with(".bp")) {
+        if (!filename.ends_with(".ys")) {
             std::cerr << "Skipping non-.bp file: " << filename << "\n";
             continue;
         }
