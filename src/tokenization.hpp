@@ -58,6 +58,7 @@ enum class TokenType {
     none,
     no_arg,
     cr,
+	_fnc,
     endfn,
     ret,
     mkpub,

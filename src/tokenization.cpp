@@ -176,6 +176,11 @@ std::vector<Token> Tokenizer::tokenize() {
                 buf.clear();
                 continue;
             }
+			else if (buf == "fn") {
+				tokens.push_back({.type = TokenType::_fnc, .line = local_lines});
+				buf.clear();
+				continue;
+			}
             else if (buf == "endfn") {
                 tokens.push_back({.type = TokenType::endfn, .line = local_lines});
                 buf.clear();

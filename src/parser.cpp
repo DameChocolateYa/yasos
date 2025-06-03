@@ -43,41 +43,6 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
         return NodeExpr(NodeExprCall{name, wrapped_args, line});
 
     }
-    else if (peek().has_value() && peek().value().type == TokenType::get &&
-        peek(1).has_value() && peek(1).value().type == TokenType::ident &&
-        peek(2).has_value() && peek(2).value().type == TokenType::l_arrow) {
-            consume();
-            Token name = consume();
-            int line = name.line;
-            consume();
-
-            std::vector<NodeExpr> arg_values;
-            while (peek().has_value() && peek().value().type != TokenType::r_arrow) {
-                NodeExpr expr;
-                if (auto e = parse_expr()) {
-                    expr = e.value();
-                }
-                arg_values.push_back(expr);
-
-                if (peek().has_value() && peek().value().type == TokenType::comma) {
-                    consume();
-                    continue;
-                }
-                else if (peek().has_value() && peek().value().type == TokenType::r_arrow) {
-                    break;
-                }
-                else {
-                    //std::cerr << "Expected ';'\n";
-                    break;
-                }
-            }
-            if (!peek().has_value() || peek().value().type != TokenType::r_arrow) {
-                add_error("Expected '>'", line);
-            }
-            consume(); // <
-
-            return NodeExpr(NodeExprCallCustomFunc{.name = name, .arg_values = arg_values, .line = line});
-        }
     else if (peek().has_value() && peek().value().type == TokenType::open_paren) {
         int line = peek().value().line;
         consume(); // (
@@ -267,10 +232,16 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         return NodeStmt{.var = stmt_var};
     }
 
-    else if (peek().has_value() && peek().value().type == TokenType::ident && peek(1).has_value() && peek(1).value().type == TokenType::eq && peek(2).has_value() && peek(2).value().type == TokenType::open_paren) {
-        Token name = consume();
-        int line = name.line;
-        consume(); // =
+    else if (peek().has_value() && peek().value().type == TokenType::_fnc) {
+		int line = peek().value().line;
+		consume();
+        if (!peek().has_value() || peek().value().type != TokenType::ident) {
+			add_error("Expected name in the function declaration\n", line);
+		}
+		Token name = consume();
+		if (!peek().has_value() || peek().value().type != TokenType::open_paren) {
+			add_error("Expected '(' in the function declaration\n", line);
+		}
         consume(); // (
         std::vector<CustomFuncArgs> args;
 
@@ -323,45 +294,26 @@ std::optional<NodeStmt> Parser::parse_stmt() {
             consume();
         }
 
-        if (!peek().has_value() || peek().value().type != TokenType::dp) { // :
-            add_error("Expected ':'", peek().value().line);
+        if (!peek().has_value() || peek().value().type != TokenType::l_key) { // {
+            add_error("Expected '{'", peek().value().line);
         }
-        consume(); // :
-        return NodeStmt{NodeStmtDefFunc{.name = name, .args = args, .return_type = return_type, .line = line}};
-    }
-    else if (peek().has_value() && peek().value().type == TokenType::ident && peek(1).has_value() && peek(1).value().type == TokenType::l_arrow) {
-        Token name = consume();
-        int line = name.line;
-        consume(); // >
-
-        std::vector<NodeExpr> arg_values;
-        while (peek().has_value() && peek().value().type != TokenType::r_arrow) {
-            NodeExpr expr;
-            if (auto e = parse_expr()) {
-                expr = e.value();
+        consume(); // {
+		
+		std::vector<NodeStmt> code_branch;
+        while (peek().has_value() && peek().value().type != TokenType::r_key) {
+            auto stmt = parse_stmt();
+            if (!stmt.has_value()) {
+                add_error("Invalid statment in 'if' block", line);
             }
-
-            arg_values.push_back(expr);
-
-            if (peek().has_value() && peek().value().type == TokenType::comma) {
-                consume();
-                continue;
-            }
-            else if (peek().has_value() && peek().value().type == TokenType::r_arrow) {
-                break;
-            }
+            code_branch.push_back(stmt.value());
         }
-        if (!peek().has_value() || peek().value().type != TokenType::r_arrow) {
-            add_error("Expected '>'", line);
-        }
-        consume(); // <
 
-        if (!peek().has_value() || peek().value().type != TokenType::semi) {
-            add_error("Expected ';'", line);
+        if (!peek().has_value() || peek().value().type != TokenType::r_key) {
+            add_error("Expected '}' to end 'if' block", line);
         }
-        consume(); // ;
+        consume(); // }
 
-        return NodeStmt{.var = NodeStmtCallCustomFunc{.name = name, .arg_values = arg_values, .line = line}};
+        return NodeStmt{NodeStmtDefFunc{.name = name, .args = args, .return_type = return_type, .code_branch = code_branch, .line = line}};
     }
 
     else if (peek().has_value() && peek().value().type == TokenType::ident &&

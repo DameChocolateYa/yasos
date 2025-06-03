@@ -118,17 +118,6 @@ static VarType check_value(const NodeExpr& expr, Generator* gen) {
             if (fnc.first == name) return fnc.second;
         }
     }
-    else if (std::holds_alternative<NodeExprCallCustomFunc>(expr.var)) {
-        NodeExprCallCustomFunc expr_call = std::get<NodeExprCallCustomFunc>(expr.var);
-        const std::string& name = expr_call.name.value.value();
-        if (m_fnc_rets.contains(name)) {
-            return m_fnc_rets.at(name);
-        }
-        if (known_function_types.contains(name)) {
-            return known_function_types.at(name);
-        }
-        return VarType::Void;
-    }
     else if (std::holds_alternative<NodeExprIdent>(expr.var)) {
         NodeExprIdent ident = std::get<NodeExprIdent>(expr.var);
         const std::string& name = ident.ident.value.value();
@@ -503,20 +492,6 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
             if (push_result) gen->push(reg);
         }
 
-        void operator()(const NodeExprCallCustomFunc expr_call) const {
-            std::vector<NodeExpr> arg_values = expr_call.arg_values;
-            std::vector<std::string> regs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
-            std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4"};
-            int index = 0;
-            for (const auto& arg : arg_values) {
-                VarType var_type = check_value(arg, gen);
-                if (var_type != VarType::Float) gen->gen_expr(arg, false, regs[index]);
-                else gen->gen_expr(arg, false, float_regs[index]);
-                ++index;
-            }
-            gen->write("  call " + expr_call.name.value.value());
-        }
-
         void operator()(const NodeExprCall& expr_call) const {
             const std::string& fn = expr_call.name.value.value();
             std::vector<NodeExprPtr> arg_values = expr_call.args;
@@ -885,7 +860,17 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 ++index;
             }
             gen->m_fnc_args.insert({stmt_def_func.name.value.value(), args});
-            m_fnc_rets.insert({stmt_def_func.name.value.value(), stmt_def_func.return_type}); 
+            m_fnc_rets.insert({stmt_def_func.name.value.value(), stmt_def_func.return_type});
+
+			for (const auto& stmt : stmt_def_func.code_branch) {
+				gen->gen_stmt(stmt);
+			}
+
+			gen->write("  mov %rbp, %rsp");
+            gen->write("  pop %rbp");
+            gen->write("  ret");
+            gen->current_mode = Mode::Global;
+            gen->current_func = "";
         }
 
         void operator()(const NodeStmtEndfn& stmt_end_fn) const {
@@ -926,30 +911,6 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                     names.end()
                 ); 
             }
-        }
-
-        void operator()(const NodeStmtCallCustomFunc& stmt_call_custom_func) const {
-            std::vector<NodeExpr> arg_values = stmt_call_custom_func.arg_values;
-
-            std::vector<std::string> regs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
-            std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4"};
-            int index = 0;
-            int reg_index = 0;
-            int float_reg_index = 0;
-
-            for (const auto& arg : arg_values) {
-                VarType var_type = check_value(arg, gen);
-                if (var_type != VarType::Float) {
-                    gen->gen_expr(arg, false, regs[reg_index]);
-                    ++reg_index;
-                }
-                else { 
-                    gen->gen_expr(arg, false, float_regs[float_reg_index]);
-                    ++float_reg_index;
-                }
-                ++index;
-            }
-            gen->write("  call " + stmt_call_custom_func.name.value.value());
         }
 
         void operator()(const NodeStmtCall& stmt_call) const {
