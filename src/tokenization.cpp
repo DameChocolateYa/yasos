@@ -16,7 +16,7 @@ std::vector<Token> Tokenizer::tokenize() {
                     c = std::tolower(c);
                 }
             }
-            if (buf == "let") {
+            if (buf == "box") {
                 tokens.push_back({.type = TokenType::var, .line = local_lines});
                 buf.clear();
                 continue;
@@ -273,6 +273,11 @@ std::vector<Token> Tokenizer::tokenize() {
 			}
 			else if (buf == "sptr") {
 				tokens.push_back({.type = TokenType::_sptr, .line = local_lines});
+				buf.clear();
+				continue;
+			}
+			else if (buf == "globl") {
+				tokens.push_back({.type = TokenType::_globl, .line = local_lines});
 				buf.clear();
 				continue;
 			}

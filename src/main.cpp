@@ -198,7 +198,7 @@ int main(int argc, char** argv) {
         link_command += "-l" + lib + " ";
     }
 
-    link_command += "-Wl,-rpath=" + func_dir;
+    link_command += " -O2 -Wl,-rpath=" + func_dir;
 
     if (system(link_command.c_str()) != 0) {
         std::cerr << "Linking failed.\n";

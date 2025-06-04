@@ -69,6 +69,7 @@ public:
 	std::stringstream m_output;
 	size_t m_stack_size = 0;
 	std::map<std::string, Var> m_vars;
+	std::unordered_map<std::string, Var> m_glob_vars;
 	std::vector<std::string> m_vars_order;
 	std::unordered_map<std::string, std::vector<Var>> m_fnc_args;	
 	//std::unordered_map<std::string, std::vector<Var>> m_fnc_ret;
@@ -89,21 +90,19 @@ public:
 
 	void push(const std::string& reg, int newline = true) {
 	    //write("  push " + reg);
-	    write("  sub $16, %rsp");
-	    write("  mov %" + reg + ", (%rsp)", newline);
+	    write("  push %" + reg, newline);
 	    ++m_stack_size;
 	}
 
 	void push_float(const std::string& reg, int newline = true) {
-	    write("  sub $16, %rsp");                          // hacer espacio en la pila
+	    write("  sub $8, %rsp");                          // hacer espacio en la pila
 	    write("  movsd %" + reg + ", (%rsp)", newline);     // guardar el valor float
 	    ++m_stack_size;
 	}
 
 	void pop(const std::string& reg, int newline = true) {
 	    //write( "  pop " + reg);
-	    write("  mov (%rsp), %" + reg);
-	    write("  add $16, %rsp");
+	    write("  pop %" + reg);
 	    if (m_stack_size == 0) {
 	        std::cerr << "Stack underflow!\n";
 	        exit(EXIT_FAILURE);
@@ -113,7 +112,7 @@ public:
 
 	void pop_float(const std::string& reg, int newline = true) {
 	    write("  movsd (%rsp), %" + reg);
-	    write("  add $16, %rsp", newline);
+	    write("  add $8, %rsp", newline);
 	    if (m_stack_size == 0) {
 	        std::cerr << "Float stack underflow!\n";
 	        exit(EXIT_FAILURE);
@@ -126,12 +125,24 @@ public:
 	        std::cerr << "Error trying to get an undeclared variable (" << var_name << ")\n";
 	        exit(EXIT_FAILURE);
 	    }
-	    size_t offset_bytes = (m_stack_size - m_vars.at(var_name).stack_loc - 1) * 16; // this should be the var pos
+	    size_t offset_bytes = (m_stack_size - m_vars.at(var_name).stack_loc - 1) * 8; // this should be the var pos
 	    return offset_bytes;
 	}
 
 	inline void call(const std::string& name) {
+		// Align stack pointer in 16 bytes for System V ABI
+		
+		size_t old_stack_size = m_stack_size;
+		while ((m_stack_size % 2) != 0) {
+			push("rax");
+		}
+
 	    write("  call *" + name + "@GOTPCREL(%rip)");
+
+		// Reset stack size
+		while (m_stack_size != old_stack_size) {
+			pop("rax");
+		}
 	}
 
     inline explicit Generator(NodeProg root, std::string filename) : m_prog(std::move(root)), filename(filename) {}

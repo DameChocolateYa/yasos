@@ -135,6 +135,7 @@ static VarType check_value(const NodeExpr& expr, Generator* gen) {
             }
             return VarType::Void;
         }
+		else if (gen->m_glob_vars.contains(name)) return gen->m_glob_vars.at(name).type;
         else {
             return VarType::Void;
         }
@@ -461,6 +462,18 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
         };
 
         void operator()(const NodeExprIdent& expr_ident) const {
+			if (gen->m_glob_vars.contains(expr_ident.ident.value.value())) {
+				const std::string& var_name = expr_ident.ident.value.value();
+				size_t offset_bytes = (gen->m_stack_size - gen->m_glob_vars.at(var_name).stack_loc - 1) * 16; // this should be the var pos
+				if (gen->m_glob_vars.at(var_name).type != VarType::Float) gen->write("  mov " + var_name + "(%rip), %" + reg);
+				else gen->write("  movsd " + var_name + "(%rip), %" + reg);
+				if (push_result) {
+					if (gen->m_glob_vars.at(var_name).type != VarType::Float) gen->push(reg);
+					else gen->push_float(reg);
+				}
+				return;
+			}	
+
             if (gen->current_mode == Mode::Function) {
                 for (const auto& fnc : gen->m_fnc_args) {
                     if (fnc.first == gen->current_func) {
@@ -691,14 +704,19 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 add_error("Variables only can be redefined inside of a function", stmt_var.line);
             }
 
-            const std::string& name = stmt_var.ident.value.value();
-            if (!gen->m_vars.contains(name)) {
-                add_error("Tried to edit an inexistent variable", stmt_var.line);
-            }
+            const std::string& name = stmt_var.ident.value.value(); 
 
             VarType value_type = check_value(stmt_var.expr, gen);
             if (value_type != VarType::Float) gen->gen_expr(stmt_var.expr, false);
             else gen->gen_expr(stmt_var.expr, false, "xmm0");
+
+			if (gen->m_glob_vars.contains(stmt_var.ident.value.value())) {
+				const std::string& var_name = stmt_var.ident.value.value();
+				size_t offset_bytes = (gen->m_stack_size - gen->m_glob_vars.at(var_name).stack_loc - 1) * 16; // this should be the var pos
+				if (gen->m_glob_vars.at(var_name).type != VarType::Float) gen->write("  mov %rax, " + var_name + "(%rip)");
+				else gen->write("  movsd %xmm0, " + var_name + "(%rip)");
+				return;
+			}	
 
             if (gen->m_vars.contains(name)) {
                 Var var = gen->m_vars.at(name);
@@ -1077,6 +1095,25 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 				add_error("Unexistent variable\n", stmt_ptr.line);
 			}	
 		}
+
+		void operator()(const NodeStmtGlobl& stmt_globl) const {
+			const std::string& name = stmt_globl.ident.value.value();
+
+			if (!gen->m_vars.contains(name)) {
+				add_error("Inexistent variable", stmt_globl.line);
+				return;
+			}
+			Var var = gen->m_vars.at(name);
+			gen->m_glob_vars.insert({name, var});
+
+			const std::string& var_name = name;
+            size_t offset_bytes = gen->get_var(var_name);
+            if (gen->m_vars.at(var_name).type != VarType::Float) gen->write("  mov " +  std::to_string(offset_bytes) +" (%rsp), %rax");
+            else gen->write("  movsd " + std::to_string(offset_bytes) + "(%rsp), %rax");
+
+
+			gen->write("  mov %rax, " + name + "(%rip)");
+		}
     };
 
     StmtVisitor visitor{.gen = this};
@@ -1101,7 +1138,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
     //m_output << filename << ":\n";
     //m_output << main_buffer.str();
 
-    //m_output << "\nsection .rodata\n";
+    m_output << ".section .rodata\n";
     if (!m_string_literals.empty()) {
         for (size_t i = 0; i < m_string_literals.size(); ++i) {
             m_output << "str_" << i << ":";
@@ -1114,6 +1151,13 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             m_output << " .double " << m_float_literals[i] << "\n";
         }
     }
+
+	m_output << ".section .data\n";
+	if (!m_glob_vars.empty()) {
+		for (const auto& var : m_glob_vars) {
+			m_output << var.first << ": .quad 0\n";
+		}
+	}
 
     return m_output.str();
 }

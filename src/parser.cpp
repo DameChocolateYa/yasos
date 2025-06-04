@@ -204,7 +204,8 @@ std::optional<NodeExpr> Parser::parse_expr() {
 std::optional<NodeStmt> Parser::parse_stmt() {
     if (peek().has_value() && (peek().value().type == TokenType::var || peek().value().type == TokenType::cnst) &&
         peek(1).has_value() && peek(1).value().type == TokenType::ident &&
-        peek(2).has_value() && peek(2).value().type == TokenType::eq)
+        peek(2).has_value() && peek(2).value().type == TokenType::l_arrow &&
+		peek(3).has_value() && peek(3).value().type == TokenType::l_arrow)
     {
         int mut = peek().value().type == TokenType::var ? true : false;
         consume();
@@ -212,6 +213,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         int line = ident.line;
         NodeStmtVar stmt_var;
         stmt_var.ident = ident;
+		consume();
 		consume();
 
         auto expr = parse_expr();
@@ -971,6 +973,22 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 		consume();
 
 		return NodeStmt{.var = NodeStmtSetPtr{.ident = ident, .expr = expr, .line = line}};
+	}
+	else if (peek().has_value() && peek().value().type == TokenType::_globl) {
+		int line = peek().value().line;
+		consume();
+		
+		if (!peek().has_value() || peek().value().type != TokenType::ident) {
+			add_error("Expected identifier", line);
+		}
+		Token ident = consume();
+
+		if (!peek().has_value() || peek().value().type != TokenType::semi) {
+			add_error("Expected ';'", line);
+		}
+		consume();
+
+		return NodeStmt{.var = NodeStmtGlobl{.ident = ident, .line = line}};
 	}
     else {
         int line = peek().value().line;

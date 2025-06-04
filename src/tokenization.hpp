@@ -80,7 +80,8 @@ enum class TokenType {
     _llibrary,
     _libpath,
 	_gptr,
-	_sptr
+	_sptr,
+	_globl
 };
 
 struct Token {
