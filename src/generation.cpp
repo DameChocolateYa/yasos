@@ -317,29 +317,64 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
 				}
             }
             else if (op == "!=") {
-                gen->write("  cmp %rbx, %rax");
-                gen->write("  setne %al");
-                gen->write("  movzx %al, %rax");
+                if (v1 == VarType::Int && v2 == VarType::Int) {
+					gen->write("  cmp %rbx, %rax");
+					gen->write("  setne %al");
+					gen->write("  movzx %al, %rax");
+				}
+				else if (v1 == VarType::Float || v2 == VarType::Float) {
+					gen->write("  ucomisd %xmm1, %xmm0");
+					gen->write("  setne %al");
+					gen->write("  movzx %al, %rax");
+				}
             }
             else if (op == "<") {
-                gen->write("  cmp %rbx, %rax");
-                gen->write("  setl %al");
-                gen->write("  movzx %al, %rax");
+                if (v1 == VarType::Int && v2 == VarType::Int) {
+					gen->write("  cmp %rbx, %rax");
+					gen->write("  setl %al");
+					gen->write("  movzx %al, %rax");
+				}
+				else if (v1 == VarType::Float || v2 == VarType::Float) {
+					gen->write("  ucomisd %xmm1, %xmm0");
+					gen->write("  setb %al");
+					gen->write("  movzx %al, %rax");
+				}
             }
             else if (op == "<=") {
-                gen->write("  cmp %rbx, %rax");
-                gen->write("  setle %al");
-                gen->write("  movzx %al, %rax");
+                if (v1 == VarType::Int && v2 == VarType::Int) {
+					gen->write("  cmp %rbx, %rax");
+					gen->write("  setle %al");
+					gen->write("  movzx %al, %rax");
+				}
+				else if (v1 == VarType::Float || v2 == VarType::Float) {
+					gen->write("  ucomisd %xmm1, %xmm0");
+					gen->write("  setbe %al");
+					gen->write("  movzx %al, %rax");
+				}
             }
             else if (op == ">") {
-                gen->write("  cmp %rbx, %rax");
-                gen->write("  setg %al");
-                gen->write("  movzx %al, %rax");
+                if (v1 == VarType::Int && v2 == VarType::Int) {
+					gen->write("  cmp %rbx, %rax");
+					gen->write("  setg %al");
+					gen->write("  movzx %al, %rax");
+				}
+				else if (v1 == VarType::Float || v2 == VarType::Float) {
+					gen->write("  ucomisd %xmm1, %xmm0");
+					gen->write("  seta %al");
+					gen->write("  movzx %al, %rax");
+				}
             }
             else if (op == ">=") {
-                gen->write("  cmp %rbx, %rax");
-                gen->write("  setge %al");
-                gen->write("  movzx %al, %rax");
+                if (v1 == VarType::Int && v2 == VarType::Int) {
+					gen->write("  cmp %rbx, %rax");
+					gen->write("  setae %al");
+					gen->write("  movzx %al, %rax");
+				}
+				else if (v1 == VarType::Float || v2 == VarType::Float) {
+					gen->write("  ucomisd %xmm1, %xmm0");
+					gen->write("  setge %al");
+					gen->write("  movzx %al, %rax");
+				}
             }
             else if (op == "&&") {
                 gen->write("  cmp $0, %rax");

@@ -4,7 +4,7 @@ detect:
   filename: "\\.ys$"
 
 rules:
-  - statement: "\\b(endfn|if|gt|gte|lt|lte|eq|neq|else|elif|do|while|then|import|use|mkpub|add|sub|mul|div|adding|subing|muling|diving|inc|dec|end|let|cnst|stop|continue|ret|get|unload|libpath|llibrary)\\b"
+  - statement: "\\b(fn|if|gt|gte|lt|lte|eq|neq|else|elif|do|while|then|import|use|mkpub|add|sub|mul|div|adding|subing|muling|diving|inc|dec|end|let|cnst|stop|continue|ret|get|unload|libpath|llibrary)\\b"
   - constant.string:
         start: "\""
         end: "\""
@@ -17,7 +17,7 @@ rules:
         rules:
             - todo: "(TODO|XXX|FIXME|NOTE):?"
 
-  - type: "\\b(int|str|float)\\b"
+  - type: "\\b(int|str|double)\\b"
 
   - constant.number: "(\\b([1-9][0-9]*|0[0-7]*|0[Xx][0-9A-Fa-f]+|0[Bb][01]+)([Uu][Ll]?[Ll]?|[Ll][Ll]?[Uu]?)?\\b)"
 
