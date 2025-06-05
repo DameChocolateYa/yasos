@@ -464,7 +464,7 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
         void operator()(const NodeExprIdent& expr_ident) const {
 			if (gen->m_glob_vars.contains(expr_ident.ident.value.value())) {
 				const std::string& var_name = expr_ident.ident.value.value();
-				size_t offset_bytes = (gen->m_stack_size - gen->m_glob_vars.at(var_name).stack_loc - 1) * 16; // this should be the var pos
+				size_t offset_bytes = (gen->m_stack_size - gen->m_glob_vars.at(var_name).stack_loc - 1) * 8; // this should be the var pos
 				if (gen->m_glob_vars.at(var_name).type != VarType::Float) gen->write("  mov " + var_name + "(%rip), %" + reg);
 				else gen->write("  movsd " + var_name + "(%rip), %" + reg);
 				if (push_result) {
@@ -712,7 +712,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 
 			if (gen->m_glob_vars.contains(stmt_var.ident.value.value())) {
 				const std::string& var_name = stmt_var.ident.value.value();
-				size_t offset_bytes = (gen->m_stack_size - gen->m_glob_vars.at(var_name).stack_loc - 1) * 16; // this should be the var pos
+				size_t offset_bytes = (gen->m_stack_size - gen->m_glob_vars.at(var_name).stack_loc - 1) * 8; // this should be the var pos
 				if (gen->m_glob_vars.at(var_name).type != VarType::Float) gen->write("  mov %rax, " + var_name + "(%rip)");
 				else gen->write("  movsd %xmm0, " + var_name + "(%rip)");
 				return;
@@ -898,15 +898,15 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 if (arg.arg_type == ArgType::Integer) var_type = VarType::Int;
                 if (arg.arg_type == ArgType::Float) var_type = VarType::Float;
 
-                args.push_back({.stack_loc = static_cast<size_t>(index) * 16, .type = var_type, .name = arg.name});
+                args.push_back({.stack_loc = static_cast<size_t>(index) * 8, .type = var_type, .name = arg.name});
                 if (var_type != VarType::Float) { 
-                    gen->write("  sub $16, %rsp");
-                    gen->write("  mov %" + regs[reg_index] + ", -" + std::to_string(static_cast<size_t>(index) * 16) + "(%rbp)"); 
+                    gen->write("  sub $8, %rsp");
+                    gen->write("  mov %" + regs[reg_index] + ", -" + std::to_string(static_cast<size_t>(index) * 8) + "(%rbp)"); 
                     ++reg_index;
                 }
                 else {
-                    gen->write("  sub $16, %rsp");
-                    gen->write("  movsd %" + float_regs[float_reg_index] + ", -" + std::to_string(static_cast<size_t>(index) * 16) + "(%rbp)");  
+                    gen->write("  sub $8, %rsp");
+                    gen->write("  movsd %" + float_regs[float_reg_index] + ", -" + std::to_string(static_cast<size_t>(index) * 8) + "(%rbp)");  
                     ++float_reg_index;
                 }
 

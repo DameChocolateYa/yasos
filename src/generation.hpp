@@ -95,9 +95,9 @@ public:
 	}
 
 	void push_float(const std::string& reg, int newline = true) {
-	    write("  sub $8, %rsp");                          // hacer espacio en la pila
-	    write("  movsd %" + reg + ", (%rsp)", newline);     // guardar el valor float
-	    ++m_stack_size;
+	    write("  sub $8, %rsp");
+		write("  movsd %" + reg + ", (%rsp)");
+		++m_stack_size;
 	}
 
 	void pop(const std::string& reg, int newline = true) {
@@ -130,19 +130,21 @@ public:
 	}
 
 	inline void call(const std::string& name) {
-		// Align stack pointer in 16 bytes for System V ABI
+	    // Align stack pointer in 16 bytes for System V ABI
 		
-		size_t old_stack_size = m_stack_size;
-		while ((m_stack_size % 2) != 0) {
-			push("rax");
-		}
+	    size_t old_stack_size = m_stack_size;
+	    while (((m_stack_size) % 2) != 0) {
+			write("  sub $8, %rsp");
+	        ++m_stack_size;
+	    }
 
-	    write("  call *" + name + "@GOTPCREL(%rip)");
+	    write("  call " + name + "@PLT");
 
-		// Reset stack size
-		while (m_stack_size != old_stack_size) {
-			pop("rax");
-		}
+	    // Reset stack size
+	    while (m_stack_size != old_stack_size) {
+	        write("  add $8, %rsp");
+	        --m_stack_size;
+	    }
 	}
 
     inline explicit Generator(NodeProg root, std::string filename) : m_prog(std::move(root)), filename(filename) {}
