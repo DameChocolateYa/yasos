@@ -71,8 +71,8 @@ public:
 	std::map<std::string, Var> m_vars;
 	std::unordered_map<std::string, Var> m_glob_vars;
 	std::vector<std::string> m_vars_order;
-	std::unordered_map<std::string, std::vector<Var>> m_fnc_args;	
-	//std::unordered_map<std::string, std::vector<Var>> m_fnc_ret;
+	std::unordered_map<std::string, std::vector<Var>> m_fnc_args;
+	std::unordered_map<std::string, VarType> m_fnc_custom_ret;
 	std::vector<std::string> m_string_literals;
 	std::vector<float> m_float_literals;
 	std::vector<std::string> m_structs;
@@ -131,9 +131,9 @@ public:
 
 	inline void call(const std::string& name) {
 	    // Align stack pointer in 16 bytes for System V ABI
-		
+	
 	    size_t old_stack_size = m_stack_size;
-	    while (((m_stack_size) % 2) != 0) {
+	    if (((m_stack_size) % 2) != 0) {
 			write("  sub $8, %rsp");
 	        ++m_stack_size;
 	    }
@@ -141,7 +141,7 @@ public:
 	    write("  call " + name + "@PLT");
 
 	    // Reset stack size
-	    while (m_stack_size != old_stack_size) {
+	    if (m_stack_size != old_stack_size) {
 	        write("  add $8, %rsp");
 	        --m_stack_size;
 	    }

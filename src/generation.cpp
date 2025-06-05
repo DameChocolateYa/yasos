@@ -112,7 +112,12 @@ static VarType check_value(const NodeExpr& expr, Generator* gen) {
         NodeExprCall expr_call = std::get<NodeExprCall>(expr.var);
         const std::string& name = expr_call.name.value.value();
         if (!known_function_types.contains(name)) {
-            return VarType::Void;
+            if (gen->m_fnc_custom_ret.contains(name)) {
+				for (const auto& fnc : gen->m_fnc_custom_ret) {
+					if (fnc.first == name) return fnc.second;
+				}
+			}
+			return VarType::Void;
         }
         for (const auto& fnc : known_function_types) {
             if (fnc.first == name) return fnc.second;
@@ -842,7 +847,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             gen->write("  jmp " + start_label);
         }
 
-        void operator()(const NodeStmtPrint& stmt_print) const {
+        /*void operator()(const NodeStmtPrint& stmt_print) const {
             NodeExpr format = stmt_print.str;
             std::vector<NodeExpr> arg_values = stmt_print.args;
             std::vector<std::string> regs = {"rsi", "rdx", "rcx", "r8", "r9"};
@@ -862,12 +867,56 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             }
             gen->write("  mov $" + std::to_string(float_reg_index) + ", %al");
             gen->call("printbp");
-        }
+        }*/
+
+	void operator()(const NodeStmtPrint& stmt_print) const {
+		NodeExpr format = stmt_print.str;
+		std::vector<NodeExpr> arg_values = stmt_print.args;
+
+		std::vector<std::string> regs = {"rsi", "rdx", "rcx", "r8", "r9"};
+		std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4"};
+
+		int int_reg_index = 0;
+		int float_reg_index = 0;
+
+		gen->gen_expr(format, false, "rdi");
+
+		for (const auto& arg : arg_values) {
+			VarType var_type = check_value(arg, gen);
+			if (var_type == VarType::Float) {
+				gen->gen_expr(arg, false, float_regs[float_reg_index]);
+				++float_reg_index;
+			} 
+			else {
+				gen->gen_expr(arg, false, regs[int_reg_index]);
+				++int_reg_index;
+			}
+		}
+
+		int save_area_size = 72;
+		/*if (((save_area_size + gen->m_stack_size * 8) % 16 == 0)) {
+			save_area_size += 8;
+		}*/
+		gen->write("  sub $" + std::to_string(save_area_size) + ", %rsp");
+
+		for (int i = 0; i < float_reg_index; ++i) {
+			int offset = 16 + i * 8;
+			gen->write("  movsd %" + float_regs[i] + ", " + std::to_string(offset) + "(%rsp)");
+		}
+
+		gen->write("  mov $" + std::to_string(float_reg_index) + ", %al");
+
+		gen->call("printbp");
+
+		gen->write("  add $" + std::to_string(save_area_size) + ", %rsp");
+	}
 
         const std::vector<std::string> regs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
         const std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm3", "xmm4", "xmm5", "xmm6"};
 
         void operator()(const NodeStmtDefFunc& stmt_def_func) const {
+			size_t stack_start = gen->m_stack_size;
+
             if (gen->current_mode == Mode::Function) {
                 add_error("Function declaration inside antoher function is not allowed", stmt_def_func.line);
             }
@@ -889,6 +938,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             gen->current_func = stmt_def_func.name.value.value();
             gen->write(stmt_def_func.name.value.value() + ":");
             gen->write("  push %rbp");
+			++gen->m_stack_size;
             gen->write("  mov %rsp, %rbp");
 
             for (int i = 0; i < stmt_def_func.args.size(); ++i) {
@@ -901,15 +951,16 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 args.push_back({.stack_loc = static_cast<size_t>(index) * 8, .type = var_type, .name = arg.name});
                 if (var_type != VarType::Float) { 
                     gen->write("  sub $8, %rsp");
+					++gen->m_stack_size;
                     gen->write("  mov %" + regs[reg_index] + ", -" + std::to_string(static_cast<size_t>(index) * 8) + "(%rbp)"); 
                     ++reg_index;
                 }
                 else {
                     gen->write("  sub $8, %rsp");
+					++gen->m_stack_size;
                     gen->write("  movsd %" + float_regs[float_reg_index] + ", -" + std::to_string(static_cast<size_t>(index) * 8) + "(%rbp)");  
                     ++float_reg_index;
                 }
-
                 ++index;
             }
             gen->m_fnc_args.insert({stmt_def_func.name.value.value(), args});
@@ -918,17 +969,24 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 			for (const auto& stmt : stmt_def_func.code_branch) {
 				gen->gen_stmt(stmt);
 			}
-
+			//std::cerr << std::to_string(gen->m_stack_size) << "\n";
 			gen->write("  mov %rbp, %rsp");
             gen->write("  pop %rbp");
+			--gen->m_stack_size;
             gen->write("  ret");
             gen->current_mode = Mode::Global;
             gen->current_func = "";
+
+			gen->write("  sub $" + std::to_string(gen->m_stack_size - stack_start) + ", %rsp");
+			while (gen->m_stack_size > stack_start) {
+				--gen->m_stack_size;
+            }	
         }
 
         void operator()(const NodeStmtEndfn& stmt_end_fn) const {
             gen->write("  mov %rbp, %rsp");
             gen->write("  pop %rbp");
+			--gen->m_stack_size;
             gen->write("  ret");
             gen->current_mode = Mode::Global;
             gen->current_func = "";
@@ -938,9 +996,10 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             NodeExpr value = stmt_ret.value;
             if (check_value(value, gen) != VarType::Float) gen->gen_expr(value, false, "rax");
             else gen->gen_expr(value, false, "xmm0");
+			gen->m_fnc_custom_ret.insert({gen->current_func, check_value(value, gen)});
 
             gen->write("  mov %rbp, %rsp");
-            gen->write("  pop %rbp");
+            gen->pop("rbp");
             gen->write("  ret");
             //gen->current_mode = Mode::Global;
             //gen->current_func = "";
@@ -955,7 +1014,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 }
                 size_t offset = it->second.stack_loc;
                 gen->write("  add $" + std::to_string(offset) + ", %rsp");
-                gen->write("  pop %rax");
+                gen->pop("rax");
                 gen->write("  sub $" + std::to_string(offset) + ", %rsp");
                 gen->m_vars.erase(it);  // borrar sin invalidar iterador de bucle
                 auto& names = gen->m_vars_order;
