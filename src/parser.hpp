@@ -147,6 +147,7 @@ struct NodeExit {
 struct NodeStmtVar {
     Token ident;
     NodeExpr expr;
+	int has_initial_value = true;
     int is_mutable;
     int line;
 };

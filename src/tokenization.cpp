@@ -13,7 +13,7 @@ std::vector<Token> Tokenizer::tokenize() {
             while(peek().has_value() && std::isalnum(peek().value())) {
                 buf.push_back(consume());
             }
-            if (buf == "box") {
+            if (buf == "var") {
                 tokens.push_back({.type = TokenType::var, .line = local_lines});
                 buf.clear();
                 continue;

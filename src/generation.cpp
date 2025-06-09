@@ -686,6 +686,13 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 add_error("Variables only can be declared inside of a function", stmt_var.line);
             }
 
+			if (!stmt_var.has_initial_value) {
+				gen->write("  mov $0, %rax");
+				gen->push("rax");
+				gen->insert_var(stmt_var.ident.value.value(), VarType::Int, stmt_var.is_mutable);
+				return;
+			}
+
             const std::string& name = stmt_var.ident.value.value(); 
             VarType value_type = check_value(stmt_var.expr, gen);
             if (value_type != VarType::Float) gen->gen_expr(stmt_var.expr, false);

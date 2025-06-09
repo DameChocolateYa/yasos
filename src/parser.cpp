@@ -202,10 +202,7 @@ std::optional<NodeExpr> Parser::parse_expr() {
 }
 
 std::optional<NodeStmt> Parser::parse_stmt() {
-    if (peek().has_value() && (peek().value().type == TokenType::var || peek().value().type == TokenType::cnst) &&
-        peek(1).has_value() && peek(1).value().type == TokenType::ident &&
-        peek(2).has_value() && peek(2).value().type == TokenType::l_arrow &&
-		peek(3).has_value() && peek(3).value().type == TokenType::l_arrow)
+    if (peek().has_value() && (peek().value().type == TokenType::var || peek().value().type == TokenType::cnst) && peek(1).has_value() && peek(1).value().type == TokenType::ident)
     {
         int mut = peek().value().type == TokenType::var ? true : false;
         consume();
@@ -213,17 +210,35 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         int line = ident.line;
         NodeStmtVar stmt_var;
         stmt_var.ident = ident;
-		consume();
+		stmt_var.is_mutable = mut;
+        stmt_var.line = line;
+
+		if (!peek().has_value()) {
+			add_error("Expected '=' with a value or a ';'", line);
+			return NodeStmt{};
+		}
+		if (peek().value().type != TokenType::eq) {
+			if (peek().value().type != TokenType::semi) {
+				add_error("Expected ';'", line);
+				return NodeStmt{};
+			}
+			consume();
+			stmt_var.has_initial_value = false;
+			if (!mut) {
+				add_error("Constant need to be declared", line);
+				return NodeStmt{};
+			}
+
+			return NodeStmt{.var = stmt_var};
+		}
 		consume();
 
         auto expr = parse_expr();
         if (!expr.has_value()) {
             add_error("Invalid Expression", line);
+			return NodeStmt{};
         }
         stmt_var.expr = expr.value();
-
-        stmt_var.is_mutable = mut;
-        stmt_var.line = line;
 
         if (peek().has_value() && peek().value().type == TokenType::semi) {
             consume();
