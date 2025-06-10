@@ -43,6 +43,7 @@ std::unordered_map<std::string, VarType> known_function_types = {
     {"digtoabc", VarType::Str},
     {"sqrt", VarType::Float},
     {"round", VarType::Float},
+    {"fltoint", VarType::Int},
     {"ceil", VarType::Float},
     {"floor", VarType::Float},
     {"pow", VarType::Float},
@@ -182,6 +183,9 @@ static VarType check_value(const NodeExpr& expr, Generator* gen) {
     else if (std::holds_alternative<NodeExprUnaryIncDec>(expr.var)) {
         return VarType::Int;
     }
+    else if (std::holds_alternative<NodeExprNone>(expr.var)) {
+        return VarType::None;
+    }
 
     return VarType::Void;
 }
@@ -249,7 +253,10 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
             const std::string& op = expr_bin.op_token.value.value();
 
             VarType v1 = check_value(*expr_bin.lhs, gen);
-            VarType v2 = check_value(*expr_bin.rhs, gen); 
+            VarType v2 = check_value(*expr_bin.rhs, gen);
+            if (v1 == VarType::None || v2 == VarType::None) {
+                add_error("Cannot operate with null values", expr_bin.line);
+            }
 
 
             if (v1 != VarType::Float && v2 != VarType::Float) {
@@ -401,7 +408,7 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
                 gen->write("  movzx %al, %rax");
             }
             else {
-                add_error("Unsupported binary operator");
+                add_error("Unsupported binary operator", expr_bin.line);
             }
             if (push_result) {
                 if (v1 != VarType::Float && v2 != VarType::Float) gen->push(reg);
@@ -419,9 +426,12 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
             size_t offset_bytes = gen->get_var(var_name);
             gen->write("  mov " + std::to_string(offset_bytes) + "(%rsp), %rax");
 
+            VarType var_type = gen->m_vars.at(var_name).type;
+            if (var_type == VarType::None ||
+            std::holds_alternative<NodeExprNone>(expr_bin_assign.right_expr->var)) {
+                add_error("Cannot operate with null values", expr_bin_assign.line);
+            }
             if (op == "+=") {
-                VarType var_type = gen->m_vars.at(var_name).type;
-
                 if (var_type == VarType::Int) gen->write("  add %rbx, %rax");
                 else {
                     gen->write("  mov %rax, %rdi");
@@ -534,7 +544,7 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
         }
 
         void operator()(const NodeExprNone& expr_none) const {
-            gen->write("  mov $0x7FFFFFFF, %" + reg);
+            gen->write("  mov $0xDEADBEEF, %" + reg);
             if (push_result) gen->push(reg);
         }
         void operator()(const NodeExprNoArg& expr_no_arg) const {}

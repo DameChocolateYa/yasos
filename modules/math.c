@@ -45,6 +45,10 @@ double round(double num, int decimals) {
     return (double)temp / factor;
 }
 
+int fltoint(float n) {
+    return (int)n;
+}
+
 double ceil(double num) {
     long long int_part = (long long)num;
 

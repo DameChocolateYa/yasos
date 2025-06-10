@@ -19,7 +19,8 @@ enum class VarType {
     Int = 0,
     Float = 1,
     Str = 2,
-	Other = 3,
+    None = 3,
+	Other = 4
 };
 
 struct NodeExpr;
@@ -132,6 +133,7 @@ struct NodeExpr {
     > var;
 
     NodeExpr() = default;
+    virtual ~NodeExpr() = default;
 
     template<typename T>
     NodeExpr(T val) : var(std::move(val)) {}
