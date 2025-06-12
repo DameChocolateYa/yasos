@@ -1,8 +1,8 @@
-#include "error.hpp"
-#include "tokenization.hpp"
-#include "parser.hpp"
-#include "generation.hpp"
-#include "global.hpp"
+#include "error.hh"
+#include "tokenization.hh"
+#include "parser.hh"
+#include "generation.hh"
+#include "global.hh"
 
 #include <cctype>
 #include <cstdlib>
@@ -67,11 +67,6 @@ int main(int argc, char** argv) {
         std::cerr << "Usage: yasos [-o output] [-S|-c|-shared] [--preserve-asm] <input1.ys> [input2.ys ...]\n";
         return EXIT_FAILURE;
     }
-
-    initialize_func_map();
-    initialize_func_ret_map();
-    initialize_str_property_map();
-    initialize_str_ret_property_map();
 
     std::vector<std::string> object_files;
     std::vector<std::string> all_libraries;

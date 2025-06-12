@@ -1,5 +1,5 @@
-#include "error.hpp"
-#include "global.hpp"
+#include "error.hh"
+#include "global.hh"
 #include <string>
 
 void add_error(const std::string& msg, int line) {

@@ -1,5 +1,5 @@
-#include "tokenization.hpp"
-#include "error.hpp"
+#include "tokenization.hh"
+#include "error.hh"
 
 std::vector<Token> Tokenizer::tokenize() {
     std::vector<Token> tokens {};
@@ -278,6 +278,16 @@ std::vector<Token> Tokenizer::tokenize() {
 				buf.clear();
 				continue;
 			}
+            else if (buf == "header") {
+                tokens.push_back({.type = TokenType::_header, .line = local_lines});
+                buf.clear();
+                continue;
+            }
+            else if (buf == "uhead") {
+               tokens.push_back({.type = TokenType::_uhead, .line = local_lines});
+                buf.clear();
+                continue; 
+            }
             else {
                 tokens.push_back({.type = TokenType::ident, .value = buf, .line = local_lines});
                 buf.clear();

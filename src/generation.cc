@@ -1,4 +1,4 @@
-#include "generation.hpp"
+#include "generation.hh"
 #include <algorithm>
 #include <cstdlib>
 #include <functional>
@@ -6,11 +6,14 @@
 #include <string>
 #include <sys/types.h>
 #include <variant>
+#include <cstring>
+#include <filesystem>
 
-#include "functions/standard.hpp"
-#include "global.hpp"
-#include "parser.hpp"
-#include "error.hpp"
+#include "global.hh"
+#include "parser.hh"
+#include "error.hh"
+
+namespace fs = std::filesystem;
 
 int main_func_declared = false;
 
@@ -73,31 +76,6 @@ std::vector<Func> decfuncs;
 
 std::unordered_map<std::string, std::function<void(const NodeExprProperty&, Generator*, int)>> str_ret_property;
 std::unordered_map<std::string, std::function<void(const NodeStmtProperty&, Generator*, int)>> str_property;
-
-void initialize_func_map() {
-    function_handlers["end"] = &handle_end;
-    //function_handlers["clsterm"] = &handle_clsterm;
-    //function_handlers["colorterm"] = &handle_colorterm;
-}
-
-void initialize_func_ret_map() {
-    function_ret_handlers["testret"] = &handle_testret;
-    //function_ret_handlers["stoint"] = &handle_stoint;
-    //function_ret_handlers["stofl"] = &handle_stofl;
-    //function_ret_handlers["scani"] = &handle_scani;
-    //function_ret_handlers["isnum"] = &handle_isnum;
-    //function_ret_handlers["isfloat"] = &handle_isfloat;
-}
-
-void initialize_str_property_map() {
-    //
-}
-
-void initialize_str_ret_property_map() {
-    str_ret_property["test"] = &handle_test_str;
-    str_ret_property["cat"] = &handle_strcat;
-    //str_ret_property["len"] = &handle_strlen;
-}
 
 static bool is_int(const NodeExpr& expr) { return std::holds_alternative<NodeExprIntLit>(expr.var); }
 static bool is_str(const NodeExpr& expr) { return std::holds_alternative<NodeExprStrLit>(expr.var); }
@@ -564,27 +542,21 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
             int reg_index = 0;
             int float_reg_index = 0;
 
-            auto it = function_ret_handlers.find(fn);
-            if (it != function_ret_handlers.end()) {
-                it->second(expr_call, gen);
+            for (const auto& arg : arg_values) {
+                VarType var_type = check_value(*arg, gen);
+                if (var_type != VarType::Float) gen->gen_expr(*arg, false, regs[reg_index]);
+                else gen->gen_expr(*arg, false, float_regs[float_reg_index]);
+                if (var_type == VarType::Float) ++float_reg_index;
+                else ++reg_index;
+                ++index;
             }
-            else {
-                for (const auto& arg : arg_values) {
-                    VarType var_type = check_value(*arg, gen);
-                    if (var_type != VarType::Float) gen->gen_expr(*arg, false, regs[reg_index]);
-                    else gen->gen_expr(*arg, false, float_regs[float_reg_index]);
-                    if (var_type == VarType::Float) ++float_reg_index;
-                    else ++reg_index;
-                    ++index;
-                }
-                gen->write("  mov $" + std::to_string(float_reg_index) + ", %al");
-                gen->call(fn);
-                //add_error("Unknown function (" + fn + ")", expr_call.line);
-            }
+            gen->write("  mov $" + std::to_string(float_reg_index) + ", %al");
+            gen->call(fn);
+            //add_error("Unknown function (" + fn + ")", expr_call.line);
         }
 
         void operator()(const NodeExprProperty& stmt_property) const {
-            const std::string& ident = stmt_property.ident.value.value();
+            /*const std::string& ident = stmt_property.ident.value.value();
             const std::string& property = stmt_property.property.value.value();
 
             VarType var_type = VarType::Void; 
@@ -615,7 +587,7 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
                         exit(EXIT_FAILURE);
                     }
                     break;
-            }
+            }*/
         }
 		
 		void operator()(const NodeExprGetPtr& expr_ptr) const {
@@ -658,14 +630,13 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 
         void operator()(const NodeStmtImport& stmt_import) const {
             const std::string& name = stmt_import.to_import.value.value();
-
             gen->libraries.push_back(name);
         }
 
         void operator()(const NodeStmtUse& stmt_use) const {
-            //std::cout << stmt_use.use[0].value.value() << "\n";
             for (int i = 0; i < stmt_use.use.size(); ++i) {
-                gen->write("  .extern " + stmt_use.use[i].value.value());
+                gen->write("  .globl " + stmt_use.use[i].value.value()); // write don't work here
+                gen->m_output << ".extern " << stmt_use.use[i].value.value() << "\n";
             }
         }
 
@@ -688,6 +659,9 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 }
                 gen->write("  .globl " + func.value.value());
                 gen->write("  .type " + func.value.value() + ", @function");
+                if (func.value.value() == "main") continue;
+                gen->m_output << ".globl " << func.value.value() << "\n";
+                gen->m_output << ".type " << func.value.value() << ", " << "@function" << "\n";
             }
         }
 
@@ -1051,27 +1025,20 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             int reg_index = 0;
             int float_reg_index = 0;
 
-            auto it = function_handlers.find(fn);
-            if (it != function_handlers.end()) {
-                it->second(stmt_call, gen);
+            for (const auto& arg : arg_values) {
+                VarType var_type = check_value(*arg, gen);
+                if (var_type != VarType::Float) gen->gen_expr(*arg, false, regs[reg_index]);
+                else gen->gen_expr(*arg, false, float_regs[float_reg_index]);
+                if (var_type == VarType::Float) ++float_reg_index;
+                else ++reg_index;
+                ++index;
             }
-            else {
-                for (const auto& arg : arg_values) {
-                    VarType var_type = check_value(*arg, gen);
-                    if (var_type != VarType::Float) gen->gen_expr(*arg, false, regs[reg_index]);
-                    else gen->gen_expr(*arg, false, float_regs[float_reg_index]);
-                    if (var_type == VarType::Float) ++float_reg_index;
-                    else ++reg_index;
-                    ++index;
-                }
-                gen->write("  mov $" + std::to_string(float_reg_index) + ", %al");
-                gen->call(fn);
-                //add_error("Unknown function (" + fn + ")", expr_call.line);
-            }
+            gen->write("  mov $" + std::to_string(float_reg_index) + ", %al");
+            gen->call(fn);
         }
 
         void operator()(const NodeStmtProperty& stmt_property) const {
-            const std::string& ident = stmt_property.ident.value.value();
+            /*const std::string& ident = stmt_property.ident.value.value();
             const std::string& property = stmt_property.property.value.value();
 
             if (!gen->m_vars.contains(ident)) {
@@ -1089,7 +1056,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                         add_error("Unknown function (" + property + ")", stmt_property.line);
                     }
                     break;
-            }
+            }*/
         }
 
         void operator()(const NodeStmtDeclmod& stmt_declmod) const {
@@ -1190,6 +1157,45 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 
 			gen->write("  mov %rax, " + name + "(%rip)");
 		}
+
+        void operator()(const NodeStmtHeader& stmt_header) const {
+            gen->is_header = true;
+        }
+        void operator()(const NodeStmtUhead& stmt_uhead) const {
+            const std::string& name = stmt_uhead.path.value.value();
+            std::ifstream input_file(name);
+            if (!input_file.is_open()) {
+                std::cerr << "Error: Could not open " << name << "\n";
+            }
+
+            std::stringstream full_source;
+            std::string line;
+            current_source_file = name;
+
+            while (std::getline(input_file, line)) {
+                full_source << line << '\n';
+                ++current_line;
+            }
+            std::string source_code = full_source.str();
+
+            Tokenizer tokenizer(std::move(source_code));
+            std::vector<Token> tokens = tokenizer.tokenize();
+
+            Parser parser(std::move(tokens));
+            std::optional<NodeProg> program = parser.parse_prog();
+
+            if (!program.has_value()) {
+                std::cerr << "Parsing failed in file: " << name << "\n";
+            }
+
+            std::string base_name = fs::path(name).stem().string();
+            //std::string gen_name = (index == 0) ? "main" : base_name;
+            std::string gen_name = base_name;
+
+            Generator generator(program.value(), gen_name);
+            std::string asm_code = generator.gen_prog();
+
+        }
     };
 
     StmtVisitor visitor{.gen = this};
@@ -1202,7 +1208,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 
     //m_output << "main:\n";
     for (const NodeStmt& stmt : m_prog.stmts) {
-        gen_stmt(stmt);
+        gen_stmt(stmt); 
     }
     if (main_func_declared) {
         main_func_declared = -5;

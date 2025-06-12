@@ -1,7 +1,7 @@
-#include "parser.hpp"
-#include "global.hpp"
-#include "error.hpp"
-#include "tokenization.hpp"
+#include "parser.hh"
+#include "global.hh"
+#include "error.hh"
+#include "tokenization.hh"
 #include <cstdlib>
 #include <execution>
 #include <memory>
@@ -1005,6 +1005,21 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
 		return NodeStmt{.var = NodeStmtGlobl{.ident = ident, .line = line}};
 	}
+    else if (peek().has_value() && peek().value().type == TokenType::_header) {
+        int line = peek().value().line;
+        return NodeStmt{.var = NodeStmtHeader{.line = line}};
+    }
+    else if (peek().has_value() && peek().value().type == TokenType::_uhead) {
+        int line = peek().value().line;
+        consume();
+
+        if (!peek().has_value() || peek().value().type != TokenType::str_lit) {
+            add_error("Expected library path", line);
+        }
+        Token path = consume();
+
+        return NodeStmt{.var = NodeStmtUhead{.path = path, .line = line}};
+    }
     else {
         int line = peek().value().line;
         consume();

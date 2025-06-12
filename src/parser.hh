@@ -9,10 +9,10 @@
 #include <memory>
 #include <iostream>
 
-#include "tokenization.hpp"
+#include "tokenization.hh"
 
 #undef __FILE__
-#define __FILE__ "src/parser.hpp"
+#define __FILE__ "src/parser.hh"
 
 enum class VarType {
     Void = -1,
@@ -288,8 +288,17 @@ struct NodeStmtGlobl {
 	int line;
 };
 
+struct NodeStmtHeader {
+    int line;
+};
+
+struct NodeStmtUhead {
+    Token path;
+    int line;
+};
+
 struct NodeStmt {
-    std::variant<NodeStmtVar, NodeStmtVarRe, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtMkpub, NodeStmtUnload, NodeStmtStop, NodeStmtContinue, NodeStmtProperty, NodeStmtDeclmod, NodeStmtEndmod, NodeStmtUmod, NodeStmtUbeepmod, NodeStmtLlibrary, NodeStmtLibpath, NodeStmtSetPtr, NodeStmtGlobl> var;
+    std::variant<NodeStmtVar, NodeStmtVarRe, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtMkpub, NodeStmtUnload, NodeStmtStop, NodeStmtContinue, NodeStmtProperty, NodeStmtDeclmod, NodeStmtEndmod, NodeStmtUmod, NodeStmtUbeepmod, NodeStmtLlibrary, NodeStmtLibpath, NodeStmtSetPtr, NodeStmtGlobl, NodeStmtHeader, NodeStmtUhead> var;
     int line;
 };
 

@@ -8,8 +8,8 @@
 #include <map>
 #include <stack>
 
-#include "parser.hpp"
-#include "global.hpp"
+#include "parser.hh"
+#include "global.hh"
 
 #undef __FILE__
 #define __FILE__ "src/generation.hpp"
@@ -76,7 +76,9 @@ public:
 	std::vector<std::string> m_string_literals;
 	std::vector<float> m_float_literals;
 	std::vector<std::string> m_structs;
-	std::stack<std::string> stmt_orde; 
+	std::stack<std::string> stmt_orde;
+
+	bool is_header = false; 
 
 	inline void write(const std::string& output, int newline = true) {
 	    if (current_mode == Mode::Function) function_buffer << output << (newline ? "\n" : "");

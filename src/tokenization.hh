@@ -5,7 +5,7 @@
 #include <vector>
 #include <optional>
 
-#include "global.hpp"
+#include "global.hh"
 
 enum class TokenType {
     int_lit,
@@ -81,7 +81,9 @@ enum class TokenType {
     _libpath,
 	_gptr,
 	_sptr,
-	_globl
+	_globl,
+    _header,
+    _uhead
 };
 
 struct Token {
