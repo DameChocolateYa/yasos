@@ -1,0 +1,10 @@
+extern fn len(s: str) -> int;
+extern fn strcat(s1: str, s2: str) -> str;
+extern fn strcut(s2: str, s2: str) -> str;
+extern fn strsub(s1: str, s2: str) -> str;
+extern fn str_to_int(s: str) -> int;
+extern fn str_to_db(s: str) -> double;
+extern fn int_to_str(n: int) -> str;
+extern fn db_to_str(n: double, decimals: int) -> str;
+extern fn strcmp(s1: str, s2: str) -> int;
+extern fn dig_to_abc(n: int) -> str;

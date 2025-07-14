@@ -46,6 +46,19 @@ extern std::vector<std::string> m_mod;
 extern std::unordered_map<std::string, std::string> m_fnc_mod;
 extern std::unordered_map<std::string, VarType> m_fnc_rets;
 
+extern std::unordered_map<std::string, std::pair<VarType, std::vector<ArgType>>> declared_funcs;
+
+typedef enum { TYPE_INT, TYPE_CHAR, TYPE_DOUBLE } TypeTag;
+
+typedef struct {
+    TypeTag type;
+    union {
+        int i;
+        char* s;
+        double d;
+    } value;
+} AnyValue;
+
 class Generator {
 private:
 
@@ -61,32 +74,41 @@ public:
 	    VarType type;
 	    std::string name;
 	    int is_mutable;
+		std::string struct_template = "";
 	};
 
 	std::string filename;
 
 	const NodeProg m_prog;
 	std::stringstream m_output;
-	size_t m_stack_size = 0;
+	size_t m_stack_size = 1;
 	std::map<std::string, Var> m_vars;
+	std::map<std::string, std::pair<int, int>> m_lists;
 	std::unordered_map<std::string, Var> m_glob_vars;
 	std::vector<std::string> m_vars_order;
 	std::unordered_map<std::string, std::vector<Var>> m_fnc_args;
 	std::unordered_map<std::string, VarType> m_fnc_custom_ret;
 	std::vector<std::string> m_string_literals;
 	std::vector<float> m_float_literals;
-	std::vector<std::string> m_structs;
 	std::stack<std::string> stmt_orde;
 
+	std::map<std::string, std::vector<std::pair<std::string, VarType>>> m_structs;
+	std::map<std::string, std::vector<NodeExpr>> m_vars_in_structs;
+	std::vector<NodeExpr> m_struct_temp_args; // shitty way
+
+	bool stack_aligned_in_call = false;	
+
 	bool is_header = false; 
+
+	std::string last_struct_template_name = "";
 
 	inline void write(const std::string& output, int newline = true) {
 	    if (current_mode == Mode::Function) function_buffer << output << (newline ? "\n" : "");
 	    else main_buffer << output << (newline ? "\n" : "");
 	}
 
-	inline void insert_var(const std::string& name, VarType type, int is_mutable) {
-	    m_vars.insert({name, Var{.stack_loc = m_stack_size - 1, .type = type, .name = name, .is_mutable = is_mutable}});
+	inline void insert_var(const std::string& name, VarType type, int is_mutable, const std::string& struct_template = "") {
+	    m_vars.insert({name, Var{.stack_loc = m_stack_size - 1, .type = type, .name = name, .is_mutable = is_mutable, .struct_template = struct_template}});
 	    m_vars_order.push_back(name);
 	}
 
@@ -154,7 +176,7 @@ public:
     std::vector<std::string> libraries;
     std::vector<std::string> libpaths;
 
-    void gen_expr(const NodeExpr& expr, bool push_result=true, const std::string& reg = "rax");
+    void gen_expr(const NodeExpr& expr, bool push_result=true, const std::string& reg = "rax", bool is_func_call = false);
     void gen_stmt(const NodeStmt& stmt);
     [[nodiscard]] std::string gen_prog();
 };

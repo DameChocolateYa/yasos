@@ -11,16 +11,19 @@
 #define __LOG_FILE__ "log.txt"
 
 enum ArgType {
-    NoArg,
-    None,
-    Integer,
-    String,
-    Float,
-    OptionalInteger,
-    OptionalString,
-    OptionalFloat,
-    VariableValue,
-    NxtUndefNum
+	Void = -1,
+	Integer = 0,
+	Float = 1,
+	String = 2,
+	None = 3,
+	Other = 4,
+	List = 5,
+	CustomIdent = 6,
+	Any = 7,
+	Ptr = 8,
+
+	NoArg = 9,
+	NxtUndefNum = 10,
 };
 
 extern std::ofstream file;

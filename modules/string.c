@@ -60,15 +60,15 @@ char* strsub(const char* s1, int begin, int end) {
     return result;
 }
 
-int stoint(const char* s1) {
+int str_to_int(const char* s1) {
     return atoi(s1);
 }
 
-float stofl(const char* s1) {
+float str_to_db(const char* s1) {
     return atof(s1);
 }
 
-char* itostr(const int n) {
+char* int_to_str(const int n) {
     char buf[32];
     int len = 0;
     int x = n;
@@ -109,7 +109,7 @@ char* itostr(const int n) {
     return res;
 }
 
-char* ftostr(double n, int decimals) {
+char* db_to_str(double n, int decimals) {
     char buf[64];
     int len = 0;
 
@@ -171,7 +171,7 @@ int strcmp(const char* s1, const char* s2) {
     return *s1 == *s2;  // Ambos deben llegar al final ('\0') al mismo tiempo
 }
 
-char* digtoabc(const int n) {
+char* dig_to_abc(const int n) {
     if (n >= 0 && n < 26) {
         char* res = (char*)malloc(2);  // 1 para la letra, 1 para '\0'
         if (res == NULL) return NULL; // Verificación de malloc

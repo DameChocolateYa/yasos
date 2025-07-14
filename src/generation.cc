@@ -23,47 +23,7 @@ std::vector<std::string> m_mod;
 std::unordered_map<std::string, std::string> m_fnc_mod;
 std::unordered_map<std::string, VarType> m_fnc_rets;
 
-std::unordered_map<std::string, VarType> known_function_types = {
-    {"sysexc", VarType::Int},
-	{"nap", VarType::Void},
-    {"testret", VarType::Str},
-    {"itostr", VarType::Str},
-    {"ftostr", VarType::Str},
-    {"stoint", VarType::Int},
-    {"stofl", VarType::Float},
-    {"scani", VarType::Str},
-    {"isnum", VarType::Int},
-    {"isint", VarType::Int},
-    {"isfloat", VarType::Int},
-    {"isnum", VarType::Int},
-    {"strcmp", VarType::Int},
-    {"strcat", VarType::Str},
-    {"strcut", VarType::Str},
-    {"strsub", VarType::Str},
-    {"len", VarType::Int},
-    {"randi", VarType::Int},
-	{"randf", VarType::Float},
-    {"digtoabc", VarType::Str},
-    {"sqrt", VarType::Float},
-    {"round", VarType::Float},
-    {"fltoint", VarType::Int},
-    {"ceil", VarType::Float},
-    {"floor", VarType::Float},
-    {"pow", VarType::Float},
-    {"fact", VarType::Int},
-    {"log", VarType::Float},
-
-	{"openf", VarType::Other},
-	{"closef", VarType::Void},
-	{"isfopen", VarType::Int},
-	{"readf", VarType::Str},
-	{"writef", VarType::Void},
-    {"makedir", VarType::Int},
-    {"makedirs", VarType::Int},
-    {"removef", VarType::Int},
-    {"removedir", VarType::Int},
-    {"removedirr", VarType::Int}
-};
+std::unordered_map<std::string, std::pair<VarType, std::vector<ArgType>>> declared_funcs;
 
 struct Func {
     std::string name;
@@ -90,21 +50,17 @@ static VarType check_value(const NodeExpr& expr, Generator* gen) {
     else if (std::holds_alternative<NodeExprCall>(expr.var)) {
         NodeExprCall expr_call = std::get<NodeExprCall>(expr.var);
         const std::string& name = expr_call.name.value.value();
-        if (!known_function_types.contains(name)) {
-            if (gen->m_fnc_custom_ret.contains(name)) {
-				for (const auto& fnc : gen->m_fnc_custom_ret) {
-					if (fnc.first == name) return fnc.second;
-				}
+        if (declared_funcs.contains(name)) {
+			for (const auto& fnc : declared_funcs) {
+				if (fnc.first == name) return fnc.second.first;
 			}
-			return VarType::Void;
-        }
-        for (const auto& fnc : known_function_types) {
-            if (fnc.first == name) return fnc.second;
-        }
+		}
+		return VarType::Void;
     }
     else if (std::holds_alternative<NodeExprIdent>(expr.var)) {
         NodeExprIdent ident = std::get<NodeExprIdent>(expr.var);
         const std::string& name = ident.ident.value.value();
+
         if (gen->m_vars.contains(name)) {
             return gen->m_vars.at(name).type;
         }
@@ -122,16 +78,6 @@ static VarType check_value(const NodeExpr& expr, Generator* gen) {
 		else if (gen->m_glob_vars.contains(name)) return gen->m_glob_vars.at(name).type;
         else {
             return VarType::Void;
-        }
-    }
-    else if (std::holds_alternative<NodeExprProperty>(expr.var)) {
-        NodeExprProperty expr_property = std::get<NodeExprProperty>(expr.var);
-        const std::string& name = expr_property.property.value.value();
-        if (!known_function_types.contains(name)) {
-            return VarType::Void;
-        }
-        for (const auto& fnc : known_function_types) {
-            if (fnc.first == name) return fnc.second;
         }
     }
     else if (std::holds_alternative<NodeExprBinaryAssign>(expr.var)) {
@@ -164,6 +110,12 @@ static VarType check_value(const NodeExpr& expr, Generator* gen) {
     else if (std::holds_alternative<NodeExprNone>(expr.var)) {
         return VarType::None;
     }
+	else if (std::holds_alternative<NodeExprList>(expr.var)) {
+		return VarType::List;
+	}
+	else if (std::holds_alternative<NodeExprListElement>(expr.var)) {
+		return VarType::Int;
+	} else if (std::holds_alternative<NodeExprStruct>(expr.var)) return VarType::Struct;
 
     return VarType::Void;
 }
@@ -185,7 +137,7 @@ void check_func_args(const std::vector<NodeExprPtr>& args, const std::unordered_
 
     int current_arg = 0;
     for (const auto& required_arg : required_args) {
-        if (required_arg.first == ArgType::VariableValue) continue;
+        if (required_arg.first == ArgType::Any) continue;
         if (required_arg.second == ArgRequired::No) continue;
 
         if (required_arg.first == ArgType::NxtUndefNum) return;
@@ -216,11 +168,155 @@ void check_func_args(const std::vector<NodeExprPtr>& args, const std::unordered_
     }
 }
 
-void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::string& reg) {
+static void call_func(const std::string& fn, std::vector<NodeExprPtr> arg_values, Generator* gen, int line, bool direct_call = false) {
+    std::vector<std::string> regs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+    std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7"};
+    int index = 0;
+    int reg_index = 0;
+    int float_reg_index = 0;
+	std::vector<ArgType> passed_args;
+	size_t stack_start = gen->m_stack_size;
+
+	int ii = 0;
+	int fi = 0;
+	size_t extra_stack = 0;
+	for (const auto& arg : arg_values) {
+		VarType var_type = check_value(*arg, gen);
+
+		if (var_type != VarType::Float && var_type != VarType::List) {
+			++ii;
+			if (ii > 6) ++extra_stack;
+		}
+		else if (var_type == VarType::Float) {
+			++fi;
+			if (fi > 8) ++extra_stack;
+		}
+		else if (var_type == VarType::List) {
+			ii += 3;
+			if (ii > 6) ++extra_stack;
+		}
+	}
+	if (((gen->m_stack_size + extra_stack) % 2) != 0) {
+		gen->write("  sub $8, %rsp");
+		++gen->m_stack_size;
+	}		
+	std::vector<std::pair<NodeExpr, VarType>> stack_args;
+    for (const auto& arg : arg_values) {
+        VarType var_type = check_value(*arg, gen);
+		passed_args.push_back(static_cast<ArgType>(var_type));
+
+		if (var_type != VarType::Float && var_type != VarType::Struct && reg_index > 5) {
+			stack_args.push_back({*arg, var_type});
+			continue;
+		}
+		else if (var_type == VarType::Float && float_reg_index > 7) {
+			stack_args.push_back({*arg, VarType::Float});
+			continue;
+		}
+		else if (var_type == VarType::Struct) {
+			std::string template_name;
+			std::vector<NodeExprPtr> fields;
+			if (std::holds_alternative<NodeExprStruct>(arg->var)) {
+				NodeExprStruct expr_struct = std::get<NodeExprStruct>(arg->var);
+				template_name = expr_struct.template_name.value.value();
+				fields = expr_struct.fields;
+			}
+			else if (std::holds_alternative<NodeExprIdent>(arg->var)) {
+				NodeExprIdent expr_ident = std::get<NodeExprIdent>(arg->var);
+				for (const auto& var : gen->m_vars) {
+					if (var.first == expr_ident.ident.value.value()) {
+						template_name = var.second.struct_template;
+						for (const auto& it : gen->m_vars_in_structs.at(expr_ident.ident.value.value())) {
+							fields.push_back(std::make_shared<NodeExpr>(it));
+						}
+					}
+				}
+			}
+
+			int struct_index = 0;
+			for (const auto& struct_arg : gen->m_structs.at(template_name)) {
+				if (struct_arg.second != VarType::Float && reg_index > 5) {
+					stack_args.push_back({*fields[struct_index], struct_arg.second});	
+
+					++struct_index;
+					++reg_index;
+					++index;
+					continue;
+				} else if (struct_arg.second == VarType::Float && float_reg_index > 7) {
+					stack_args.push_back({*fields[struct_index], struct_arg.second});
+					++struct_index;
+					++float_reg_index;
+					++index;
+					continue;	
+				}
+				
+				if (struct_arg.second != VarType::Float) {
+					gen->gen_expr(*fields[struct_index], false, regs[reg_index]);
+					++reg_index;
+				}
+				else if (struct_arg.second == VarType::Float) {
+					gen->gen_expr(*fields[struct_index], false, regs[reg_index]); 
+					++float_reg_index;
+				}
+				++index;
+				++struct_index;
+			}
+			continue;
+		}
+
+        if (var_type != VarType::Float && var_type != VarType::List) gen->gen_expr(*arg, false, regs[reg_index]);
+        else gen->gen_expr(*arg, false, float_regs[float_reg_index]);
+        if (var_type == VarType::Float) ++float_reg_index;
+        else ++reg_index;
+        ++index;
+    }
+
+	if (!stack_args.empty()) {
+		for (int i = stack_args.size() - 1; i >= 0; --i) {
+			const auto& arg = stack_args[i];
+			gen->gen_expr(arg.first, true, (arg.second == VarType::Float ? "xmm0" : "rax"));
+		}
+	}
+
+	bool func_exists = false;
+	for (const auto& fnc : declared_funcs) {
+		if (direct_call) break;
+		if (fnc.first == fn) {
+			if (fnc.second.second.size() != arg_values.size()) {
+				add_error("Too few args", line);
+			}
+			func_exists = true;
+			int index = -1;
+			for (const auto& arg : fnc.second.second) {
+				++index;
+				if (arg == ArgType::Any || arg == ArgType::Ptr) continue;
+				if (arg != passed_args[index]) {
+					add_error("ERROR PASSING ARGS\n", line);
+					return;
+				}
+			}
+			if (!func_exists) {
+				add_error("Inexistent func (" + fn + ")", line);
+				return;
+			}
+
+		}
+	}
+
+    gen->write("  mov $" + std::to_string(float_reg_index) + ", %al");
+    gen->call(fn);
+	while (gen->m_stack_size > stack_start) {
+        gen->write("  add $8, %rsp");
+		--gen->m_stack_size;
+    }
+}
+
+void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::string& reg, bool is_func_call) {
     struct ExprVisitor {
         Generator* gen;
         bool push_result;
         std::string reg;
+		bool is_func_call;
 
         void operator()(const NodeExprIntLit& expr_int_lit) const {
             gen->write("  mov $" + expr_int_lit.int_lit.value.value() + ", %" + reg);
@@ -489,7 +585,7 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
             size_t offset_bytes = gen->get_var(var_name);
             //std::cerr << gen->m_vars.at(var_name).stack_loc << "\n";
             if (gen->m_vars.at(var_name).type != VarType::Float) gen->write("  mov " +  std::to_string(offset_bytes) +" (%rsp), %" + reg);
-            else gen->write("  movsd " + std::to_string(offset_bytes) + "(%rsp), %" + reg);
+            else if (gen->m_vars.at(var_name).type == VarType::Float) gen->write("  movsd " + std::to_string(offset_bytes) + "(%rsp), %" + reg);
             //gen->write("  mov rax, rsi");
             if (push_result) {
                 if (gen->m_vars.at(var_name).type != VarType::Float) gen->push(reg);
@@ -522,7 +618,7 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
         }
 
         void operator()(const NodeExprNone& expr_none) const {
-            gen->write("  mov $0xDEADBEEF, %" + reg);
+            gen->write("  mov $0, %" + reg);
             if (push_result) gen->push(reg);
         }
         void operator()(const NodeExprNoArg& expr_no_arg) const {}
@@ -534,61 +630,70 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
         }
 
         void operator()(const NodeExprCall& expr_call) const {
-            const std::string& fn = expr_call.name.value.value();
+			const std::string& fn = expr_call.name.value.value();
             std::vector<NodeExprPtr> arg_values = expr_call.args;
-            std::vector<std::string> regs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
-            std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4"};
-            int index = 0;
-            int reg_index = 0;
-            int float_reg_index = 0;
-
-            for (const auto& arg : arg_values) {
-                VarType var_type = check_value(*arg, gen);
-                if (var_type != VarType::Float) gen->gen_expr(*arg, false, regs[reg_index]);
-                else gen->gen_expr(*arg, false, float_regs[float_reg_index]);
-                if (var_type == VarType::Float) ++float_reg_index;
-                else ++reg_index;
-                ++index;
-            }
-            gen->write("  mov $" + std::to_string(float_reg_index) + ", %al");
-            gen->call(fn);
-            //add_error("Unknown function (" + fn + ")", expr_call.line);
-        }
+			call_func(fn, arg_values, gen, expr_call.line, false); 
+		}
 
         void operator()(const NodeExprProperty& stmt_property) const {
-            /*const std::string& ident = stmt_property.ident.value.value();
-            const std::string& property = stmt_property.property.value.value();
+			const std::string& ident = stmt_property.ident.value.value();
+			const std::string& property = stmt_property.property.value.value();
+			int line = stmt_property.line;
 
-            VarType var_type = VarType::Void; 
-            if (gen->current_mode == Mode::Function) {
-                for (const auto& fnc : gen->m_fnc_args) {
-                    if (fnc.first == gen->current_func) {
-                        for (const auto& arg : fnc.second) {
-                            if (arg.name == ident) var_type = arg.type;
-                        }
-                    }
-                } 
-            }
-            else if (gen->m_vars.contains(ident)) {
-                var_type = gen->m_vars.at(ident).type;
-            }
-            if (var_type == VarType::Void) add_error("Unknown variable (" + ident + ")", stmt_property.line);
+			size_t stack_abs_pos = 0;
+			size_t stack_arg_pos;
 
+			std::string struct_templat;
+			bool is_arg = false;
+			if (gen->current_mode == Mode::Function) {
+				for (const auto& fnc : gen->m_fnc_args) {
+					if (fnc.first == gen->current_func) {
+						for (const auto& arg : gen->m_fnc_args.at(fnc.first)) {
+							if (arg.name == ident) {
+								is_arg = true;
+								struct_templat = arg.struct_template;
+								stack_arg_pos = arg.stack_loc;
+							}
+						}
+					}
+				}
+			}	
+			if (!is_arg) {
+				if (gen->m_vars.contains(ident)) {
+					struct_templat = gen->m_vars.at(ident).struct_template;
+				} else {
+					add_error("Cannot find variable", line);
+					return;
+				}
+			}
+			if (struct_templat == "") {
+				add_error("Variable is not a struct type", line);
+				return;
+			}
 
-            switch (var_type) {
-                case VarType::Str:
-                    auto it = str_ret_property.find(property);
-                    if (it != str_ret_property.end()) {
-                        push_result_in_func = push_result;
-                        it->second(stmt_property, gen, stmt_property.is_func);
-                    }
-                    else {
-                        add_error("Unknown func (" + property, stmt_property.line);
-                        exit(EXIT_FAILURE);
-                    }
-                    break;
-            }*/
-        }
+			if (!is_arg) {
+				for (const auto& struct_template : gen->m_structs) {
+					if (struct_template.first != struct_templat) continue;
+					size_t stack_rel_pos = (struct_template.second.size() - 2) * 8;
+					for (const auto& prop : struct_template.second) {
+						if (prop.first != property) stack_rel_pos -= 8;	
+						else break;
+					}
+					stack_abs_pos = ((gen->m_stack_size - gen->m_vars.at(ident).stack_loc) * 8) + stack_rel_pos;
+					gen->write("  mov " + std::to_string(stack_abs_pos) + "(%rsp), %" + reg);
+					if (push_result) gen->push(reg);
+				}
+			} else {
+				int index = 0;
+				for (const auto& field : gen->m_structs.at(struct_templat)) {
+					if (field.first == property) break;
+					++index;
+				}	
+				gen->write("  mov -" + std::to_string(stack_arg_pos + (index * 8)) + "(%rbp), %" + reg);
+				if (push_result) gen->push(reg);
+
+			}
+		}	
 		
 		void operator()(const NodeExprGetPtr& expr_ptr) const {
 			if (gen->m_vars.contains(expr_ptr.ident.value.value())) {	
@@ -618,9 +723,96 @@ void Generator::gen_expr(const NodeExpr& expr, bool push_result, const std::stri
 				add_error("Unexistent variable\n", expr_ptr.line);
 			}	
 		}
+
+		void operator()(const NodeExprList& expr_list) const {
+			size_t shadow_space = expr_list.elements.size() * 8;
+			gen->write("  mov $24, %rdi");
+			gen->call("malloc");
+			gen->write("  mov %rax, %rbx");
+
+			gen->write("  mov $" + std::to_string(shadow_space) + ", %rdi");
+			gen->call("malloc");
+			gen->write("  mov %rax, %rcx");
+
+			gen->write("  mov %rcx, 0(%rbx)");
+			for (int i = 0; i <= expr_list.elements.size() - 1; ++i) {
+				const auto& arg = expr_list.elements[i];
+				VarType var_type = check_value(arg, gen);
+				if (var_type != VarType::Float && var_type != VarType::List) {
+					gen->gen_expr(arg, false, "rax");
+					gen->write("  mov %rax, " + std::to_string(i * 8) + "(%rcx)");
+				}
+				else if (var_type == VarType::Float) {
+					gen->gen_expr(arg, false, "xmm0");
+					gen->write("  movsd %xmm0, " + std::to_string(i * 8) + "(%rcx)");
+				}
+			}
+			gen->write("  movl $" + std::to_string(expr_list.elements.size()) + ", 8(%rbx)");
+			gen->write("  movl $" + std::to_string(expr_list.elements.size()) + ", 12(%rbx)");
+			gen->write("  mov %rbx, %" + reg);
+		}
+
+		void operator()(const NodeExprListElement& expr_list_element) const {
+			const std::string& var_name = expr_list_element.list_name.value.value();
+            size_t offset_bytes = gen->get_var(var_name);
+			if (check_value(expr_list_element, gen) != VarType::Int) {
+				add_error("Expected Integer expression as index", expr_list_element.line);
+				return;
+			}
+			
+			NodeExpr mul_expr = NodeExpr(NodeExprBinary{	
+				.lhs = expr_list_element.index,
+				.op_token = Token{.type = TokenType::str_type, .value = "*"},
+				.rhs = std::make_shared<NodeExpr>(NodeExprIntLit{
+					.int_lit = Token{
+					.type = TokenType::int_lit,
+					.value = "8"
+					}
+				}),	
+			});
+			gen->gen_expr(mul_expr, false, "rax");
+
+			gen->write("  mov " + std::to_string(offset_bytes) + "(%rsp), %rbx");
+			gen->write("  mov 0(%rbx), %rcx");
+			gen->write("  mov (%rcx,%rax,1), %" + reg);
+
+			if (push_result) gen->push(reg);
+		}
+
+		void operator()(const NodeExprStruct& expr_struct) const {
+			int normal_reg_index = 0;
+			int float_reg_index = 0;
+
+			const std::string& template_name = expr_struct.template_name.value.value();
+			gen->last_struct_template_name = template_name;
+			int line = expr_struct.line;
+
+			if (!gen->m_structs.contains(template_name)) {
+				add_error("Inexistent struct template", line);
+				return;
+			}
+			
+			int index = 0;
+			for (const auto& field : expr_struct.fields) {
+				bool field_found = false;
+				VarType field_type = gen->m_structs.at(template_name)[index].second;
+				NodeExpr expr = *field;
+				if (check_value(expr, gen) != field_type) {
+					add_error("Argument type in struct is not the same as the struct template", line);
+					return;
+				}
+				++index;	
+			}
+
+			gen->m_struct_temp_args.clear();
+			for (const auto& it : expr_struct.fields) {
+				if (!is_func_call) gen->gen_expr(*it, true);
+				gen->m_struct_temp_args.push_back(*it);
+			}
+		}
     };
 
-    ExprVisitor visitor{.gen = this, .push_result = push_result, .reg = reg};
+    ExprVisitor visitor{.gen = this, .push_result = push_result, .reg = reg, .is_func_call = is_func_call};
     std::visit(visitor, expr.var);
 }
 
@@ -629,8 +821,39 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
         Generator* gen;
 
         void operator()(const NodeStmtImport& stmt_import) const {
-            const std::string& name = stmt_import.to_import.value.value();
-            gen->libraries.push_back(name);
+			const std::string& name = stmt_import.to_import.value.value();
+			const std::string& path = "/usr/include/ysinclude/" + name + ".ys";
+            std::ifstream input_file(path);
+            if (!input_file.is_open()) {
+                std::cerr << "Error: Could not open " << name << "\n";
+            }
+
+            std::stringstream full_source;
+            std::string line;
+            current_source_file = path;
+
+            while (std::getline(input_file, line)) {
+                full_source << line << '\n';
+                ++current_line;
+            }
+            std::string source_code = full_source.str();
+
+            Tokenizer tokenizer(std::move(source_code));
+            std::vector<Token> tokens = tokenizer.tokenize();
+
+            Parser parser(std::move(tokens));
+            std::optional<NodeProg> program = parser.parse_prog();
+
+            if (!program.has_value()) {
+                std::cerr << "Parsing failed in file: " << name << "\n";
+            }
+
+            std::string base_name = fs::path(path).stem().string();
+            //std::string gen_name = (index == 0) ? "main" : base_name;
+            std::string gen_name = base_name;
+
+            Generator generator(program.value(), gen_name);
+            std::string asm_code = generator.gen_prog();
         }
 
         void operator()(const NodeStmtUse& stmt_use) const {
@@ -679,8 +902,18 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 
             const std::string& name = stmt_var.ident.value.value(); 
             VarType value_type = check_value(stmt_var.expr, gen);
-            if (value_type != VarType::Float) gen->gen_expr(stmt_var.expr, false);
-            else gen->gen_expr(stmt_var.expr, false, "xmm0");
+            if (value_type != VarType::Float && value_type != VarType::List && value_type != VarType::Struct) gen->gen_expr(stmt_var.expr, false);
+            else if (value_type == VarType::Float) gen->gen_expr(stmt_var.expr, false, "xmm0");
+			else if (value_type == VarType::Struct) {
+				gen->gen_expr(stmt_var.expr, false);
+				gen->m_vars_in_structs.insert({name, gen->m_struct_temp_args});
+			}
+			else {
+				gen->gen_expr(stmt_var.expr, true, "rax"); // Special case
+				gen->push("rax");
+				gen->insert_var(stmt_var.ident.value.value(), VarType::List, stmt_var.is_mutable);
+				//gen->m_lists.insert({name, {}})
+			}
 
 			if (value_type == VarType::Other) {
 				gen->push("rax");	
@@ -688,11 +921,14 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 				return;
 			} 
             
-            if (value_type != VarType::Float) gen->push("rax", false);
-            else gen->push_float("xmm0", false);
+            if (value_type != VarType::Float && value_type != VarType::List && value_type != VarType::Struct) gen->push("rax", false);
+            else if (value_type == VarType::Float) gen->push_float("xmm0", false);
+			else {
+				
+			}
             gen->write(" # Creating a new var (" + name + ")");
             //gen->m_vars.insert({name, Var{.stack_loc = gen->m_stack_size - 1, .type = var_type, .name = name}});
-            gen->insert_var(name, value_type, stmt_var.is_mutable);
+            gen->insert_var(name, value_type, stmt_var.is_mutable, (value_type == VarType::Struct ? gen->last_struct_template_name : ""));
         }
 
         void operator()(const NodeStmtVarRe& stmt_var) const {
@@ -786,7 +1022,8 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             std::string start_label = label + "start";
             std::string end_label = label + "end";
             gen->stmt_orde.push(label);
-            size_t stack_start = gen->m_vars.size();
+            size_t var_n = gen->m_vars.size();
+			size_t stack_start = gen->m_stack_size;
 
             for (const auto& stmt : stmt_while.bfw) {
                 //gen->gen_stmt(stmt);
@@ -798,7 +1035,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             gen->write("  cmp $0, %rax");
             gen->write("  je " + end_label);
 
-            for (const auto& stmt :  stmt_while.then_branch) {
+            for (const auto& stmt :  stmt_while.then_branch) {	
                 gen->gen_stmt(stmt);
             }
 
@@ -806,20 +1043,28 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
                 //gen->gen_stmt(stmt);
             }
 
-            while (gen->m_vars.size() > stack_start) {
+            while (gen->m_vars.size() > var_n) {
                 int i = gen->m_vars_order.size() - 1;
                 const auto& var_name = gen->m_vars_order[i];
-                gen->pop("rax");
                 gen->m_vars.erase(var_name);
                 gen->m_vars_order.pop_back();
             }
+			if (gen->m_stack_size > stack_start) {
+				//std::cerr << "ST: " << std::to_string(gen->m_stack_size) << ", ST_ST: " << std::to_string(stack_start) << "\n";
+				gen->write("  add $" + std::to_string((gen->m_stack_size - stack_start) * 8) + ", %rsp");
+				gen->m_stack_size -= (gen->m_stack_size - stack_start);
+			}
  
             gen->write("  jmp " + start_label);
             gen->write(end_label + ":"); 
-            while (gen->m_vars.size() > stack_start) {
+            /*while (gen->m_vars.size() > stack_start) {
                 gen->pop("rax");
-            }
-        }
+            }*/
+			if (gen->m_stack_size > stack_start) {
+				gen->write("  add $" + std::to_string((gen->m_stack_size - stack_start) * 8) + ", %rsp");
+				gen->m_stack_size -= (gen->m_stack_size - stack_start);
+			}
+		}
 
         void operator()(const NodeStmtStop& stmt_stop) const {
             if (gen->stmt_orde.empty()) {
@@ -838,124 +1083,202 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             gen->write("  jmp " + start_label);
         }
 
-        /*void operator()(const NodeStmtPrint& stmt_print) const {
+        void operator()(const NodeStmtPrint& stmt_print) const {
             NodeExpr format = stmt_print.str;
             std::vector<NodeExpr> arg_values = stmt_print.args;
             std::vector<std::string> regs = {"rsi", "rdx", "rcx", "r8", "r9"};
-            std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4"};
+            std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7"};
             int index = 0;
             int reg_index = 0;
-            int float_reg_index = 0;
+			int float_reg_index = 0;
+			size_t stack_start = gen->m_stack_size;
+
+			int ii = 1; // Including format right here
+			int fi = 0;
+			size_t extra_stack = 0;
+			for (const auto& arg : stmt_print.args) {
+				VarType var_type = check_value(arg, gen);
+
+				if (var_type != VarType::Float) {
+					++ii;
+					if (ii > 5) ++extra_stack;
+				}
+				else if (var_type == VarType::Float) {
+					++fi;
+					if (fi > 7) ++extra_stack;
+				}
+			}
+			if (((gen->m_stack_size + extra_stack) % 2) != 0) {
+				gen->write("  sub $8, %rsp");
+				++gen->m_stack_size;
+			}
 
             gen->gen_expr(format, false, "rdi");
-            for (const auto& arg : stmt_print.args) {
+
+			std::vector<std::pair<NodeExpr, VarType>> stack_args;
+			for (const auto& arg : stmt_print.args) {
                 VarType var_type = check_value(arg, gen);
+				
+				if (var_type != VarType::Float && reg_index > 4) {
+					stack_args.push_back({arg, VarType::Int});
+					continue;
+				}
+				else if (var_type == VarType::Float && float_reg_index > 7) {
+					stack_args.push_back({arg, VarType::Float});
+					continue;
+				}
+				
                 if (var_type != VarType::Float) gen->gen_expr(arg, false, regs[reg_index]);
                 else gen->gen_expr(arg, false, float_regs[float_reg_index]);
                 if (var_type == VarType::Float) ++float_reg_index;
                 else ++reg_index;
                 ++index;
             }
+			for (int i = stack_args.size() - 1; i >= 0; --i) {
+				const auto& arg = stack_args[i];
+				gen->gen_expr(arg.first, true, (arg.second == VarType::Float ? "xmm0" : "rax"));
+			}
+
             gen->write("  mov $" + std::to_string(float_reg_index) + ", %al");
             gen->call("printbp");
-        }*/
-
-	void operator()(const NodeStmtPrint& stmt_print) const {
-		NodeExpr format = stmt_print.str;
-		std::vector<NodeExpr> arg_values = stmt_print.args;
-
-		std::vector<std::string> regs = {"rsi", "rdx", "rcx", "r8", "r9"};
-		std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4"};
-
-		int int_reg_index = 0;
-		int float_reg_index = 0;
-
-		gen->gen_expr(format, false, "rdi");
-
-		for (const auto& arg : arg_values) {
-			VarType var_type = check_value(arg, gen);
-			if (var_type == VarType::Float) {
-				gen->gen_expr(arg, false, float_regs[float_reg_index]);
-				++float_reg_index;
-			} 
-			else {
-				gen->gen_expr(arg, false, regs[int_reg_index]);
-				++int_reg_index;
-			}
-		}
-
-		int save_area_size = 72;
-		/*if (((save_area_size + gen->m_stack_size * 8) % 16 == 0)) {
-			save_area_size += 8;
-		}*/
-		gen->write("  sub $" + std::to_string(save_area_size) + ", %rsp");
-
-		for (int i = 0; i < float_reg_index; ++i) {
-			int offset = 16 + i * 8;
-			gen->write("  movsd %" + float_regs[i] + ", " + std::to_string(offset) + "(%rsp)");
-		}
-
-		gen->write("  mov $" + std::to_string(float_reg_index) + ", %al");
-
-		gen->call("printbp");
-
-		gen->write("  add $" + std::to_string(save_area_size) + ", %rsp");
-	}
+			gen->write("  add $" + std::to_string((gen->m_stack_size - stack_start) * 8) + ", %rsp");
+			gen->m_stack_size -= (gen->m_stack_size - stack_start); 
+        }	
 
         const std::vector<std::string> regs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
-        const std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm3", "xmm4", "xmm5", "xmm6"};
+        const std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7"};
 
         void operator()(const NodeStmtDefFunc& stmt_def_func) const {
 			size_t stack_start = gen->m_stack_size;
-
-            if (gen->current_mode == Mode::Function) {
-                add_error("Function declaration inside antoher function is not allowed", stmt_def_func.line);
-            }
-            if (gen->mod == Mode::Mod) {
-                m_fnc_mod.insert({gen->current_mod, stmt_def_func.name.value.value()});
-                gen->write("  .globl " + stmt_def_func.name.value.value());
-            }
-            if (stmt_def_func.name.value.value() == "main" && main_func_declared != -5) {
-                main_func_declared = true;
-            }
-
-            gen->current_mode = Mode::Function;
+			int line = stmt_def_func.line;
             
             int index = 1;
             int reg_index = 0;
             int float_reg_index = 0;
-            std::vector<Var> args;
+			int stack_index = 0;
 
+            std::vector<Var> args;
+			std::vector<ArgType> args_required;
+			VarType ret_type = stmt_def_func.return_type;
+
+			for (const auto& arg : stmt_def_func.args) {
+				args_required.push_back(arg.arg_type);
+			}
+
+			if (stmt_def_func.name.value.value() == "main" && main_func_declared != -5) {
+                main_func_declared = true;
+            }
+			else {
+				const std::string& name = stmt_def_func.name.value.value();
+				declared_funcs.insert({name, {ret_type, args_required}});
+			}
+			
+			if (stmt_def_func.is_pub) {
+				gen->m_output << ".globl " + stmt_def_func.name.value.value() << "\n";
+			}
+			if (stmt_def_func.is_extern) return;
+			
+			if (gen->current_mode == Mode::Function) {
+				add_error("Function declaration inside antoher function is not allowed", stmt_def_func.line);
+            }
+            gen->current_mode = Mode::Function;
             gen->current_func = stmt_def_func.name.value.value();
             gen->write(stmt_def_func.name.value.value() + ":");
             gen->write("  push %rbp");
 			++gen->m_stack_size;
             gen->write("  mov %rsp, %rbp");
 
+			int ii = 0;
+			int fi = 0;
+			size_t extra_stack = 2;
+			size_t extra_stack_index = 2;
+			for (const auto& arg : stmt_def_func.args) {
+				VarType var_type = static_cast<VarType>(arg.arg_type);
+
+				if (var_type != VarType::Float) {
+					++ii;
+					if (ii > 6) ++extra_stack;
+				}
+				else if (var_type == VarType::Float) {
+					++fi;
+					if (fi > 8) ++extra_stack;
+				}
+			}
+			
+			size_t shadow_space = (((gen->m_stack_size + stmt_def_func.args.size()) % 2) == 0 ? (stmt_def_func.args.size() * 8) : (stmt_def_func.args.size() * 8 + 8));
+			gen->write("  sub $" + std::to_string(shadow_space) + ", %rsp");
             for (int i = 0; i < stmt_def_func.args.size(); ++i) {
                 auto arg = stmt_def_func.args[i];
                 VarType var_type;
                 if (arg.arg_type == ArgType::String) var_type = VarType::Str;
                 if (arg.arg_type == ArgType::Integer) var_type = VarType::Int;
                 if (arg.arg_type == ArgType::Float) var_type = VarType::Float;
+				if (arg.arg_type == ArgType::CustomIdent) var_type = VarType::Struct;
 
-                args.push_back({.stack_loc = static_cast<size_t>(index) * 8, .type = var_type, .name = arg.name});
-                if (var_type != VarType::Float) { 
-                    gen->write("  sub $8, %rsp");
-					++gen->m_stack_size;
+                args.push_back({.stack_loc = static_cast<size_t>(index) * 8, .type = var_type, .name = arg.name, .struct_template = (var_type == VarType::Struct) ? stmt_def_func.absolute_type_name_args[i] : ""});
+				
+				if (var_type != VarType::Float && var_type != VarType::Struct && reg_index > 5) {
+					gen->write("  mov " + std::to_string((extra_stack_index + 1) * 8) + "(%rbp), %rax");
+					gen->write("  mov %rax, -" + std::to_string(static_cast<size_t>(index) * 8) + "(%rbp)");
+					++index;
+					++stack_index;
+					++extra_stack_index;
+					continue;
+				}
+				else if (var_type == VarType::Float && float_reg_index > 7) {
+					gen->write("  movsd " + std::to_string((extra_stack + 1) * 8) + "(%rbp), %xmm0");
+					gen->write("  movsd %xmm0, -" + std::to_string(static_cast<size_t>(index) * 8) + "(%rbp)");
+					++index;
+					++stack_index;
+					--extra_stack;
+					continue;
+				} else if (var_type == VarType::Struct) {
+					std::string template_name = stmt_def_func.absolute_type_name_args[i];
+					if (!gen->m_structs.contains(template_name)) {
+						add_error("Unknown template name", line);
+						return;
+					}
+					for (const auto& arg : gen->m_structs.at(template_name)) {
+						VarType type = arg.second;
+						if (type != VarType::Float && type != VarType::Struct && reg_index > 5) {
+							gen->write("  mov " + std::to_string((extra_stack_index) * 8) + "(%rbp), %rax");
+							gen->write("  mov %rax, -" + std::to_string(static_cast<size_t>(index) * 8) + "(%rbp)");
+							++stack_index;
+							++extra_stack_index;
+							++index;
+							continue;
+						}
+						else if (type == VarType::Float && float_reg_index > 7) {
+							gen->write("  movsd " + std::to_string((extra_stack) * 8) + "(%rbp), %xmm0");
+							gen->write("  movsd %xmm0, -" + std::to_string(static_cast<size_t>(index) * 8) + "(%rbp)");
+							++stack_index;
+							--extra_stack;
+							++index;
+							continue;
+						} else if (type != VarType::Float && type != VarType::Struct) {
+							gen->write("  mov %" + regs[reg_index] + ", -" + std::to_string(static_cast<size_t>(index) * 8) + "(%rbp)"); 
+							++reg_index;
+							++index;
+						} else if (type == VarType::Float) {
+							gen->write("  movsd %" + float_regs[float_reg_index] + ", -" + std::to_string(static_cast<size_t>(index) * 8) + "(%rbp)");  
+							++float_reg_index;
+							++index;
+						}
+					}
+					continue;
+				}
+
+                if (var_type != VarType::Float && var_type != VarType::Struct) {
                     gen->write("  mov %" + regs[reg_index] + ", -" + std::to_string(static_cast<size_t>(index) * 8) + "(%rbp)"); 
                     ++reg_index;
                 }
-                else {
-                    gen->write("  sub $8, %rsp");
-					++gen->m_stack_size;
+                else if (var_type == VarType::Float) {
                     gen->write("  movsd %" + float_regs[float_reg_index] + ", -" + std::to_string(static_cast<size_t>(index) * 8) + "(%rbp)");  
                     ++float_reg_index;
-                }
-                ++index;
-            }
+				}
+			}
             gen->m_fnc_args.insert({stmt_def_func.name.value.value(), args});
-            m_fnc_rets.insert({stmt_def_func.name.value.value(), stmt_def_func.return_type});
+            m_fnc_rets.insert({stmt_def_func.name.value.value(), stmt_def_func.return_type});	
 
 			for (const auto& stmt : stmt_def_func.code_branch) {
 				gen->gen_stmt(stmt);
@@ -1019,44 +1342,34 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
         void operator()(const NodeStmtCall& stmt_call) const {
             const std::string& fn = stmt_call.name.value.value();
             std::vector<NodeExprPtr> arg_values = stmt_call.args;
-            std::vector<std::string> regs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
-            std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4"};
-            int index = 0;
-            int reg_index = 0;
-            int float_reg_index = 0;
-
-            for (const auto& arg : arg_values) {
-                VarType var_type = check_value(*arg, gen);
-                if (var_type != VarType::Float) gen->gen_expr(*arg, false, regs[reg_index]);
-                else gen->gen_expr(*arg, false, float_regs[float_reg_index]);
-                if (var_type == VarType::Float) ++float_reg_index;
-                else ++reg_index;
-                ++index;
-            }
-            gen->write("  mov $" + std::to_string(float_reg_index) + ", %al");
-            gen->call(fn);
+			call_func(fn, arg_values, gen, stmt_call.line, false);
         }
 
         void operator()(const NodeStmtProperty& stmt_property) const {
-            /*const std::string& ident = stmt_property.ident.value.value();
-            const std::string& property = stmt_property.property.value.value();
+			const std::string& ident = stmt_property.ident.value.value();
+			const std::string& property = stmt_property.property.value.value();
+			int line = stmt_property.line;
 
-            if (!gen->m_vars.contains(ident)) {
-                add_error("Unknown variable (" + ident + ")", stmt_property.line);
-            }
-            VarType var_type = gen->m_vars.at(ident).type;
+			gen->gen_expr(stmt_property.expr, false);
 
-            switch (var_type) {
-                case VarType::Str:
-                    auto it = str_property.find(property);
-                    if (it != str_property.end()) {
-                        it->second(stmt_property, gen, stmt_property.is_func);
-                    }
-                    else {
-                        add_error("Unknown function (" + property + ")", stmt_property.line);
-                    }
-                    break;
-            }*/
+			if (gen->m_vars.contains(ident)) {
+				if (gen->m_vars.at(ident).struct_template == "") {
+					add_error("The variable whose property was tried to access, it is not a struct", line);
+					return;
+				}
+				
+				size_t stack_abs_pos;
+				for (const auto& struct_template : gen->m_structs) {
+					if (struct_template.first != gen->m_vars.at(ident).struct_template) continue;
+					size_t stack_rel_pos = (struct_template.second.size() - 2) * 8;
+					for (const auto& prop : struct_template.second) {
+						if (prop.first != property) stack_rel_pos -= 8;	
+						else break;
+					}
+					stack_abs_pos = ((gen->m_stack_size - gen->m_vars.at(ident).stack_loc) * 8) + stack_rel_pos;
+					gen->write("  mov %rax, " + std::to_string(stack_abs_pos) + "(%rsp)");
+				}
+			}
         }
 
         void operator()(const NodeStmtDeclmod& stmt_declmod) const {
@@ -1196,6 +1509,46 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             std::string asm_code = generator.gen_prog();
 
         }
+
+		void operator()(const NodeStmtLeave& stmt_leave) const {
+			gen->write("  mov %rbp, %rsp");
+            gen->pop("rbp");
+            gen->write("  ret");
+		}
+
+		void operator()(const NodeStmtListElement& stmt_list_element) const {
+			const std::string& name = stmt_list_element.list_name.value.value();
+			NodeExpr index = stmt_list_element.index;
+			NodeExpr expr = stmt_list_element.expr;
+			int line = stmt_list_element.line;
+
+			size_t offset_bytes = gen->get_var(name);
+			if (check_value(index, gen) != VarType::Int) {
+				add_error("Expected Integer expression as index", line);
+				return;
+			}
+
+			NodeExpr mul_expr = NodeExpr(NodeExprBinary{	
+				.lhs = std::make_shared<NodeExpr>(index),
+				.op_token = Token{.type = TokenType::str_type, .value = "*"},
+				.rhs = std::make_shared<NodeExpr>(NodeExprIntLit{
+					.int_lit = Token{
+					.type = TokenType::int_lit,
+					.value = "8"
+					}
+				}),	
+			});
+			gen->gen_expr(mul_expr, false, "rax");
+			gen->gen_expr(expr, false, "r10");
+			gen->write("  mov " + std::to_string(offset_bytes) + "(%rsp), %rbx");
+			gen->write("  mov 0(%rbx), %rcx");
+			gen->write("  mov %r10, (%rcx,%rax,1)");
+		}
+
+		void operator()(const NodeStmtStruct& stmt_struct) const {
+			std::string name = stmt_struct.name.value.value();
+			gen->m_structs.insert({name, stmt_struct.fields});
+		}
     };
 
     StmtVisitor visitor{.gen = this};
@@ -1203,8 +1556,8 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 }
 
 [[nodiscard]] std::string Generator::gen_prog() {
-    //m_output << ".globl " << filename << /*"\nsection .text*/"\n";
-    //m_output << "extern free\n";
+	declared_funcs.clear();
+	m_output << ".extern malloc\n"; // Necessary to many things
 
     //m_output << "main:\n";
     for (const NodeStmt& stmt : m_prog.stmts) {

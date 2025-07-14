@@ -22,6 +22,7 @@ enum class TokenType {
     str_type,
     int_type,
     double_type,
+	any_type,
     dp,
     comment_begin,
     comment_end,
@@ -81,14 +82,21 @@ enum class TokenType {
     _libpath,
 	_gptr,
 	_sptr,
+	_ptr,
 	_globl,
     _header,
-    _uhead
+    _uhead,
+	_leave,
+	_pub,
+	_extern,
+	_list,
+	_struct,
+	_nwstruct,
 };
 
 struct Token {
     TokenType type;
-    std::optional<std::string> value;
+    std::optional<std::string> value = "";
     int line;
 };
 

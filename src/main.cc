@@ -41,6 +41,7 @@ int main(int argc, char** argv) {
     bool compile_only = false;       // -c
     bool generate_shared = false;    // -shared
     std::string output_file = "out"; // -o
+	bool print_link_command = false;
     std::vector<std::string> input_files;
 
     init_debug();
@@ -58,7 +59,9 @@ int main(int argc, char** argv) {
             generate_shared = true;
         } else if (arg == "--preserve-asm") {
             keep_asm = true;
-        } else {
+        } else if (arg == "--print-link-command"){
+			print_link_command = true;
+		} else {
             input_files.emplace_back(arg);
         }
     }
@@ -157,12 +160,7 @@ int main(int argc, char** argv) {
 
         LOG(__FILE__, "Compiled: " + filename);
         current_line = 1;
-    }
-
-    if (!compiled_successfully) {
-        std::cerr << "\nErrors in compilation\n";
-        return EXIT_FAILURE;
-    }
+    } 
 
     if (generate_asm_only || compile_only) {
         LOG(__FILE__, "Compilation finished without linking.");
@@ -193,7 +191,13 @@ int main(int argc, char** argv) {
         link_command += "-l" + lib + " ";
     }
 
-    link_command += " -O2 -Wl,-rpath=" + func_dir;
+    link_command += "-L/usr/lib/yslib -lys -O2 -Wl,-rpath=" + func_dir;
+	if (print_link_command) std::cerr << link_command << "\n";
+
+	if (!compiled_successfully) {
+        std::cerr << "\nErrors in compilation\n";
+        return EXIT_FAILURE;
+    }
 
     if (system(link_command.c_str()) != 0) {
         std::cerr << "Linking failed.\n";

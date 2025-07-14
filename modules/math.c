@@ -45,7 +45,7 @@ double round(double num, int decimals) {
     return (double)temp / factor;
 }
 
-int fltoint(float n) {
+int db_to_int(float n) {
     return (int)n;
 }
 
@@ -60,10 +60,10 @@ double ceil(double num) {
     }
 }
 
-double floor(double num) {
-    long long int_part = (long long)num;
+double floor(double n) {
+    long long int_part = (long long)n;
 
-    if (num < (double)int_part) {
+    if (n < (double)int_part) {
         return (double)(int_part - 1);
     }
     else {

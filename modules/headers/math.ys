@@ -1,0 +1,12 @@
+extern fn sqrt(x: double) -> double;
+extern fn pow(base: double, exponent: int) -> double;
+extern fn round(num: double, decimals: int) -> double;
+extern fn db_to_int(n: double) -> int;
+extern fn ceil(n: double) -> double;
+extern fn floor(n: double) -> double;
+extern fn abs(x: int) -> int;
+extern fn fabs(x: double) -> double;
+extern fn fact(x: int) -> int;
+extern fn log(x: double, base: double) -> double;
+
+

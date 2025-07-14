@@ -20,7 +20,9 @@ enum class VarType {
     Float = 1,
     Str = 2,
     None = 3,
-	Other = 4
+	Other = 4,
+	List = 5,
+	Struct = 6
 };
 
 struct NodeExpr;
@@ -114,6 +116,24 @@ struct NodeExprGetPtr {
 	int line;
 };
 
+struct NodeExprList {
+	std::vector<NodeExpr> elements;
+
+	int line;
+};
+
+struct NodeExprListElement {
+	Token list_name;
+	NodeExprPtr index;
+	int line;
+};
+
+struct NodeExprStruct {
+	Token template_name;
+	std::vector<NodeExprPtr> fields;
+	int line;
+};
+
 struct NodeExpr {
     std::variant<
         NodeExprIntLit,
@@ -129,7 +149,10 @@ struct NodeExpr {
         NodeExprCR,
         NodeExprBoolValue,
         NodeExprProperty,
-		NodeExprGetPtr
+		NodeExprGetPtr,
+		NodeExprList,
+		NodeExprListElement,
+		NodeExprStruct
     > var;
 
     NodeExpr() = default;
@@ -229,6 +252,9 @@ struct NodeStmtDefFunc {
     std::vector<CustomFuncArgs> args;
     VarType return_type;
 	std::vector<NodeStmt> code_branch;
+	bool is_pub = false;
+	bool is_extern = false;
+	std::vector<std::string> absolute_type_name_args;
     int line;
 };
 
@@ -260,10 +286,7 @@ struct NodeStmtContinue {
 struct NodeStmtProperty {
     Token ident;
     Token property;
-    
-    int is_func = false;
-    std::vector<NodeExprPtr> args; // optional
-    
+    NodeExpr expr; 
     int line;
 };
 
@@ -297,8 +320,25 @@ struct NodeStmtUhead {
     int line;
 };
 
+struct NodeStmtLeave {
+	int line;
+};
+
+struct NodeStmtListElement {
+	Token list_name;
+	NodeExpr index;
+	NodeExpr expr;
+	int line;
+};
+
+struct NodeStmtStruct {
+	Token name;
+	std::vector<std::pair<std::string, VarType>> fields;
+	int line;
+};
+
 struct NodeStmt {
-    std::variant<NodeStmtVar, NodeStmtVarRe, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtMkpub, NodeStmtUnload, NodeStmtStop, NodeStmtContinue, NodeStmtProperty, NodeStmtDeclmod, NodeStmtEndmod, NodeStmtUmod, NodeStmtUbeepmod, NodeStmtLlibrary, NodeStmtLibpath, NodeStmtSetPtr, NodeStmtGlobl, NodeStmtHeader, NodeStmtUhead> var;
+    std::variant<NodeStmtVar, NodeStmtVarRe, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtMkpub, NodeStmtUnload, NodeStmtStop, NodeStmtContinue, NodeStmtProperty, NodeStmtDeclmod, NodeStmtEndmod, NodeStmtUmod, NodeStmtUbeepmod, NodeStmtLlibrary, NodeStmtLibpath, NodeStmtSetPtr, NodeStmtGlobl, NodeStmtHeader, NodeStmtUhead, NodeStmtLeave, NodeStmtListElement, NodeStmtStruct> var;
     int line;
 };
 

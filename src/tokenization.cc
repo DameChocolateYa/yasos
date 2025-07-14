@@ -8,9 +8,9 @@ std::vector<Token> Tokenizer::tokenize() {
     int local_lines = 1;
 
     while(peek().has_value()) {
-        if (std::isalpha(peek().value())) {
+        if (std::isalpha(peek().value()) || peek().value() == '_') {
             buf.push_back(consume());
-            while(peek().has_value() && std::isalnum(peek().value())) {
+            while(peek().has_value() && (std::isalnum(peek().value()) || peek().value() == '_')) {
                 buf.push_back(consume());
             }
             if (buf == "var") {
@@ -38,6 +38,11 @@ std::vector<Token> Tokenizer::tokenize() {
                 buf.clear();
                 continue;
             }
+			else if (buf == "any") {
+				tokens.push_back({.type = TokenType::any_type, .line = local_lines});
+				buf.clear();
+				continue;
+			}
             else if (buf == "add") {
                 tokens.push_back({.type = TokenType::plus, .value="+", .line = local_lines});
                 buf.clear();
@@ -273,6 +278,11 @@ std::vector<Token> Tokenizer::tokenize() {
 				buf.clear();
 				continue;
 			}
+			else if (buf == "ptr") {
+				tokens.push_back({.type = TokenType::_ptr, .line = local_lines});
+				buf.clear();
+				continue;
+			}
 			else if (buf == "globl") {
 				tokens.push_back({.type = TokenType::_globl, .line = local_lines});
 				buf.clear();
@@ -284,10 +294,39 @@ std::vector<Token> Tokenizer::tokenize() {
                 continue;
             }
             else if (buf == "uhead") {
-               tokens.push_back({.type = TokenType::_uhead, .line = local_lines});
-                buf.clear();
+				tokens.push_back({.type = TokenType::_uhead, .line = local_lines});
+				buf.clear();
                 continue; 
             }
+			else if (buf == "leave") {
+				tokens.push_back({.type = TokenType::_leave, .line = local_lines});
+				buf.clear();
+				continue;
+			}
+			else if (buf == "pub") {
+				tokens.push_back({.type = TokenType::_pub, .line = local_lines});
+				buf.clear();
+				continue;
+			} 
+			else if (buf == "extern") {
+				tokens.push_back({.type = TokenType::_extern, .line = local_lines});
+				buf.clear();
+				continue;
+			}
+			else if (buf == "list") {
+				tokens.push_back({.type = TokenType::_list, .line = local_lines});
+				buf.clear();
+				continue;
+			}
+			else if (buf == "struct") {
+				tokens.push_back({.type = TokenType::_struct, .line = local_lines});
+				buf.clear();
+				continue;
+			} else if (buf == "nwstruct") {
+				tokens.push_back({.type = TokenType::_nwstruct, .line = local_lines});
+				buf.clear();
+				continue;
+			} 
             else {
                 tokens.push_back({.type = TokenType::ident, .value = buf, .line = local_lines});
                 buf.clear();
@@ -338,6 +377,20 @@ std::vector<Token> Tokenizer::tokenize() {
                 buf.push_back(consume());
             }
             if (!peek().has_value() || peek().value() != '"') {
+                add_error("Undeterminated string literal");
+                exit(EXIT_FAILURE);
+            }
+            consume();
+
+            tokens.push_back({.type = TokenType::str_lit, .value = buf, .line = local_lines});
+            buf.clear();
+        }
+		else if (peek().value() == '\'') {
+            consume();
+            while (peek().has_value() && peek().value() != '\'') {
+                buf.push_back(consume());
+            }
+            if (!peek().has_value() || peek().value() != '\'') {
                 add_error("Undeterminated string literal");
                 exit(EXIT_FAILURE);
             }

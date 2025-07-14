@@ -54,7 +54,8 @@ char* scani() {
     return result;
 }
 
-int isint(const char* s1) {
+int is_int(const char* s1) {
+	if (s1[0] == '\0') return 0;
     for (int i = 0; s1[i] != '\0'; ++i) {
         if (s1[i] != '-' && (s1[i] < '0' || s1[i] > '9')) {
             return 0;
@@ -66,7 +67,8 @@ int isint(const char* s1) {
     return 1;
 }
 
-int isfloat(const char* s1) {
+int is_float(const char* s1) {
+	if (s1[0] == '\0') return 0;
     int decimal = false;
     for (int i = 0; s1[i] != '\0'; ++i) {
         if (s1[i] != '-' && s1[i] != '.' && (s1[i] < '0' || s1[i] > '9')) {
@@ -84,7 +86,8 @@ int isfloat(const char* s1) {
     return 1;
 }
 
-int isnum(const char* s1) {
+int is_num(const char* s1) {
+	if (s1[0] == '\0') return 0;
     int decimal = false;
     for (int i = 0; s1[i] != '\0'; ++i) {
         if (s1[i] != '-' && s1[i] != '.' && (s1[i] < '0' || s1[i] > '9')) {
@@ -193,4 +196,12 @@ double randf(double min, double max, int decimals) {
 
 void nap(const unsigned int seconds) {
 	sleep(seconds);
+}
+
+void* alloc(size_t size) {
+	return malloc(size);
+}
+
+void* ralloc(void* ptr, size_t size) {
+	return realloc(ptr, size);
 }

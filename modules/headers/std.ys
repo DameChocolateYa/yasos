@@ -1,0 +1,12 @@
+extern fn scani() -> str;
+extern fn is_int(s: str) -> int;
+extern fn is_float(s: str) -> int;
+extern fn is_num(s: str) -> int;
+extern fn waitk() -> none;
+extern fn cls() -> none;
+extern fn sysexc(command: str) -> int;
+extern fn termc(color: int) -> none;
+extern fn randi(min: double, max: double, decimals: int) -> double;
+extern fn nap(seconds: int) -> none;
+extern fn alloc(size: int) -> int;
+extern fn ralloc(pointer: ptr, size: int) -> int;

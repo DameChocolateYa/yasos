@@ -58,10 +58,8 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
         
         return inner_expr;
     }
-    else if (peek().has_value() && peek().value().type == TokenType::get &&
-            peek(1).has_value() && peek(1).value().type == TokenType::ident
-            && peek(2).has_value() && peek(2).value().type == TokenType::dot) {
-        consume(); // get
+    else if (peek().has_value() && peek().value().type == TokenType::ident
+            && peek(1).has_value() && peek(1).value().type == TokenType::dot) {
         Token ident = consume();
         int line = ident.line;
         consume(); // .
@@ -112,6 +110,87 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
 		consume();
 
 		return NodeExpr(NodeExprGetPtr{.ident = ident, .line = line});
+	}
+	else if (peek().has_value() && peek().value().type == TokenType::_list) {
+		int line = peek().value().line;
+		consume();
+		std::vector<NodeExpr> elements;
+		
+		if (!peek().has_value() || peek().value().type != TokenType::l_arrow) {
+			add_error("Expected a list\n", line);
+		}
+		consume();
+
+		while (peek().has_value() && peek().value().type != TokenType::r_arrow) {
+			auto e = parse_expr();
+			if (!e.has_value()) {
+				add_error("Malformed expression in list declaration\n", line);
+			}
+			elements.push_back(e.value());
+			if (!peek().has_value() || (peek().value().type != TokenType::r_arrow && peek().value().type != TokenType::comma)) {
+				add_error("Expected ',' or '>'\n", line);
+			}
+			if (peek().value().type == TokenType::comma) {
+				consume();
+				continue;
+			}
+			else break;
+		}
+		consume();
+
+		return NodeExpr(NodeExprList({.elements = elements, .line = line}));
+	} else if (peek().has_value() && peek().value().type == TokenType::_nwstruct) {
+		int line = peek().value().line;
+		consume();
+
+		if (!peek().has_value() || peek().value().type != TokenType::ident) {
+			add_error("Expected name of struct template", line);
+		}
+		Token struct_template_name = consume();
+
+		std::vector<NodeExprPtr> fields;
+		if (peek().has_value() && peek().value().type == TokenType::l_key) {
+			consume();
+			while (peek().has_value() && peek().value().type != TokenType::r_key) {
+				auto e = parse_expr();
+				if (!e.has_value()) {
+					add_error("Malformed expression in field of struct", line);
+				}
+				fields.push_back(std::make_shared<NodeExpr>(e.value()));
+				if (peek().has_value() && peek().value().type == TokenType::comma) consume();
+			}
+			if (!peek().has_value() || peek().value().type != TokenType::r_key) {
+				add_error("Expected '}'", line);
+			}
+			consume();
+		}
+		else if (peek().has_value()) {
+			add_error("Expected declaration of struct or at least the end of the expression", line);
+		}
+		
+		return NodeExpr(NodeExprStruct{.template_name = struct_template_name, .fields = fields, .line = line});
+	}
+	else if (peek().has_value() && peek().value().type == TokenType::ident && peek(1).has_value() && peek(1).value().type == TokenType::l_bracket) {
+		int line = peek().value().line;
+		Token list_name = consume();
+		consume();
+
+		if (!peek().has_value()) {
+			add_error("Expected expression", line);
+		}
+		auto e = parse_expr();
+		if (!e.has_value()) {
+			add_error("Malformed expression", line);
+		}
+
+		NodeExprPtr index = std::make_shared<NodeExpr>(e.value());
+
+		if (!peek().has_value() || peek().value().type != TokenType::r_bracket) {
+			add_error("Expected ']'", line);
+		}
+		consume();
+
+		return NodeExpr(NodeExprListElement{.list_name = list_name, .index = index, .line = line});
 	}
     else if (peek().has_value() && peek().value().type == TokenType::int_lit) {
         return NodeExpr(NodeExprIntLit{consume()});
@@ -249,10 +328,17 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         return NodeStmt{.var = stmt_var};
     }
 
-    else if (peek().has_value() && peek().value().type == TokenType::_fnc) {
+    else if (peek().has_value() && peek().value().type == TokenType::_fnc ||
+	peek().has_value() && peek().value().type == TokenType::_extern && peek(1).has_value() && peek(1).value().type == TokenType::_fnc) {
 		int line = peek().value().line;
+		bool is_pub = false;
+		bool is_extern = false;
+		if (peek().value().type == TokenType::_extern) {
+			is_extern = true;
+			consume();
+		}
 		consume();
-        if (!peek().has_value() || peek().value().type != TokenType::ident) {
+		if (!peek().has_value() || peek().value().type != TokenType::ident) {
 			add_error("Expected name in the function declaration\n", line);
 		}
 		Token name = consume();
@@ -261,30 +347,55 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 		}
         consume(); // (
         std::vector<CustomFuncArgs> args;
+		std::vector<std::string> absolute_type_name_args;
 
         while (peek().has_value() && peek().value().type != TokenType::close_paren) {
             if (peek().has_value() && peek().value().type == TokenType::ident && peek(1).has_value() && peek(1).value().type == TokenType::dp &&
-                peek(2).has_value() && (peek(2).value().type == TokenType::str_type || peek(2).value().type == TokenType::int_type || peek(2).value().type == TokenType::double_type)) {
-                    std::string arg_name = consume().value.value();
+                peek(2).has_value()) {
+                std::string arg_name = consume().value.value();
+                consume();
+                Token arg_type_tok = consume();
+                ArgType arg_type;
+
+				switch (arg_type_tok.type) {
+				case TokenType::str_type:
+				arg_type = ArgType::String; break;
+					
+				case TokenType::int_type:
+				arg_type = ArgType::Integer; break;
+
+				case TokenType::double_type:
+				arg_type = ArgType::Float; break;
+
+				case TokenType::_list:
+				arg_type = ArgType::List; break;
+
+				case TokenType::any_type:
+				arg_type = ArgType::Any; break;
+
+				case TokenType::_ptr:
+				arg_type = ArgType::Ptr; break;
+
+				case TokenType::ident:
+				arg_type = ArgType::CustomIdent; break;
+
+				default:
+				arg_type = ArgType::CustomIdent; break;
+				}
+
+                args.push_back({.name = arg_name, .arg_type = arg_type});
+				absolute_type_name_args.push_back(arg_type_tok.value.value());
+
+                if (peek().has_value() && peek().value().type == TokenType::comma) {
                     consume();
-                    Token arg_type_tok = consume();
-                    ArgType arg_type;
-                    if (arg_type_tok.type == TokenType::str_type) arg_type = ArgType::String;
-                    else if (arg_type_tok.type == TokenType::int_type) arg_type = ArgType::Integer;
-                    else if (arg_type_tok.type == TokenType::double_type) arg_type = ArgType::Float;
-
-                    args.push_back({.name = arg_name, .arg_type = arg_type});
-
-                    if (peek().has_value() && peek().value().type == TokenType::comma) {
-                        consume();
-                        continue;
-                    }
-                    else if (peek().has_value() && peek().value().type == TokenType::close_paren) {
-                        break;
-                    }
-                    else {
-                        add_error("Expected ')'", line);
-                    }
+                    continue;
+                }
+                else if (peek().has_value() && peek().value().type == TokenType::close_paren) {
+                    break;
+                }
+                else {
+                    add_error("Expected ')'", line);
+                }
             }
             else {
                 add_error("Malformed expression in function declaration", line);
@@ -305,32 +416,52 @@ std::optional<NodeStmt> Parser::parse_stmt() {
             if (peek().value().type == TokenType::str_type) return_type = VarType::Str;
             else if (peek().value().type == TokenType::int_type) return_type = VarType::Int;
             else if (peek().value().type == TokenType::double_type) return_type = VarType::Float;
+			else if (peek().value().type == TokenType::none) return_type = VarType::None;
             else {
                 add_error("Unknown return type in specification", line);
             }
             consume();
         }
 
-        if (!peek().has_value() || peek().value().type != TokenType::l_key) { // {
-            add_error("Expected '{'", peek().value().line);
-        }
-        consume(); // {
-		
 		std::vector<NodeStmt> code_branch;
-        while (peek().has_value() && peek().value().type != TokenType::r_key) {
-            auto stmt = parse_stmt();
-            if (!stmt.has_value()) {
-                add_error("Invalid statment in 'if' block", line);
-            }
-            code_branch.push_back(stmt.value());
-        }
+		if (peek().has_value() && peek().value().type == TokenType::l_key) {
+			consume();
+			while (peek().has_value() && peek().value().type != TokenType::r_key) {
+				auto stmt = parse_stmt();
+				if (!stmt.has_value()) {
+					add_warning("Empty block in func", line);
+					break;
+				}
+				code_branch.push_back(stmt.value());
+			}
 
-        if (!peek().has_value() || peek().value().type != TokenType::r_key) {
-            add_error("Expected '}' to end 'if' block", line);
-        }
-        consume(); // }
+			if (!peek().has_value() || peek().value().type != TokenType::r_key) {
+				add_error("Expected '}' to end 'func' block", line);
+			}
+			consume(); // }
+			if (peek().has_value() && peek().value().type == TokenType::_pub) {
+				consume();
+				is_pub = true;
+				if (!peek().has_value() && peek().value().type != TokenType::semi) {
+					add_error("Expected ';'", line);
+				}
+				consume();
+			}
+		}
+		else if (peek().has_value() && peek().value().type == TokenType::semi) consume();
+		else if (peek().has_value() && peek().value().type == TokenType::_pub) {
+			consume();
+			is_pub = true;
+			if (!peek().has_value() && peek().value().type != TokenType::semi) {
+				add_error("Expected ';'", line);
+			}
+			consume();
+		}
+		else {
+			add_error("Expected function block or ';'", line);
+		}	
 
-        return NodeStmt{NodeStmtDefFunc{.name = name, .args = args, .return_type = return_type, .code_branch = code_branch, .line = line}};
+        return NodeStmt{NodeStmtDefFunc{.name = name, .args = args, .return_type = return_type, .code_branch = code_branch, .is_pub = is_pub, .is_extern = is_extern, .absolute_type_name_args = absolute_type_name_args, .line = line}};
     }
 
     else if (peek().has_value() && peek().value().type == TokenType::ident &&
@@ -497,8 +628,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         consume();
 
         return NodeStmt(NodeStmtPrint{str, args, line});
-    }
-
+    }	
     else if (peek().has_value() && peek().value().type == TokenType::_if) {
         int line = peek().value().line;
         consume(); // If
@@ -835,43 +965,28 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
         return NodeStmt{.var = NodeStmtContinue{.line = line}};
     }
-    else if (peek().has_value() && peek().value().type == TokenType::get &&
-            peek(2).has_value() && peek(2).value().type == TokenType::ident
-            && peek(3).has_value() && peek(2).value().type == TokenType::dot) {
-        consume(); // get
+    else if (peek().has_value() && peek().value().type == TokenType::ident
+            && peek(1).has_value() && peek(1).value().type == TokenType::dot
+			&& peek(2).has_value() && peek(2).value().type == TokenType::ident
+			&& peek(3).has_value() && peek(3).value().type == TokenType::eq) {
         Token ident = consume();
         int line = ident.line;
         consume(); // .
         Token property = consume();
+		consume(); // =
 
-        int is_func = false;
-        std::vector<NodeExprPtr> args;
-        if (peek().has_value() && peek().value().type == TokenType::open_paren) {
-            is_func = true;
-            while (peek().has_value() && peek().value().type != TokenType::close_paren) {
-                auto e = parse_expr();
-                if (!e.has_value()) {
-                    add_error("Invalid Expression", line);
-                }
-                args.push_back(std::make_shared<NodeExpr>(e.value()));
-
-                if (peek().has_value() && peek().value().type == TokenType::comma) {
-                    consume();
-                    continue;
-                }
-            }
-            if (!peek().has_value() || peek().value().type != TokenType::close_paren) {
-                add_error("Expected ')'", line);
-            }
-            consume();
-        }
-
+		auto e = parse_expr();
+		if (!e.has_value()) {
+			add_error("Malformed expression", line);
+		}
+		NodeExpr expr = e.value();
+        
         if (!peek().has_value() || peek().value().type != TokenType::semi) {
             add_error("Expected ';'", line);
         }
         consume();
 
-        return NodeStmt{.var = NodeStmtProperty{.ident = ident, .property = property, .is_func = is_func, .args = args, .line = line}};
+        return NodeStmt{.var = NodeStmtProperty{.ident = ident, .property = property, .expr = expr, .line = line}};
     }
     else if (peek().has_value() && peek().value().type == TokenType::_declmod) {
         consume(); // declmod
@@ -1020,6 +1135,116 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
         return NodeStmt{.var = NodeStmtUhead{.path = path, .line = line}};
     }
+	else if (peek().has_value() && peek().value().type == TokenType::_leave) {
+		int line = peek().value().line;
+		consume();
+		
+		if (!peek().has_value() || peek().value().type != TokenType::semi) {
+			add_error("Expected ';'", line);
+		}
+		consume();
+
+		return NodeStmt{.var = NodeStmtLeave{.line = line}};
+	}
+	else if (peek().has_value() && peek().value().type == TokenType::ident && peek(1).has_value() && peek(1).value().type == TokenType::l_bracket) {
+		int line = peek().value().line;
+		Token ident = consume();
+		consume();
+
+		if (!peek().has_value()) {
+			add_error("Expected expression", line);
+		}
+		auto e = parse_expr();
+		if (!e.has_value()) {
+			add_error("Malformed expression", line);
+		}
+
+		NodeExpr index = e.value();
+
+		if (!peek().has_value() || peek().value().type != TokenType::r_bracket) {
+			add_error("Expected ']'", line);
+		}
+		consume();
+
+		if (!peek().has_value() && peek().value().type != TokenType::eq) {
+			add_error("Expected '='", line);
+		}
+		consume();
+
+		e = parse_expr();
+		if (!e.has_value()) {
+			add_error("Malformed expression", line);
+		}
+		NodeExpr expr = e.value();
+
+		if (!peek().has_value() || peek().value().type != TokenType::semi) {
+			add_error("Expected ';'");
+		}
+		consume();
+
+		return NodeStmt{.var = NodeStmtListElement{.list_name = ident, .index = index, .expr = expr, .line = line}};
+	} else if (peek().has_value() && peek().value().type == TokenType::_struct) {
+		int line = peek().value().line;
+		consume();
+		
+		if (!peek().has_value() || peek().value().type != TokenType::ident) {
+			add_error("Expected name to struct", line);
+		}
+		Token struct_name = consume();
+
+		if (!peek().has_value() || peek().value().type != TokenType::l_key) {
+			add_error("Expected '{' in struct definition", line);
+		}
+		consume();
+
+		std::vector<std::pair<std::string, VarType>> fields;
+		while (peek().has_value() && peek().value().type != TokenType::r_key) {
+			if (!peek().has_value() || peek().value().type != TokenType::ident) {
+				add_error("Unknown statment in struct");
+			}
+			Token name = consume();
+
+			if (!peek().has_value() || peek().value().type != TokenType::dp) {
+				add_error("Expected ':'");
+			}
+			consume();
+
+			if (!peek().has_value()) {
+				add_error("Expected type");
+			}
+			Token type_tok = consume();
+			if (!peek().has_value() || peek().value().type != TokenType::semi) {
+				add_error("Expected ';'");
+			}
+			consume();
+
+			const std::string& field_name = name.value.value();
+			VarType type;
+			switch (type_tok.type) {
+				case TokenType::int_type:
+				type = VarType::Int; break;
+
+				case TokenType::double_type:
+				type = VarType::Float; break;
+
+				case TokenType::str_type:
+				type = VarType::Str; break;
+			}
+			fields.push_back({field_name, type});
+		}
+
+		if (!peek().has_value() || peek().value().type != TokenType::r_key) {
+			add_error("Expected '}'");
+		}
+		consume();
+		if (!peek().has_value() || peek().value().type != TokenType::semi) {
+			add_error("Expected ';'");
+		}
+		consume();
+
+
+		return NodeStmt{.var = NodeStmtStruct{.name = struct_name, .fields = fields, .line = line}};
+	}
     else {
         int line = peek().value().line;
         consume();
