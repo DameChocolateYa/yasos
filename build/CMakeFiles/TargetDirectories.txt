@@ -1,3 +1,0 @@
-/home/samuel/dev/yasos/yasos/build/CMakeFiles/yasos.dir
-/home/samuel/dev/yasos/yasos/build/CMakeFiles/edit_cache.dir
-/home/samuel/dev/yasos/yasos/build/CMakeFiles/rebuild_cache.dir
