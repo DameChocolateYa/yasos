@@ -8,6 +8,7 @@
 #include "global.hh"
 
 enum class TokenType {
+  null_tok,
     int_lit,
     str_lit,
     float_lit,
@@ -36,6 +37,9 @@ enum class TokenType {
     r_bracket,
     plus,
     minus,
+    ref,
+    amp,
+    deref,
     star,
     slash,
     percent,
@@ -56,21 +60,23 @@ enum class TokenType {
     gte,
     eq_eq,
     bang_eq,
+    bang,
     none,
     no_arg,
     cr,
-	_fnc,
+	  _fnc,
     endfn,
     ret,
     mkpub,
     get,
     _while,
+    _loop,
+    _for,
+    _foreach,
     _stop,
     _continue,
-    _do,
     _true,
     _false,
-    _then,
     _unload,
     dot,
     _err,
@@ -92,6 +98,7 @@ enum class TokenType {
 	_list,
 	_struct,
 	_nwstruct,
+  _new,
 };
 
 struct Token {
@@ -113,7 +120,7 @@ class Tokenizer {
 
         inline char consume() {
             return m_src.at(m_index++);
-        }
+        } 
 
         const std::string m_src;
         size_t m_index = 0;

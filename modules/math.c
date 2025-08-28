@@ -1,5 +1,7 @@
 #include <stdio.h>
 
+const double PI = 3.141592;
+
 double sqrt(double x) {
     if (x < 0) return 1;
     if (x == 0 || x == 1) return x;

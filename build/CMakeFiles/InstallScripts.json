@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/samuel/dev/yasos/yasos/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

@@ -4,6 +4,10 @@
 #undef strcat
 #include <stdlib.h>
 #include <math.h>
+#include <ctype.h>
+
+const char* STR_EMPTY = "";
+const char* STR_WHITE = " ";
 
 int len(const char* s1) {
     int len = (int)strlen(s1);
@@ -26,6 +30,20 @@ char* strcat(const char* s1, const char* s2) {
     return result;
 }
 
+void bufcat(char** s1, const char* s2) {
+  if (!s1 || !s2) return;
+
+  size_t len1 = strlen(*s1);
+  size_t len2 = strlen(s2);
+
+  s1 = (char**)realloc(s1, len1 + len2 + 1);
+  if (!s1) {
+    return;
+  }
+
+  *s1 = strcat(*s1, s2);
+}
+
 char* strcut(const char* s1, int begin, int end) { 
     int len = strlen(s1);
 
@@ -44,6 +62,11 @@ char* strcut(const char* s1, int begin, int end) {
     return result;
 }
 
+void bufcut(const char** s1, int begin, int end) {
+    if (!s1) return;
+    *s1 = strcut(*s1, begin, end);
+}
+
 char* strsub(const char* s1, int begin, int end) {
     int len = strlen(s1);
 
@@ -60,15 +83,20 @@ char* strsub(const char* s1, int begin, int end) {
     return result;
 }
 
-int str_to_int(const char* s1) {
+void bufsub(const char** s1, int begin, int end) {
+  if (!s1) return;
+  *s1 = strsub(*s1, begin, end);
+}
+
+int stoint(const char* s1) {
     return atoi(s1);
 }
 
-float str_to_db(const char* s1) {
+float stdb(const char* s1) {
     return atof(s1);
 }
 
-char* int_to_str(const int n) {
+char* itostr(const int n) {
     char buf[32];
     int len = 0;
     int x = n;
@@ -185,4 +213,93 @@ char* dig_to_abc(const int n) {
         res[1] = '\0';
         return res;
     }
+}
+
+bool strempty(const char* s) {
+  bool empty = true;
+  for (int i = 0; i < strlen(s); ++i) {
+    if (s[i] != '\0') empty = false;
+  }
+
+  return empty;
+}
+
+bool is_whitespace(const char* s) {
+  bool is_whitespace = true;
+  for (int i = 0; i < strlen(s); ++i) {
+    if (s[1] != ' ') is_whitespace = false;
+  }
+
+  return is_whitespace;
+}
+
+char* trim(const char* s) {
+  if (s == NULL) return NULL;
+
+  const char* begin = s;
+  const char* end;
+
+  while (*begin && isspace((unsigned char)*begin)) {
+    ++begin;
+  }
+
+  if (*begin == '\0') {
+    char* empty = (char*)malloc(1);
+    if (empty) empty[0] = '\0';
+    return empty;
+  }
+
+  end = begin + strlen(begin) - 1;
+  while (end > begin && isspace((unsigned char)*end)) {
+    --end;
+  }
+
+  size_t len = end - begin + 1;
+
+  char* new = (char*)malloc(len);
+  if (!new) return NULL;
+  strncpy(new, begin, len);
+
+  return new;
+}
+
+void buftrim(const char** buf) {
+  if (!buf) return;
+  *buf = trim(*buf);
+}
+
+char* strreplace(const char* s, const char* old_sub, const char* new_sub) {
+  if (!s || !old_sub || !new_sub) return NULL;
+
+  size_t old_len = strlen(old_sub);
+  size_t new_len = strlen(new_sub);
+  size_t count = 0;
+
+  const char* tmp = s;
+  while ((tmp = strstr(tmp, old_sub))) {
+    ++count;
+    tmp += old_len;
+  }
+
+  size_t result_len = strlen(s) + count * (new_len - old_len);
+
+  char* result = (char*)malloc(result_len);
+  if (!result) return NULL;
+
+  char* dest = result;
+  while (*s) {
+    if (strstr(s, old_sub) == s) {
+      memcpy(dest, new_sub, new_len);
+      s += old_len;
+    } else {
+      *dest++ = *s++;
+    }
+  }
+
+  return result;
+}
+
+void bufreplace(const char** buf, const char* old_sub, const char* new_sub) {
+  if (!buf) return;
+  *buf = strreplace(*buf, old_sub, new_sub);
 }

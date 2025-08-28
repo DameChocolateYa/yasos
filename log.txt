@@ -1,6 +1,0 @@
-[DEBUG STARTED]
-
-[src/main.cpp] Compiled: test.bp
-[src/main.cpp] Build complete: Executable 'out'
-
-[DEBUG FINISHED | SUCCESS]

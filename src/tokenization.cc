@@ -6,6 +6,7 @@ std::vector<Token> Tokenizer::tokenize() {
 
     std::string buf = "";
     int local_lines = 1;
+    int tokens_in_current_line = 0;
 
     while(peek().has_value()) {
         if (std::isalpha(peek().value()) || peek().value() == '_') {
@@ -108,11 +109,6 @@ std::vector<Token> Tokenizer::tokenize() {
                 buf.clear();
                 continue;
             }
-            else if (buf == "then") {
-                tokens.push_back({.type = TokenType::_then, .line = local_lines});
-                buf.clear();
-                continue;
-            }
             else if (buf == "and") {
                 tokens.push_back({.type = TokenType::_and, .value="&&", .line = local_lines});
                 buf.clear();
@@ -178,11 +174,11 @@ std::vector<Token> Tokenizer::tokenize() {
                 buf.clear();
                 continue;
             }
-			else if (buf == "fn") {
-				tokens.push_back({.type = TokenType::_fnc, .line = local_lines});
-				buf.clear();
-				continue;
-			}
+			      else if (buf == "fun") {
+				      tokens.push_back({.type = TokenType::_fnc, .line = local_lines});
+				      buf.clear();
+				      continue;
+			      }
             else if (buf == "endfn") {
                 tokens.push_back({.type = TokenType::endfn, .line = local_lines});
                 buf.clear();
@@ -208,6 +204,19 @@ std::vector<Token> Tokenizer::tokenize() {
                 buf.clear();
                 continue;
             }
+            else if (buf == "loop") {
+              tokens.push_back({.type = TokenType::_loop, .line = local_lines});
+              buf.clear();
+              continue;
+            } else if (buf == "for") {
+              tokens.push_back({.type = TokenType::_for, .line = local_lines});
+              buf.clear();
+              continue;
+            } else if (buf == "foreach") {
+              tokens.push_back({.type = TokenType::_foreach, .line = local_lines});
+              buf.clear();
+              continue;
+            }
             else if (buf == "stop") {
                 tokens.push_back({.type = TokenType::_stop, .line = local_lines});
                 buf.clear();
@@ -215,11 +224,6 @@ std::vector<Token> Tokenizer::tokenize() {
             }
             else if (buf == "continue") {
                 tokens.push_back({.type = TokenType::_continue, .line = local_lines});
-                buf.clear();
-                continue;
-            }
-            else if (buf == "do") {
-                tokens.push_back({.type = TokenType::_do, .line = local_lines});
                 buf.clear();
                 continue;
             }
@@ -268,6 +272,16 @@ std::vector<Token> Tokenizer::tokenize() {
                 buf.clear();
                 continue;
             }
+      else if (buf == "ref") {
+        tokens.push_back({.type = TokenType::ref, .line = local_lines});
+        buf.clear();
+        continue;
+      }
+      else if (buf == "deref") {
+        tokens.push_back({.type = TokenType::deref, .line = local_lines});
+        buf.clear();
+        continue;
+      }
 			else if (buf == "gptr") {
 				tokens.push_back({.type = TokenType::_gptr, .line = local_lines});
 				buf.clear();
@@ -326,12 +340,271 @@ std::vector<Token> Tokenizer::tokenize() {
 				tokens.push_back({.type = TokenType::_nwstruct, .line = local_lines});
 				buf.clear();
 				continue;
-			} 
+			} else if (buf == "new") {
+        tokens.push_back({.type = TokenType::_new, .line = local_lines});
+        buf.clear();
+        continue;
+      } 
             else {
                 tokens.push_back({.type = TokenType::ident, .value = buf, .line = local_lines});
                 buf.clear();
             }
+            ++tokens_in_current_line;
         }
+        else if (peek().value() == '"') {
+            consume();
+            while (peek().has_value() && peek().value() != '"') {
+                buf.push_back(consume());
+            }
+            if (!peek().has_value() || peek().value() != '"') {
+                add_error("Undeterminated string literal");
+                exit(EXIT_FAILURE);
+            }
+            consume();
+
+            tokens.push_back({.type = TokenType::str_lit, .value = buf, .line = local_lines});
+            buf.clear();
+            ++tokens_in_current_line;
+        }
+		else if (peek().value() == '\'') {
+            consume();
+            while (peek().has_value() && peek().value() != '\'') {
+                buf.push_back(consume());
+            }
+            if (!peek().has_value() || peek().value() != '\'') {
+                add_error("Undeterminated string literal");
+                exit(EXIT_FAILURE);
+            }
+            consume();
+
+            tokens.push_back({.type = TokenType::str_lit, .value = buf, .line = local_lines});
+            buf.clear();
+            ++tokens_in_current_line;
+        }
+        else if (peek().value() == '(') {
+            consume();
+            tokens.push_back({.type = TokenType::open_paren, .value = "(", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == ')') {
+            consume();
+            tokens.push_back({.type = TokenType::close_paren, .value = ")", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == ';') {
+            consume();
+            tokens.push_back({.type = TokenType::semi, .value = ";", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == ':') {
+            consume();
+            tokens.push_back({.type = TokenType::dp, .value = ":", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == ',') {
+            consume();
+            tokens.push_back({.type = TokenType::comma, .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '.') {
+            consume();
+            tokens.push_back({.type = TokenType::dot, .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '+' && peek(1).has_value() && peek(1).value() == '+') {
+            consume(); consume();
+            tokens.push_back({.type = TokenType::plusplus, .value="++", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '-' && peek(1).has_value() && peek(1).value() == '-') {
+            consume(); consume();
+            tokens.push_back({.type = TokenType::minusminus, .value="--", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '=' && peek(1).has_value() && peek(1).value() == '=') {
+            consume(); consume();
+            tokens.push_back({.type = TokenType::eq_eq, .value = "==", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '!' && peek(1).has_value() && peek(1).value() == '=') {
+            consume(); consume();
+            tokens.push_back({.type = TokenType::bang_eq, .value = "!=", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '!') {
+            consume();
+            tokens.push_back({.type = TokenType::bang, .value = "!", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '+' && peek(1).has_value() && peek(1).value() == '=') {
+            consume(); consume();
+            tokens.push_back({.type = TokenType::plus_eq, .value = "+=", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '-' && peek(1).has_value() && peek(1).value() == '=') {
+            consume(); consume();
+            tokens.push_back({.type = TokenType::minus_eq, .value = "-=", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '*' && peek(1).has_value() && peek(1).value() == '=') {
+            consume(); consume();
+            tokens.push_back({.type = TokenType::star_eq, .value = "*=", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '/' && peek(1).has_value() && peek(1).value() == '=') {
+            consume(); consume();
+            tokens.push_back({.type = TokenType::slash_eq, .value = "/=", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '=') {
+            consume();
+            tokens.push_back({.type = TokenType::eq, .value = "=", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '+') {
+            consume();
+            tokens.push_back({.type = TokenType::plus, .value="+", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '-' && (!peek(1).has_value() || peek(1).value() != '#')) {
+            consume();
+            tokens.push_back({.type = TokenType::minus, .value="-", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '*') {
+            consume();
+            tokens.push_back({.type = TokenType::star, .value="*", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '&') {
+          consume();
+          tokens.push_back({.type = TokenType::amp, .value="&", .line = local_lines});
+          ++tokens_in_current_line;
+        }
+        else if (peek().value() == '/') {
+            consume();
+            tokens.push_back({.type = TokenType::slash, .value="/", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '%') {
+            consume();
+            tokens.push_back({.type = TokenType::percent, .value="%", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '#' && peek(1).has_value() && peek(1).value() == '-') {
+            consume(); consume();
+            while (peek().has_value() && peek().value() != '\n') {
+                consume();
+            }
+            continue;
+        }
+        else if (peek().value() == '-' && peek(1).has_value() && peek(1).value() == '#' && peek(2).has_value() && peek(2).value() == '-') {
+            while (tokens_in_current_line > 0) {
+                tokens.pop_back();
+                --tokens_in_current_line;
+            }
+            consume(); consume(); consume();
+            while (peek().has_value() && peek().value() != '\n') consume();
+            continue;
+        }
+        else if (peek().value() == '-' && peek(1).has_value() && peek(1).value() == '#') {
+            while (tokens_in_current_line > 0) {
+                tokens.pop_back();
+                --tokens_in_current_line;
+            }
+            consume(); consume();
+        } 
+        else if (peek().value() == '#' && peek(1).has_value() && peek(1).value() == '*') {
+            consume(); consume();
+            while (peek().has_value() && peek().value() != '*' && peek(1).has_value() && peek(1).value() != '#') {
+                consume(); // ignora todo dentro del comentario
+            }
+            if (peek().has_value() && peek().value() == '*' && peek(1).has_value() && peek(1).value() == '#') {
+                consume(); consume(); // consume '*#'
+            } else {
+                add_error("Expected end of comment", local_lines);
+            }
+            continue;  // skip a agregar token
+        } 
+        else if (peek().value() == '<' && peek(1).has_value() && peek(1).value() == '=') {
+            consume(); consume();
+            tokens.push_back({.type = TokenType::lte, .value = "<=", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '>' && peek(1).has_value() && peek(1).value() == '=') {
+            consume(); consume();
+            tokens.push_back({.type = TokenType::gte, .value = ">=", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '<') {
+            consume();
+            tokens.push_back({.type = TokenType::l_arrow, .value = "<", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '>') {
+            consume();
+            tokens.push_back({.type = TokenType::r_arrow, .value = ">", .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '{') {
+            consume();
+            tokens.push_back({.type = TokenType::l_key, .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '}') {
+            consume();
+            tokens.push_back({.type = TokenType::r_key, .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '[') {
+            consume();
+            tokens.push_back({.type = TokenType::l_bracket, .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == ']') {
+            consume();
+            tokens.push_back({.type = TokenType::r_bracket, .line = local_lines});
+            ++tokens_in_current_line;
+            continue;
+        }
+        else if (peek().value() == '\n') {
+            consume();
+            ++local_lines;
+            tokens_in_current_line = 0;
+            continue;
+        }
+        else if (std::isspace(peek().value())) {
+            consume();
+            continue;
+        } 
         else if (peek().value() == '-' && std::isdigit(peek(1).value())
             || peek().value() == '+' && std::isdigit(peek(1).value()) 
             || std::isdigit(peek().value())) {
@@ -370,174 +643,9 @@ std::vector<Token> Tokenizer::tokenize() {
                 .line = local_lines
             });
             buf.clear();
+            ++tokens_in_current_line;
         }
-        else if (peek().value() == '"') {
-            consume();
-            while (peek().has_value() && peek().value() != '"') {
-                buf.push_back(consume());
-            }
-            if (!peek().has_value() || peek().value() != '"') {
-                add_error("Undeterminated string literal");
-                exit(EXIT_FAILURE);
-            }
-            consume();
 
-            tokens.push_back({.type = TokenType::str_lit, .value = buf, .line = local_lines});
-            buf.clear();
-        }
-		else if (peek().value() == '\'') {
-            consume();
-            while (peek().has_value() && peek().value() != '\'') {
-                buf.push_back(consume());
-            }
-            if (!peek().has_value() || peek().value() != '\'') {
-                add_error("Undeterminated string literal");
-                exit(EXIT_FAILURE);
-            }
-            consume();
-
-            tokens.push_back({.type = TokenType::str_lit, .value = buf, .line = local_lines});
-            buf.clear();
-        }
-        else if (peek().value() == '(') {
-            consume();
-            tokens.push_back({.type = TokenType::open_paren, .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == ')') {
-            consume();
-            tokens.push_back({.type = TokenType::close_paren, .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == ';') {
-            consume();
-            tokens.push_back({.type = TokenType::semi, .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == ':') {
-            consume();
-            tokens.push_back({.type = TokenType::dp, .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == ',') {
-            consume();
-            tokens.push_back({.type = TokenType::comma, .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == '.') {
-            consume();
-            tokens.push_back({.type = TokenType::dot, .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == '+' && peek(1).has_value() && peek(1).value() == '+') {
-            consume(); consume();
-            tokens.push_back({.type = TokenType::plusplus, .value="++", .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == '-' && peek(1).has_value() && peek(1).value() == '-') {
-            consume(); consume();
-            tokens.push_back({.type = TokenType::minusminus, .value="--", .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == '+' && peek(1).has_value() && peek(1).value() == '=') {
-            consume(); consume();
-            tokens.push_back({.type = TokenType::plus_eq, .value = "+=", .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == '-' && peek(1).has_value() && peek(1).value() == '=') {
-            consume(); consume();
-            tokens.push_back({.type = TokenType::minus_eq, .value = "-=", .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == '*' && peek(1).has_value() && peek(1).value() == '=') {
-            consume(); consume();
-            tokens.push_back({.type = TokenType::star_eq, .value = "*=", .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == '/' && peek(1).has_value() && peek(1).value() == '=') {
-            consume(); consume();
-            tokens.push_back({.type = TokenType::slash_eq, .value = "/=", .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == '=') {
-            consume();
-            tokens.push_back({.type = TokenType::eq, .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == '+') {
-            consume();
-            tokens.push_back({.type = TokenType::plus, .value="+", .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == '-') {
-            consume();
-            tokens.push_back({.type = TokenType::minus, .value="-", .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == '*') {
-            consume();
-            tokens.push_back({.type = TokenType::star, .value="*", .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == '/') {
-            consume();
-            tokens.push_back({.type = TokenType::slash, .value="/", .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == '%') {
-            consume();
-            tokens.push_back({.type = TokenType::percent, .value="%", .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == '#') {
-            consume();
-            while (peek().has_value() && peek().value() != '#') {
-                consume(); // ignora todo dentro del comentario
-            }
-            if (peek().has_value()) {
-                consume(); // consume '#'
-            }
-            continue;  // skip a agregar token
-        }
-        else if (peek().value() == '<') {
-            consume();
-            tokens.push_back({.type = TokenType::l_arrow, .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == '>') {
-            consume();
-            tokens.push_back({.type = TokenType::r_arrow, .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == '{') {
-            consume();
-            tokens.push_back({.type = TokenType::l_key, .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == '}') {
-            consume();
-            tokens.push_back({.type = TokenType::r_key, .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == '[') {
-            consume();
-            tokens.push_back({.type = TokenType::l_bracket, .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == ']') {
-            consume();
-            tokens.push_back({.type = TokenType::r_bracket, .line = local_lines});
-            continue;
-        }
-        else if (peek().value() == '\n') {
-            consume();
-            ++local_lines;
-            continue;
-        }
-        else if (std::isspace(peek().value())) {
-            consume();
-            continue;
-        } 
         else {
             add_error("TOKEN ERROR" + std::to_string(peek().value()), local_lines);
             exit(EXIT_FAILURE);

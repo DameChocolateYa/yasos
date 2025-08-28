@@ -15,9 +15,12 @@
 #include <vector>
 #include <filesystem>
 #include <unordered_set>
+#include <unistd.h>
 
 #undef __FILE__
 #define __FILE__ "src/main.cpp"
+
+const std::string username = getlogin();
 
 namespace fs = std::filesystem;
 
@@ -28,7 +31,7 @@ int current_line = 1;
 int compiled_successfully = true;
 
 int debug_mode_enabled = false;
-std::string func_dir = "/usr/lib/beeplib";
+std::string func_dir = "/usr/lib/yslib";
 
 int main(int argc, char** argv) {
 #ifdef __DEBUG__
@@ -36,11 +39,19 @@ int main(int argc, char** argv) {
     func_dir = "src/functions";
 #endif
 
+    const std::string cache_directory = "/home/" + username +  "/.cache/yasos/";
+    if (system(("test -d " + cache_directory).c_str()) != 0) {
+        if (system(("mkdir " + cache_directory).c_str()) != 0) {
+            add_warning("Could not create cache directory", -1);
+        }
+    }
+
     bool keep_asm = false;
     bool generate_asm_only = false;  // -S
     bool compile_only = false;       // -c
     bool generate_shared = false;    // -shared
     std::string output_file = "out"; // -o
+    bool generate_executable = false;
 	bool print_link_command = false;
     std::vector<std::string> input_files;
 
@@ -51,6 +62,7 @@ int main(int argc, char** argv) {
 
         if (arg == "-o" && i + 1 < argc) {
             output_file = argv[++i];
+            generate_executable = true;
         } else if (arg == "-S") {
             generate_asm_only = true;
         } else if (arg == "-c") {
@@ -122,6 +134,7 @@ int main(int argc, char** argv) {
         std::string asm_code = generator.gen_prog();
 
         std::string asm_file = base_name + ".s";
+        if (!generate_asm_only) asm_file = cache_directory +  base_name + ".s";
         std::string obj_file = base_name + ".o";
 
         std::ofstream asm_out(asm_file);
@@ -169,10 +182,14 @@ int main(int argc, char** argv) {
 
     std::string link_command;
 
-    if (generate_shared) {
-        link_command = "g++ -shared -o " + output_file + " ";
-    } else {
+    if (generate_executable) {
         link_command = "g++ -o " + output_file + " ";
+    } else {
+        link_command = "g++ ";
+    }
+
+    if (generate_shared) {
+        link_command += "-shared";
     }
 
     for (const auto& obj : object_files) {
@@ -199,9 +216,18 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
 
-    if (system(link_command.c_str()) != 0) {
-        std::cerr << "Linking failed.\n";
-        return EXIT_FAILURE;
+    if (generate_executable) {
+        if (system(link_command.c_str()) != 0) {
+            add_error("Linking failed", -1);
+            return EXIT_FAILURE;
+        }
+
+        for (const auto& obj : object_files) {
+            if (system(("rm " + obj).c_str()) != 0) {
+                add_warning("Could not delete objects files", -1);
+                break;
+            }
+        }
     }
 
     LOG(__FILE__, "Build complete: Output '" + output_file + "'");

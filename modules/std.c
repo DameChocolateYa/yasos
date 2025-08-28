@@ -16,6 +16,12 @@
 #define SYS_wait4   61
 #define SYS_exit    60
 
+extern const int OK = 0;
+extern const int FAIL = 1;
+extern const int ERR = -1;
+extern const int ZERO = 0;
+extern const int NOT_FOUND = 127;
+
 long syscall(long number, ...); // prototype to avoi libc warning
 
 const char path[] = "/bin/sh";
@@ -23,16 +29,105 @@ const char arg0[] = "sh";
 const char arg1[] = "-c";
 
 void printbp(const char* format, ...) {
-    if (!format) {
-        fprintf(stderr, "printbp, INVALID format\n");
+  if (!format) {
+    fprintf(stderr, "prec_print, INVALID format\n");
+    return;
+  }
+
+  va_list args;
+  va_start(args, format);
+  vprintf(format, args);
+  va_end(args);
+  fflush(stdout);
+}
+
+char* format(const char* format, ...) {
+  char* result;
+  va_list args;
+
+  va_start(args, format);
+  if (vasprintf(&result, format, args) == -1) {
+    result = NULL;
+  }
+  va_end(args);
+
+  return result;
+}
+
+void bufformat(const char** buf_and_format, ...) {
+  char* result;
+  va_list args;
+
+  va_start(args, *buf_and_format);
+  if (vasprintf(&result, *buf_and_format, args) == -1) {
+    result = NULL;
+  }
+  va_end(args);
+
+  *buf_and_format = result;
+} 
+
+void print(const char* first_arg, ...) {
+  if (!first_arg) {
+    fprintf(stderr, "print funtion, INVALID format\n");
+    return;
+  }
+
+  va_list args;
+  va_start(args, first_arg);
+  vprintf(first_arg, args);
+  va_end(args);
+  fflush(stdout);
+}
+
+void printerr(const char *fmt, ...) {
+    if (!fmt) {
+        const char *err = "print function, INVALID format\n";
+        write(2, err, 31);  // stderr
         return;
     }
-    
+
+    char buffer[1024];   // espacio temporal
     va_list args;
-    va_start(args, format);
-    vprintf(format, args);
+    va_start(args, fmt);
+    int n = vsnprintf(buffer, sizeof(buffer), fmt, args);
     va_end(args);
-    fflush(stdout);
+
+    if (n > 0) {
+        write(2, buffer, n);  // stderr
+    }
+}
+
+void printerr_ln(const char *fmt, ...) {
+    if (!fmt) {
+        const char *err = "print function, INVALID format\n";
+        write(2, err, 31);  // stderr
+        return;
+    }
+
+    char buffer[1024];   // espacio temporal
+    va_list args;
+    va_start(args, fmt);
+    int n = vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+
+    if (n > 0) {
+        write(2, buffer, n);  // stderr
+    }
+}
+
+void println(const char* first_arg, ...) {
+  if (!first_arg) {
+    fprintf(stderr, "print funtion, INVALID format\n");
+  }
+
+  va_list args;
+  va_start(args, first_arg);
+  vprintf(first_arg, args);
+  va_end(args);
+  fflush(stdout);
+  
+  putchar('\n');
 }
 
 char* scani() {
@@ -52,6 +147,36 @@ char* scani() {
     }
 
     return result;
+}
+
+char* ask(char* msg_format, ...) {
+  if (!msg_format) {
+    fprintf(stderr, "ASK FUNCTION: INVALID MSG-FORMAT\n");
+    return NULL;
+  }
+  va_list args;
+  va_start(args, msg_format);
+  vprintf(msg_format, args);
+  va_end(args);
+  fflush(stdout);
+  
+  char buffer[240];
+
+  if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+    fprintf(stderr, "Error trying to read frpm stdin\n");
+    return NULL;
+  }
+  size_t len = strlen(buffer);
+  if (len > 0 && buffer[len - 1] == '\n') {
+    buffer[len - 1] = '\0';
+  }
+
+  char* result = (char*)malloc(len);
+  if (result != NULL) {
+    strcpy(result, buffer);
+  }
+
+  return result;
 }
 
 int is_int(const char* s1) {

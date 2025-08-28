@@ -1,0 +1,13 @@
+#- By the moment, special types like file wich should be a struct, will be any type
+
+extern fun openf(file: &any, path: str, mode: str) -> none;
+extern fun readf(file: &any) -> str;
+extern fun writef(file: &any, text: str) -> none;
+extern fun closef(file: &any) -> none;
+extern fun is_fopen(file: any) -> int;
+
+extern fun makedir(path: str) -> none;
+extern fun makedirs(path: str) -> none;
+extern fun removef(filepath: str) -> none;
+extern fun removedir(dirpath: str) -> none;
+extern fun removedirr(path: str) -> none;

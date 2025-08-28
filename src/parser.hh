@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <map>
 #include <vector>
 #include <optional>
 #include <variant>
@@ -14,15 +15,25 @@
 #undef __FILE__
 #define __FILE__ "src/parser.hh"
 
-enum class VarType {
-    Void = -1,
-    Int = 0,
-    Float = 1,
-    Str = 2,
-    None = 3,
-	Other = 4,
-	List = 5,
-	Struct = 6
+struct Type {
+  enum class Kind {
+    Int,
+    Float,
+    Str,
+    None,
+    List,
+    Struct,
+    Var,
+	  Any,
+	  Ptr,
+	  NoArg,
+	  NxtUndefNum,
+    UserDefined
+  };
+
+  Kind kind; 
+  bool is_ref = false; // if type has & before type ident
+  std::string user_type = "";
 };
 
 struct NodeExpr;
@@ -49,7 +60,6 @@ struct NodeExprFloatLit {
 };
 
 struct NodeExprNone {
-    Token none;
     int line;
 };
 
@@ -72,6 +82,12 @@ struct NodeExprBinaryAssign {
     int line;
 };
 
+struct NodeExprUnary {
+    Token op;
+    std::shared_ptr<NodeExpr> expr;
+    int line;
+};
+
 struct NodeExprUnaryIncDec {
     Token ident;
     Token op_token;
@@ -91,7 +107,7 @@ struct NodeExprCR {
 
 struct CustomFuncArgs {
     std::string name;
-    ArgType arg_type;
+    Type arg_type;
     int line;
 };
 
@@ -116,6 +132,11 @@ struct NodeExprGetPtr {
 	int line;
 };
 
+struct NodeExprDeref {
+  NodeExprPtr expr;
+  int line;
+};
+
 struct NodeExprList {
 	std::vector<NodeExpr> elements;
 
@@ -134,6 +155,11 @@ struct NodeExprStruct {
 	int line;
 };
 
+struct NodeExprNew {
+  Type type;
+  int line;
+};
+
 struct NodeExpr {
     std::variant<
         NodeExprIntLit,
@@ -143,6 +169,7 @@ struct NodeExpr {
         NodeExprCall,
         NodeExprBinary,
         NodeExprBinaryAssign,
+        NodeExprUnary,
         NodeExprUnaryIncDec,
         NodeExprNoArg,
         NodeExprNone,
@@ -150,16 +177,18 @@ struct NodeExpr {
         NodeExprBoolValue,
         NodeExprProperty,
 		NodeExprGetPtr,
+    NodeExprDeref,
 		NodeExprList,
 		NodeExprListElement,
-		NodeExprStruct
+		NodeExprStruct,
+    NodeExprNew
     > var;
 
     NodeExpr() = default;
     virtual ~NodeExpr() = default;
 
     template<typename T>
-    NodeExpr(T val) : var(std::move(val)) {}
+    NodeExpr(T val) : var(std::move(val)) {} 
 
     int line;
 };
@@ -169,17 +198,25 @@ struct NodeExit {
     int line;
 };
 
+struct NodeStmtAssign {
+  NodeExpr target;
+  Token op_tok;
+  NodeExpr value;
+  int line;
+};
+
 struct NodeStmtVar {
     Token ident;
+    Type type = Type{Type::Kind::None};
     NodeExpr expr;
-	int has_initial_value = true;
+	  int has_initial_value = true;
     int is_mutable;
     int line;
 };
 
 struct NodeStmtVarRe {
     Token ident;
-    VarType type;
+    Type type;
     NodeExpr expr;
     int line;
 };
@@ -229,7 +266,9 @@ struct NodeStmt;
 struct NodeStmtIf {
     NodeExpr condition;
     std::vector<NodeStmt> then_branch;
-    std::optional<std::variant<std::shared_ptr<NodeStmtIf>, std::vector<NodeStmt>>> else_branch;
+    std::vector<NodeExpr> elif_conditions;
+    std::vector<std::vector<NodeStmt>> elif_branches;
+    std::vector<NodeStmt> else_branch;
     int line;
 };
 
@@ -241,16 +280,23 @@ struct NodeStmtWhile {
     int line;
 };
 
-struct NodeStmtPrint {
-    NodeExpr str;
-    std::vector<NodeExpr> args;
-    int line;
+struct NodeStmtLoop {
+  std::vector<NodeStmt> then_branch;
+  int line;
+};
+
+struct NodeStmtFor {
+  std::vector<NodeStmt> init;
+  NodeExpr condition;
+  std::vector<NodeStmt> update;
+  std::vector<NodeStmt> code_branch;
+  int line;
 };
 
 struct NodeStmtDefFunc {
     Token name;
     std::vector<CustomFuncArgs> args;
-    VarType return_type;
+    Type return_type;
 	std::vector<NodeStmt> code_branch;
 	bool is_pub = false;
 	bool is_extern = false;
@@ -333,17 +379,18 @@ struct NodeStmtListElement {
 
 struct NodeStmtStruct {
 	Token name;
-	std::vector<std::pair<std::string, VarType>> fields;
+	std::vector<std::pair<std::string, Type>> fields;
 	int line;
 };
 
 struct NodeStmt {
-    std::variant<NodeStmtVar, NodeStmtVarRe, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtPrint, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtMkpub, NodeStmtUnload, NodeStmtStop, NodeStmtContinue, NodeStmtProperty, NodeStmtDeclmod, NodeStmtEndmod, NodeStmtUmod, NodeStmtUbeepmod, NodeStmtLlibrary, NodeStmtLibpath, NodeStmtSetPtr, NodeStmtGlobl, NodeStmtHeader, NodeStmtUhead, NodeStmtLeave, NodeStmtListElement, NodeStmtStruct> var;
+    std::variant<NodeStmtAssign, NodeStmtVar, NodeStmtVarRe, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtLoop, NodeStmtFor, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtMkpub, NodeStmtUnload, NodeStmtStop, NodeStmtContinue, NodeStmtProperty, NodeStmtDeclmod, NodeStmtEndmod, NodeStmtUmod, NodeStmtUbeepmod, NodeStmtLlibrary, NodeStmtLibpath, NodeStmtSetPtr, NodeStmtGlobl, NodeStmtHeader, NodeStmtUhead, NodeStmtLeave, NodeStmtListElement, NodeStmtStruct> var;
     int line;
 };
 
 struct NodeProg {
     std::vector<NodeStmt> stmts;
+    NodeExpr expr;
 };
 
 class Parser {
@@ -372,7 +419,7 @@ class Parser {
     public:
         inline explicit Parser(std::vector<Token> tokens) : m_tokens(std::move(tokens)) {}
         std::optional<NodeExpr> parse_primary_expr();
-        std::optional<NodeExpr> parse_expr();
+        std::optional<NodeExpr> parse_expr(int min_precedence = 0);
         std::optional<NodeStmt> parse_stmt();
-        std::optional<NodeProg> parse_prog();
+        std::optional<NodeProg> parse_prog(bool parse_only_one_expr = false);
 };
