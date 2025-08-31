@@ -189,7 +189,7 @@ int main(int argc, char** argv) {
     }
 
     if (generate_shared) {
-        link_command += "-shared";
+        link_command += "-shared ";
     }
 
     for (const auto& obj : object_files) {

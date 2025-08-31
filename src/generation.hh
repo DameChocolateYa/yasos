@@ -10,6 +10,7 @@
 
 #include "parser.hh"
 #include "global.hh"
+#include "error.hh"
 
 #undef __FILE__
 #define __FILE__ "src/generation.hpp"
@@ -216,9 +217,9 @@ public:
 	    --m_stack_size;
 	}
 
-	size_t get_var(const std::string& var_name) {
+	size_t get_var(const std::string& var_name, size_t line) {
 	    if (!m_vars.contains(var_name)) {
-	        std::cerr << "Error trying to get an undeclared variable (" << var_name << ")\n";
+	        add_error("Error trying to get an undeclared variable (" + var_name + ")", line);
 	        exit(EXIT_FAILURE);
 	    }
 	    size_t offset_bytes = (m_vars.at(var_name).stack_loc - 1) * 8; // this should be the var pos

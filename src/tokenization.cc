@@ -500,6 +500,11 @@ std::vector<Token> Tokenizer::tokenize() {
           tokens.push_back({.type = TokenType::amp, .value="&", .line = local_lines});
           ++tokens_in_current_line;
         }
+        else if (peek().value() == '|') {
+          consume();
+          tokens.push_back({.type = TokenType::pipe, .value="|", .line = local_lines});
+          ++tokens_in_current_line;
+        }
         else if (peek().value() == '/') {
             consume();
             tokens.push_back({.type = TokenType::slash, .value="/", .line = local_lines});

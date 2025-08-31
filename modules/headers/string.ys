@@ -1,22 +1,37 @@
 extern fun len(s: str) -> int;
 extern fun strcat(s1: str, s2: str) -> str;
 extern fun bufcat(buf: &str, s2: str) -> none;
-extern fun strcut(s1: str, begin: int, end: int) -> str;
-extern fun bufcut(buf: &str, begin: int, end: int) -> none;
+
+extern fun strcut_index(s1: str, begin: int, end: int) -> str;
+extern fun bufcut_index(buf: &str, begin: int, end: int) -> none;
+
+extern fun strcut(string: str, substr: str) -> str;
+extern fun bufcut(buf: &str, substr: str) -> none;
+
 extern fun strsub(s1: str, begin: int, end: int) -> str;
 extern fun bufsub(buf: &str, begin: int, end: int) -> none;
+
 extern fun stoint(s: str) -> int;
 extern fun stodb(s: str) -> double;
 extern fun itostr(n: int) -> str;
 extern fun dbtostr(n: double, decimals: int) -> str;
+
 extern fun strcmp(s1: str, s2: str) -> int;
 extern fun dig_to_abc(n: int) -> str;
+
 extern fun strempty(s: str) -> int;
 extern fun is_whitespace(s: str) -> int;
+
 extern fun trim(s: str) -> str;
 extern fun buftrim(buf: &str) -> none;
+
 extern fun strreplace(s: str, old_sub: str, new_sub: str) -> str;
 extern fun bufreplace(buf: &str, old_sub: str, new_sub: str) -> none;
 
+extern fun strcontains(string: str, substr: str) -> str;
+extern fun strcontains_case(string: str, substr: str) -> str;
+extern fun strfind(string: str, substr: str) -> int;
+
 cnst STR_EMPTY: str = 0;
 cnst STR_WHITE: str = 0;
+cnst STR_NULLT: str = 0;

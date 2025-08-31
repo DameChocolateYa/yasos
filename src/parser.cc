@@ -155,7 +155,7 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
             consume(); // (
             is_func = true;
             while (peek().has_value() && peek().value().type != TokenType::close_paren) {
-                auto e = parse_primary_expr();
+                auto e = parse_expr();
                 if (!e.has_value()) {
                     add_error("Invalid expression in property args", line);
                 }
@@ -173,6 +173,13 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
         }
 
         return NodeExpr(NodeExprProperty{.ident = ident, .property = property, .is_func = is_func, .args = args, .line = line});
+    }
+    else if (peek().has_value() && peek().value().type == TokenType::amp && peek(1).has_value() && peek(1).value().type == TokenType::amp ||
+        peek().has_value() && peek().value().type == TokenType::pipe && peek(1).has_value() && peek(1).value().type == TokenType::pipe) {
+      int line = consume().line;
+      consume();
+
+      add_error("Neither && nor || are valid operators. Use and / or instead", line, ErrType::WrongAndOr);
     }
 	else if (peek().has_value() && peek().value().type == TokenType::ref || peek().value().type == TokenType::amp) {
 		int line = peek().value().line;
@@ -339,7 +346,7 @@ std::optional<NodeExpr> Parser::parse_expr(int min_precedence) {
     while (true) {
       auto op_token_opt = peek();
       if (!op_token_opt.has_value()) break;
-      auto op_token = *op_token_opt; 
+      auto op_token = *op_token_opt;
 
       if (op_token.type == TokenType::close_paren ||
           op_token.type == TokenType::comma ||
@@ -1531,6 +1538,12 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 			}
 			consume();
 
+      bool is_ref = false;
+      if (peek().has_value() && peek().value().type == TokenType::amp) {
+        consume();
+        is_ref = true;
+      }
+
 			if (!peek().has_value()) {
 				add_error("Expected type");
 			}
@@ -1553,7 +1566,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 				type = Type{Type::Kind::Str}; break;
 
         case TokenType::ident:
-        type = Type{Type::Kind::UserDefined, false, type_tok.value.value()}; break;
+        type = Type{Type::Kind::UserDefined, is_ref, type_tok.value.value()}; break;
 			}
 			fields.push_back({field_name, type});
 		}

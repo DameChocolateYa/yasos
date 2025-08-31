@@ -8,6 +8,7 @@
 
 const char* STR_EMPTY = "";
 const char* STR_WHITE = " ";
+const char* STR_NULLT = "\0";
 
 int len(const char* s1) {
     int len = (int)strlen(s1);
@@ -44,7 +45,7 @@ void bufcat(char** s1, const char* s2) {
   *s1 = strcat(*s1, s2);
 }
 
-char* strcut(const char* s1, int begin, int end) { 
+char* strcut_index(const char* s1, int begin, int end) { 
     int len = strlen(s1);
 
     if (begin < 0) begin = 0;
@@ -62,9 +63,46 @@ char* strcut(const char* s1, int begin, int end) {
     return result;
 }
 
-void bufcut(const char** s1, int begin, int end) {
+void bufcut_index(const char** s1, int begin, int end) {
     if (!s1) return;
-    *s1 = strcut(*s1, begin, end);
+    *s1 = strcut_index(*s1, begin, end);
+}
+
+char* strcut(const char* str, const char* sub) {
+    const char* pos = strstr(str, sub);
+    if (pos == NULL) {
+        return strdup(str);
+    }
+
+    size_t len_before = pos - str;
+    size_t len_sub = strlen(sub);
+    size_t len_after = strlen(pos + len_sub);
+
+    char* result = (char*)malloc(len_before + len_after + 1);
+    if (!result) return NULL;
+
+    strncpy(result, str, len_before);
+    strcpy(result + len_before, pos + len_sub);
+    return result;
+}
+
+void bufcut(char **str_ptr, const char *sub) {
+    char *str = *str_ptr;
+    char *pos = strstr(str, sub);
+    if (!pos) return;
+
+    size_t len_before = pos - str;
+    size_t len_sub = strlen(sub);
+    size_t len_after = strlen(pos + len_sub);
+
+    char *nuevo = (char*)malloc(len_before + len_after + 1);
+    if (!nuevo) return;
+
+    strncpy(nuevo, str, len_before);
+    strcpy(nuevo + len_before, pos + len_sub);
+
+    free(str);
+    *str_ptr = nuevo;
 }
 
 char* strsub(const char* s1, int begin, int end) {
@@ -302,4 +340,20 @@ char* strreplace(const char* s, const char* old_sub, const char* new_sub) {
 void bufreplace(const char** buf, const char* old_sub, const char* new_sub) {
   if (!buf) return;
   *buf = strreplace(*buf, old_sub, new_sub);
+}
+
+int strcontains(const char* str, const char* substring) {
+  if (strstr(str, substring) != NULL) return 1;
+  else return 0;
+}
+
+int strcontains_case(const char* str, const char* substring) {
+  if (strcasestr(str, substring) != NULL) return 1;
+  else return 0;
+}
+
+int strfind(const char* str, const char* substring) {
+  char* pos = (char*)strstr(str, substring);
+  if (pos == NULL) return -1;
+  return(int)(pos - str);
 }
