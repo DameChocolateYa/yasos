@@ -1,0 +1,11 @@
+use std;
+
+fun panic(msg: str) -> none {
+  println("%s", msg);
+  exit(1);
+} pub;
+
+fun cuspanic(msg: str, status: int) -> none {
+  println("%s", msg);
+  exit(status);
+} pub;

@@ -17,6 +17,9 @@ extern fun write(channel: int, msg: str, len: int);
 extern fun printerr(fmt: str, undefan);
 extern fun printerr_ln(fmt: str, undefan);
 
+extern fun panic(msg: str) -> none;
+extern fun cuspanic(msg: str, status: int) -> none;
+
 #- LIBC FUNCTIONS
 extern fun malloc(size: int) -> any;
 extern fun free(pointer: any) -> any;
@@ -28,10 +31,10 @@ extern fun format(format: str, undefan) -> str;
 extern fun bufformat(buf_and_format: &str, undefan) -> any;
 
 extern fun system(proc: str) -> int;
-
+extern fun exit(status: int) -> none;
 
 #- Constant are filled with no important values
-#- Beacues their declaration is external
+#- Because their declaration is external
 
 cnst OK: int = 0;
 cnst FAIL: int = 0;

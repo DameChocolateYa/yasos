@@ -407,13 +407,13 @@ std::vector<Token> Tokenizer::tokenize() {
         }
         else if (peek().value() == ',') {
             consume();
-            tokens.push_back({.type = TokenType::comma, .line = local_lines});
+            tokens.push_back({.type = TokenType::comma, .value = ",", .line = local_lines});
             ++tokens_in_current_line;
             continue;
         }
         else if (peek().value() == '.') {
             consume();
-            tokens.push_back({.type = TokenType::dot, .line = local_lines});
+            tokens.push_back({.type = TokenType::dot, .value = ".", .line = local_lines});
             ++tokens_in_current_line;
             continue;
         }
@@ -489,6 +489,42 @@ std::vector<Token> Tokenizer::tokenize() {
             ++tokens_in_current_line;
             continue;
         }
+        else if (peek().value() == '#' && peek(1).has_value() && peek(1).value() == '-') {
+            consume(); consume();
+            while (peek().has_value() && peek().value() != '\n') {
+                consume();
+            }
+            continue;
+        }
+        else if (peek().value() == '-' && peek(1).has_value() && peek(1).value() == '#' && peek(2).has_value() && peek(2).value() == '-') {
+            while (tokens_in_current_line > 0) {
+                tokens.pop_back();
+                --tokens_in_current_line;
+            }
+            consume(); consume(); consume();
+            while (peek().has_value() && peek().value() != '\n') consume();
+            continue;
+        }
+        else if (peek().value() == '-' && peek(1).has_value() && peek(1).value() == '#') {
+            while (tokens_in_current_line > 0) {
+                tokens.pop_back();
+                --tokens_in_current_line;
+            }
+            consume(); consume();
+        } 
+        else if (peek().value() == '#' && peek(1).has_value() && peek(1).value() == '*') {
+            consume(); consume();
+            while (peek().has_value()) {
+                if (peek().has_value() && peek().value() == '*' && peek(1).has_value() && peek(1).value() == '#') break;
+                consume(); // ignora todo dentro del comentario
+            }
+            if (peek().has_value() && peek().value() == '*' && peek(1).has_value() && peek(1).value() == '#') {
+                consume(); consume(); // consume '*#'
+            } else {
+                add_error("Expected end of comment", local_lines);
+            }
+            continue;  // skip a agregar token
+        } 
         else if (peek().value() == '*') {
             consume();
             tokens.push_back({.type = TokenType::star, .value="*", .line = local_lines});
@@ -516,41 +552,6 @@ std::vector<Token> Tokenizer::tokenize() {
             tokens.push_back({.type = TokenType::percent, .value="%", .line = local_lines});
             ++tokens_in_current_line;
             continue;
-        }
-        else if (peek().value() == '#' && peek(1).has_value() && peek(1).value() == '-') {
-            consume(); consume();
-            while (peek().has_value() && peek().value() != '\n') {
-                consume();
-            }
-            continue;
-        }
-        else if (peek().value() == '-' && peek(1).has_value() && peek(1).value() == '#' && peek(2).has_value() && peek(2).value() == '-') {
-            while (tokens_in_current_line > 0) {
-                tokens.pop_back();
-                --tokens_in_current_line;
-            }
-            consume(); consume(); consume();
-            while (peek().has_value() && peek().value() != '\n') consume();
-            continue;
-        }
-        else if (peek().value() == '-' && peek(1).has_value() && peek(1).value() == '#') {
-            while (tokens_in_current_line > 0) {
-                tokens.pop_back();
-                --tokens_in_current_line;
-            }
-            consume(); consume();
-        } 
-        else if (peek().value() == '#' && peek(1).has_value() && peek(1).value() == '*') {
-            consume(); consume();
-            while (peek().has_value() && peek().value() != '*' && peek(1).has_value() && peek(1).value() != '#') {
-                consume(); // ignora todo dentro del comentario
-            }
-            if (peek().has_value() && peek().value() == '*' && peek(1).has_value() && peek(1).value() == '#') {
-                consume(); consume(); // consume '*#'
-            } else {
-                add_error("Expected end of comment", local_lines);
-            }
-            continue;  // skip a agregar token
         } 
         else if (peek().value() == '<' && peek(1).has_value() && peek(1).value() == '=') {
             consume(); consume();
@@ -578,13 +579,13 @@ std::vector<Token> Tokenizer::tokenize() {
         }
         else if (peek().value() == '{') {
             consume();
-            tokens.push_back({.type = TokenType::l_key, .line = local_lines});
+            tokens.push_back({.type = TokenType::l_key, .value = "{", .line = local_lines});
             ++tokens_in_current_line;
             continue;
         }
         else if (peek().value() == '}') {
             consume();
-            tokens.push_back({.type = TokenType::r_key, .line = local_lines});
+            tokens.push_back({.type = TokenType::r_key, .value = "}", .line = local_lines});
             ++tokens_in_current_line;
             continue;
         }

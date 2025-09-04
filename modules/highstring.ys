@@ -1,0 +1,82 @@
+use std;
+use string;
+
+fun str_upper(string: str) -> str {
+  cnst len: int = strlen(string);
+  var result: str = "";
+
+  for (var i: int = 0; i < len; i += 1) {
+    var c: str = strsub(string, i, i + 1);
+
+    if (strcmp(c, "a")) {result = strcat(result, "A");}
+    elif (strcmp(c, "b")) {result = strcat(result, "B");}
+    elif (strcmp(c, "c")) {result = strcat(result, "C");}
+    elif (strcmp(c, "d")) {result = strcat(result, "D");}
+    elif (strcmp(c, "e")) {result = strcat(result, "E");}
+    elif (strcmp(c, "f")) {result = strcat(result, "F");}
+    elif (strcmp(c, "g")) {result = strcat(result, "G");}
+    elif (strcmp(c, "h")) {result = strcat(result, "H");}
+    elif (strcmp(c, "i")) {result = strcat(result, "I");}
+    elif (strcmp(c, "j")) {result = strcat(result, "J");} 
+    elif (strcmp(c, "k")) {result = strcat(result, "K");}
+    elif (strcmp(c, "l")) {result = strcat(result, "L");}
+    elif (strcmp(c, "m")) {result = strcat(result, "M");}
+    elif (strcmp(c, "n")) {result = strcat(result, "N");}
+    elif (strcmp(c, "ñ")) {result = strcat(result, "Ñ");}
+    elif (strcmp(c, "o")) {result = strcat(result, "O");}
+    elif (strcmp(c, "p")) {result = strcat(result, "P");}
+    elif (strcmp(c, "q")) {result = strcat(result, "Q");}
+    elif (strcmp(c, "r")) {result = strcat(result, "R");}
+    elif (strcmp(c, "s")) {result = strcat(result, "S");}
+    elif (strcmp(c, "t")) {result = strcat(result, "T");}
+    elif (strcmp(c, "u")) {result = strcat(result, "U");}
+    elif (strcmp(c, "v")) {result = strcat(result, "V");}
+    elif (strcmp(c, "w")) {result = strcat(result, "W");}
+    elif (strcmp(c, "x")) {result = strcat(result, "X");}
+    elif (strcmp(c, "y")) {result = strcat(result, "Y");}
+    elif (strcmp(c, "z")) {result = strcat(result, "Z");}
+    else {result = strcat(result, c);}
+  }
+
+  ret result;
+} pub;
+
+fun str_lower(string: str) -> str {
+  cnst len: int = strlen(string);
+  var result: str = "";
+
+  for (var i: int = 0; i < len; i += 1) {
+    var c: str = strsub(string, i, i + 1);
+
+    if (strcmp(c, "A")) {result = strcat(result, "a");}
+    elif (strcmp(c, "B")) {result = strcat(result, "b");}
+    elif (strcmp(c, "C")) {result = strcat(result, "c");}
+    elif (strcmp(c, "D")) {result = strcat(result, "d");}
+    elif (strcmp(c, "E")) {result = strcat(result, "e");}
+    elif (strcmp(c, "F")) {result = strcat(result, "f");}
+    elif (strcmp(c, "G")) {result = strcat(result, "g");}
+    elif (strcmp(c, "H")) {result = strcat(result, "h");}
+    elif (strcmp(c, "I")) {result = strcat(result, "i");}
+    elif (strcmp(c, "J")) {result = strcat(result, "j");} 
+    elif (strcmp(c, "K")) {result = strcat(result, "k");}
+    elif (strcmp(c, "L")) {result = strcat(result, "l");}
+    elif (strcmp(c, "M")) {result = strcat(result, "m");}
+    elif (strcmp(c, "N")) {result = strcat(result, "n");}
+    elif (strcmp(c, "Ñ")) {result = strcat(result, "ñ");}
+    elif (strcmp(c, "O")) {result = strcat(result, "o");}
+    elif (strcmp(c, "P")) {result = strcat(result, "p");}
+    elif (strcmp(c, "Q")) {result = strcat(result, "q");}
+    elif (strcmp(c, "R")) {result = strcat(result, "r");}
+    elif (strcmp(c, "S")) {result = strcat(result, "s");}
+    elif (strcmp(c, "T")) {result = strcat(result, "t");}
+    elif (strcmp(c, "U")) {result = strcat(result, "u");}
+    elif (strcmp(c, "V")) {result = strcat(result, "v");}
+    elif (strcmp(c, "W")) {result = strcat(result, "w");}
+    elif (strcmp(c, "X")) {result = strcat(result, "x");}
+    elif (strcmp(c, "Y")) {result = strcat(result, "y");}
+    elif (strcmp(c, "Z")) {result = strcat(result, "z");}
+    else {result = strcat(result, c);}
+  }
+
+  ret result;
+} pub;

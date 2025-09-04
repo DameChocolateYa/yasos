@@ -116,6 +116,22 @@ public:
   bool write_stmt = true;
   std::stringstream buf;
 
+  static size_t size_of(Type::Kind type) {
+    switch (type) {
+      case Type::Kind::Int: return 4;
+      case Type::Kind::Str: return 8;
+      case Type::Kind::Float: return 8;
+      case Type::Kind::Any: return 8;
+      case Type::Kind::None: return 1;
+      default: return 8;
+    }
+
+    return 8;
+  }
+
+  static std::string reg_transform(const std::string& reg, size_t bytes) {
+  }
+
 	inline void write(const std::string& output, int newline = true) {
       if (!write_stmt) {
         buf << output << (newline ? "\n" : "");
@@ -135,59 +151,133 @@ public:
     Sub,
     Div,
   };
-  inline void mov(const std::string& reg1, const std::string& reg2, Op op = Op::Mov, bool reg1_pointer = false, bool reg2_pointer = false) {
-    std::stringstream buf;
-    buf << "  ";
-    bool is_float_op = (std::find(float_regs.begin(), float_regs.end(), reg1) != float_regs.end() || std::find(float_regs.begin(), float_regs.end(), reg2) != float_regs.end());
-    switch (op) {
-      case Op::Mov:
-        if (is_float_op) buf << "movsd ";
-        else buf << "mov ";
-        break;
-      case Op::Add:
-        if (is_float_op) buf << "addsd ";
-        else buf << "add ";
-        break;
-      case Op::Mul:
-        if (is_float_op) buf << "imul ";
-        else buf << "mulsd ";
-        break;
-      case Op::Div:
-        break;
-      case Op::Lea:
-        buf << "lea ";
-        break;
+ 
+  
+inline void emit_op(
+    const std::string& src,
+    const std::string& dst,
+    Op op,                 // Mov, Add, Sub, Mul, Div, Lea
+    size_t bytes = 8,
+    bool src_float = false,
+    bool dst_float = false,
+    bool is_ref = false
+) {
+    std::stringstream output;
+    output << "  ";
+
+    // Elegir mnemónico según tipo
+    if (src_float || dst_float) {
+        switch(op) {
+            case Op::Mov: output << "movsd "; break;
+            case Op::Add: output << "addsd "; break;
+            case Op::Sub: output << "subsd "; break;
+            case Op::Mul: output << "mulsd "; break;
+            case Op::Div: output << "divsd "; break;
+            case Op::Lea: output << "lea "; break;
+        }
+    } else {
+        switch(op) {
+            case Op::Mov: output << (bytes == 4 && !is_ref ? "movl " : "movq "); break;
+            case Op::Add: output << (bytes == 4 && !is_ref ? "addl " : "addq "); break;
+            case Op::Sub: output << (bytes == 4 && !is_ref ? "subl " : "subq "); break;
+            case Op::Mul: output << (bytes == 4 && !is_ref ? "imull " : "imul "); break;
+            case Op::Div: output << (bytes == 4 && !is_ref ? "idivl " : "idivq "); break;
+            case Op::Lea: output << "lea "; break;
+        }
     }
-    
-    if (reg1_pointer) buf << "(%" << reg1 << ")";
-    else buf << "%" << reg1;
 
-    buf << ", ";
+    // Helper para formatear operandos
+    auto fmt_op = [bytes, is_ref](const std::string& s) -> std::string {
+        // Si es memoria (contiene paréntesis), no añadimos %
+        if (s.find('(') != std::string::npos) return s;
 
-    if (reg2_pointer) buf << "(%" << reg2 << ")";
-    else buf << "%" << reg2;
-    buf << "\n";
+        // Ajustar registros según bytes
+        if (bytes == 4 && !is_ref) {
+            if (s == "rax") return "%eax";
+            if (s == "rdi") return "%edi";
+            if (s == "rsi") return "%esi";
+            if (s == "rdx") return "%edx";
+            if (s == "rcx") return "%ecx";
+            if (s == "rbx") return "%ebx";
+            if (s == "rbp") return "%ebp";
+            if (s == "rsp") return "%esp";
+            if (s == "r8") return "%r8d";
+            if (s == "r9") return "%r9d";
+            if (s == "r10") return "%r10d";
+            if (s == "%r10") return "%r10d";
+        } else {
+          if (s == "rax") return "%rax";
+          if (s == "rdi") return "%rdi";
+          if (s == "rsi") return "%rsi";
+          if (s == "rdx") return "%rdx";
+          if (s == "rcx") return "%rcx";
+          if (s == "rbx") return "%rbx";
+          if (s == "rbp") return "%rbp";
+          if (s == "rsp") return "%rsp";
+          if (s == "r8") return "%r8";
+          if (s == "r9") return "%r9";
+          if (s == "r10") return "%r10";
+          if (s == "%r10") return "%r10";
+        }
+        return s;
+    };
+    output << fmt_op(src) << ", " << fmt_op(dst);
+
+    if (!write_stmt) {
+        buf << output.str() << "\n";
+        return;
+    }
 
     if (current_mode == Mode::Function) function_buffer << buf.str();
-	  else main_buffer << buf.str();
-  }
+    else main_buffer << buf.str();
+}
 
-	inline void insert_var(const std::string& name, Type type, int is_mutable = true, const std::string& struct_template = "", bool is_globl = false, NodeExpr expr = NodeExpr(NodeExprNone {.line = 0})) {
+	inline void insert_var(const std::string& name, Type type, size_t pos, int is_mutable = true, const std::string& struct_template = "", bool is_globl = false, NodeExpr expr = NodeExpr(NodeExprNone {.line = 0})) {
 	    if (!is_globl) {
-        m_vars.insert({name, Var{.stack_loc = m_stack_size_rel, .type = type, .name = name, .is_mutable = is_mutable, .struct_template = struct_template}});
+        m_vars.insert({name, Var{.stack_loc = pos, .type = type, .name = name, .is_mutable = is_mutable, .struct_template = struct_template}});
          m_vars_order.push_back(name);
       } else {
         m_glob_vars.insert({name, GlobVar{.expr = expr, .type = type, .name = name, .is_mutable = is_mutable, .struct_template = struct_template}});
       }
 	}
 
-	void push(const std::string& reg, int newline = true) {
-	    //write("  push " + reg);
-	    //write("  push %" + reg, newline); 
-      ++m_stack_size;
-      ++m_stack_size_rel;
-      write("  mov %" + reg + ", " + std::to_string((m_stack_size_rel - 1) * 8) + "(%rsp)"); 
-	}
+  std::vector<std::vector<size_t>> empty_offsets = {};
+  std::vector<size_t> last_offset;
+
+  
+  size_t push(const std::string& reg, size_t bytes = 4, bool is_ref = false, int newline = true) {
+    for (auto it = empty_offsets.begin(); it != empty_offsets.end(); ++it) {
+      if (it->size() >= bytes && it->front() % 8 == 0) {
+        size_t pos = it->front();   // primer offset libre
+        //write("  movl %" + reg + ", " + std::to_string(pos) + "(%rsp)");
+        //write("  mov %" + reg + ", " + std::to_string(pos) + "(%rsp)");
+        emit_op(reg, std::to_string(pos) + "(%rsp)", Op::Mov, bytes, false, false, is_ref);
+        it->erase(it->begin(), it->begin() + bytes); // consumir hueco
+        if (it->empty()) empty_offsets.erase(it);
+        last_offset.push_back(pos);
+        return pos;
+      }
+    }
+
+    if ((m_stack_size_rel % 8) != 0) {
+      empty_offsets.push_back({});
+      while ((m_stack_size_rel % 8) != 0) {
+        empty_offsets.back().push_back({m_stack_size_rel});
+        ++m_stack_size_rel;
+        ++m_stack_size;
+      }
+    }
+
+    // 3. Asignar nuevo espacio
+    //write("  mov %" + reg + ", " + std::to_string(m_stack_size_rel) + "(%rsp)");
+    emit_op(reg, std::to_string(m_stack_size_rel) + "(%rsp)", Op::Mov, bytes, false, false, is_ref);
+    size_t pos = m_stack_size_rel;
+    m_stack_size += bytes;
+    m_stack_size_rel += bytes;
+    last_offset.push_back(pos);
+
+    return pos; // for insert var
+}
 
 	void push_float(const std::string& reg, int newline = true) {
 	    write("  sub $8, %rsp");
@@ -195,16 +285,11 @@ public:
 		++m_stack_size;
 	}
 
-	void pop(const std::string& reg, int newline = true) {
-	    //write( "  pop " + reg);
-	    //write("  pop %" + reg);
-      write("  mov " + std::to_string((m_stack_size_rel - 1) * 8) + "(%rsp), %" + reg);
-	    if (m_stack_size == 0) {
-	        std::cerr << "Stack underflow!\n";
-	        exit(EXIT_FAILURE);
-	    }
-	    --m_stack_size;
-      --m_stack_size_rel;
+	void pop(const std::string& reg, size_t bytes = 4, int newline = true) {
+    m_stack_size_rel -= bytes;
+    m_stack_size -= bytes;
+    emit_op(std::to_string(last_offset.back()) + "(%rsp)", reg, Op::Mov, bytes);
+    last_offset.pop_back();
 	}
 
 	void pop_float(const std::string& reg, int newline = true) {
@@ -222,7 +307,7 @@ public:
 	        add_error("Error trying to get an undeclared variable (" + var_name + ")", line);
 	        exit(EXIT_FAILURE);
 	    }
-	    size_t offset_bytes = (m_vars.at(var_name).stack_loc - 1) * 8; // this should be the var pos
+	    size_t offset_bytes = (m_vars.at(var_name).stack_loc); // this should be the var pos
 	    return offset_bytes;
 	}
 

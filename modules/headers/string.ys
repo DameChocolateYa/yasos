@@ -28,6 +28,9 @@ extern fun buftrim(buf: &str) -> none;
 extern fun strreplace(s: str, old_sub: str, new_sub: str) -> str;
 extern fun bufreplace(buf: &str, old_sub: str, new_sub: str) -> none;
 
+extern fun str_upper(string: str) -> str;
+extern fun str_lower(string: str) -> str;
+
 extern fun strcontains(string: str, substr: str) -> str;
 extern fun strcontains_case(string: str, substr: str) -> str;
 extern fun strfind(string: str, substr: str) -> int;
