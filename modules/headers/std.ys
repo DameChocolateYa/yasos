@@ -6,19 +6,19 @@ extern fun ask(msg_format: str, undefan) -> str;
 extern fun is_int(s: str) -> int;
 extern fun is_float(s: str) -> int;
 extern fun is_num(s: str) -> int;
-extern fun waitk() -> none;
-extern fun cls() -> none;
+extern fun waitk() -> int;
+extern fun cls() -> int;
 extern fun sysexc(command: str) -> int;
-extern fun termc(color: int) -> none;
+extern fun termc(color: int) -> int;
 extern fun randi(min: double, max: double, decimals: int) -> double;
-extern fun nap(seconds: int) -> none;
+extern fun nap(seconds: int) -> int;
 
-extern fun write(channel: int, msg: str, len: int);
-extern fun printerr(fmt: str, undefan);
-extern fun printerr_ln(fmt: str, undefan);
+extern fun write(channel: int, msg: str, len: int) -> int;
+extern fun printerr(fmt: str, undefan) -> int;
+extern fun printerr_ln(fmt: str, undefan) -> int;
 
-extern fun panic(msg: str) -> none;
-extern fun cuspanic(msg: str, status: int) -> none;
+extern fun panic(msg: str) -> int;
+extern fun cuspanic(msg: str, status: int) -> int;
 
 #- LIBC FUNCTIONS
 extern fun malloc(size: int) -> any;
@@ -31,14 +31,14 @@ extern fun format(format: str, undefan) -> str;
 extern fun bufformat(buf_and_format: &str, undefan) -> any;
 
 extern fun system(proc: str) -> int;
-extern fun exit(status: int) -> none;
+extern fun exit(status: int) -> int;
 
 #- Constant are filled with no important values
 #- Because their declaration is external
 
 cnst OK: int = 0;
-cnst FAIL: int = 0;
-cnst ERR: int = 0;
-cnst NOT_FOUND: int = 0;
+cnst FAIL: int = 1;
+cnst ERR: int = 1;
+cnst NOT_FOUND: int = 127;
 
 cnst ZERO: int = 0;

@@ -8,6 +8,8 @@
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
+#include <llvm/Support/raw_ostream.h>
+#include <memory>
 #include <sstream>
 #include <optional>
 #include <string>
@@ -130,16 +132,23 @@ int main(int argc, char** argv) {
         //std::string gen_name = (index == 0) ? "main" : base_name;
         std::string gen_name = base_name;
 
-        Generator generator(program.value(), gen_name);
+        Generator generator(program.value(), gen_name, std::move(TheModule));
         std::string asm_code = generator.gen_prog();
+        std::string ll_file = base_name + ".ll";
+        std::error_code EC;
+        llvm::raw_fd_ostream ll_out(ll_file, EC);
+        generator.ModModule->print(ll_out, nullptr);
+        ll_out.close();
 
         std::string asm_file = base_name + ".s";
         if (!generate_asm_only) asm_file = cache_directory +  base_name + ".s";
-        std::string obj_file = base_name + ".o";
+        std::string obj_file = base_name + ".o"; 
 
-        std::ofstream asm_out(asm_file);
-        asm_out << asm_code;
-        asm_out.close();
+        std::string llc_cmd = "llc -relocation-model=pic -filetype=asm " + ll_file + " -o " + asm_file;
+        if (system(llc_cmd.c_str()) != 0) {
+          std::cerr << "LLC failed for: " << filename << "\n";
+          return EXIT_FAILURE;
+        }
 
         if (!generate_asm_only && compiled_successfully) {
             std::string assemble_cmd = "as -o " + obj_file + " " + asm_file;
@@ -154,6 +163,9 @@ int main(int argc, char** argv) {
 
             object_files.push_back(obj_file);
         }
+
+        const std::string command_rm_ll = "rm " + ll_file;
+        system(command_rm_ll.c_str());
 
         if (generate_asm_only) {
             continue;
@@ -183,9 +195,9 @@ int main(int argc, char** argv) {
     std::string link_command;
 
     if (generate_executable) {
-        link_command = "g++ -o " + output_file + " ";
+        link_command = "g++ -no-pie -o " + output_file + " ";
     } else {
-        link_command = "g++ ";
+        link_command = "g++ -no-pie ";
     }
 
     if (generate_shared) {
@@ -209,7 +221,6 @@ int main(int argc, char** argv) {
     }
 
     link_command += "-L/usr/lib/yslib -lys -O2 -Wl,-rpath=" + func_dir;
-	if (print_link_command) std::cerr << link_command << "\n";
 
 	if (!compiled_successfully) {
         std::cerr << "\nErrors in compilation\n";

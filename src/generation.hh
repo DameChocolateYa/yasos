@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdlib>
+#include <llvm/IR/BasicBlock.h>
 #include <sstream>
 #include <string>
 #include <unistd.h>
@@ -11,6 +12,11 @@
 #include "parser.hh"
 #include "global.hh"
 #include "error.hh"
+
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
 
 #undef __FILE__
 #define __FILE__ "src/generation.hpp"
@@ -60,6 +66,9 @@ typedef struct {
     } value;
 } AnyValue;
 
+extern std::unique_ptr<llvm::Module> TheModule;
+extern llvm::LLVMContext TheContext;
+
 class Generator {
 private:
 
@@ -69,12 +78,16 @@ public:
 	Mode mod;
 	std::string current_mod = "";
 	std::stringstream function_buffer, main_buffer;
+ 
+  llvm::IRBuilder<> Builder; 
+  std::unique_ptr<llvm::Module> ModModule;
 
 	struct Var {
-	    size_t stack_loc;
-	    Type type;
+      llvm::Type* type; 
 	    std::string name;
-	    int is_mutable;
+      llvm::Value* var_ptr;
+	    bool is_mutable;
+      bool is_globl;
 		  std::string struct_template = "";
 	};
   struct GlobVar {
@@ -96,12 +109,12 @@ public:
 	std::map<std::string, std::pair<int, int>> m_lists;
 	std::unordered_map<std::string, GlobVar> m_glob_vars;
 	std::vector<std::string> m_vars_order;
-  std::unordered_map<std::string, std::pair<Type, std::vector<Type>>> declared_funcs;
+  std::unordered_map<std::string, std::pair<llvm::Type*, std::vector<llvm::Type*>>> declared_funcs;
 	std::unordered_map<std::string, std::vector<Var>> m_fnc_args;
 	std::unordered_map<std::string, Type> m_fnc_custom_ret;
 	std::vector<std::string> m_string_literals;
 	std::vector<float> m_float_literals;
-	std::stack<std::string> stmt_orde;
+	std::stack<std::pair<llvm::BasicBlock*, std::pair<llvm::BasicBlock*, llvm::BasicBlock*>>> stmt_orde; // 1 - start | 2- end | 3- update (for)
 
 	std::map<std::string, std::vector<std::pair<std::string, Type>>> m_structs;
 	std::map<std::string, std::vector<NodeExpr>> m_vars_in_structs;
@@ -232,13 +245,9 @@ inline void emit_op(
     else main_buffer << buf.str();
 }
 
-	inline void insert_var(const std::string& name, Type type, size_t pos, int is_mutable = true, const std::string& struct_template = "", bool is_globl = false, NodeExpr expr = NodeExpr(NodeExprNone {.line = 0})) {
-	    if (!is_globl) {
-        m_vars.insert({name, Var{.stack_loc = pos, .type = type, .name = name, .is_mutable = is_mutable, .struct_template = struct_template}});
-         m_vars_order.push_back(name);
-      } else {
-        m_glob_vars.insert({name, GlobVar{.expr = expr, .type = type, .name = name, .is_mutable = is_mutable, .struct_template = struct_template}});
-      }
+	inline void insert_var(const std::string& name, llvm::Type* type, llvm::Value* var_ptr, int is_mutable = true, bool is_globl = false, std::string struct_template = "") {
+      m_vars.insert({name, Var{.type = type, .name = name, .var_ptr = var_ptr, .is_mutable = is_mutable, .is_globl = is_globl, .struct_template = struct_template}});
+      m_vars_order.push_back(name); 
 	}
 
   std::vector<std::vector<size_t>> empty_offsets = {};
@@ -307,8 +316,8 @@ inline void emit_op(
 	        add_error("Error trying to get an undeclared variable (" + var_name + ")", line);
 	        exit(EXIT_FAILURE);
 	    }
-	    size_t offset_bytes = (m_vars.at(var_name).stack_loc); // this should be the var pos
-	    return offset_bytes;
+	    //size_t offset_bytes = (m_vars.at(var_name).stack_loc); // this should be the var pos
+	    return 0;
 	}
 
 	inline void call(const std::string& name) {
@@ -329,12 +338,12 @@ inline void emit_op(
 	    }
 	}
 
-    inline explicit Generator(NodeProg root, std::string filename) : m_prog(std::move(root)), filename(filename) {}
+    inline explicit Generator(NodeProg root, std::string filename, std::unique_ptr<llvm::Module> module) : m_prog(std::move(root)), filename(filename), Builder(TheContext), ModModule(std::move(module)){}
 
     std::vector<std::string> libraries;
     std::vector<std::string> libpaths;
 
-    void gen_expr(const NodeExpr& expr, bool push_result=true, const std::string& reg = "rax", bool is_value = true, bool is_func_call = false);
+    llvm::Value* gen_expr(const NodeExpr& expr, bool push_result=true, const std::string& reg = "rax", bool is_value = true, bool is_func_call = false);
     void gen_stmt(const NodeStmt& stmt);
     [[nodiscard]] std::string gen_prog();
 };

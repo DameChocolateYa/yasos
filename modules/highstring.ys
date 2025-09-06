@@ -1,8 +1,7 @@
-use std;
-use string;
+use string::{strsub, len, strcmp, strcat};
 
 fun str_upper(string: str) -> str {
-  cnst len: int = strlen(string);
+  cnst len: int = len(string);
   var result: str = "";
 
   for (var i: int = 0; i < len; i += 1) {
@@ -42,7 +41,7 @@ fun str_upper(string: str) -> str {
 } pub;
 
 fun str_lower(string: str) -> str {
-  cnst len: int = strlen(string);
+  cnst len: int = len(string);
   var result: str = "";
 
   for (var i: int = 0; i < len; i += 1) {

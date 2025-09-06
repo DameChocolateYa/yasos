@@ -2,7 +2,7 @@
 TARGET = libys.so
 
 CC = gcc
-AS = as
+AS = gcc
 YS = yasos
 CFLAGS = -Wall -Wextra -O2 -fPIC -g -L/usr/lib/yslib -lys
 LDFLAGS = -shared
@@ -29,7 +29,7 @@ $(TARGET): $(OBJ)
 
 # Compilación de ensamblador escrito a mano
 %.o: %.s
-	$(AS) $< -o $@
+	$(AS) -fPIC -c $< -o $@
 
 # Generación de .s a partir de .ys
 %.s: %.ys
@@ -38,7 +38,7 @@ $(TARGET): $(OBJ)
 # Los .o de YASOS dependen de los .s generados
 %.o: %.ys
 	$(YS) -S $<
-	$(AS) $*.s -o $@
+	$(AS) -fPIC -c $*.s -o $@
 
 clean:
 	rm -f $(OBJ) $(TARGET) $(SRC_S_GEN)

@@ -16,12 +16,6 @@
 #define SYS_wait4   61
 #define SYS_exit    60
 
-extern const int OK = 0;
-extern const int FAIL = 1;
-extern const int ERR = -1;
-extern const int ZERO = 0;
-extern const int NOT_FOUND = 127;
-
 long syscall(long number, ...); // prototype to avoi libc warning
 
 const char path[] = "/bin/sh";

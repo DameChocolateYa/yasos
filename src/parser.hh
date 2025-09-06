@@ -239,7 +239,8 @@ struct NodeStmtUse {
 };
 
 struct NodeStmtImport {
-    Token to_import;
+    Token mod_name;
+    std::vector<std::string> to_import;
     int line;
 };
 
@@ -307,6 +308,7 @@ struct NodeStmtDefFunc {
 	bool is_pub = false;
 	bool is_extern = false;
 	std::vector<std::string> absolute_type_name_args;
+  bool is_vargs;
     int line;
 };
 

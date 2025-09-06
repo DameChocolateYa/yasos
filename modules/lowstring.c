@@ -6,10 +6,6 @@
 #include <math.h>
 #include <ctype.h>
 
-const char* STR_EMPTY = "";
-const char* STR_WHITE = " ";
-const char* STR_NULLT = "\0";
-
 int len(const char* s1) {
     int len = (int)strlen(s1);
     return len;

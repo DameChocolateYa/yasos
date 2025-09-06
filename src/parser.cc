@@ -381,7 +381,7 @@ std::optional<NodeExpr> Parser::parse_expr(int min_precedence) {
 
     if (is_comparison) {
       lhs = NodeExpr(NodeExprBinary{
-        std::make_shared<NodeExpr>(*lhs), op_token, std::make_shared<NodeExpr>(rhs), op_token.line
+        std::make_shared<NodeExpr>(*lhs), op_token, std::make_shared<NodeExpr>(rhs),op_token.line
       });
       // TODO
     } else {
@@ -628,6 +628,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 		std::vector<std::string> absolute_type_name_args;
 
     bool has_args = false;
+    bool vargs = false;
         while (peek().has_value() && peek().value().type != TokenType::close_paren) {
             if (peek().has_value() && peek().value().type == TokenType::ident) {
               has_args = true;
@@ -637,7 +638,9 @@ std::optional<NodeStmt> Parser::parse_stmt() {
               Token arg_type_tok;
 
               if (arg_name == "undefan") {
-                arg_type = Type{Type::Kind::NxtUndefNum};
+                //arg_type = Type{Type::Kind::NxtUndefNum};
+                vargs = true;
+                break;
               }
               else if (arg_name == "undefa") {
                 arg_type = Type{Type::Kind::Any};
@@ -743,7 +746,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 			is_pub = true;
       need_semi = true;
 		}
-        result = NodeStmt{NodeStmtDefFunc{.name = name, .args = args, .return_type = return_type, .code_branch = code_branch, .is_pub = is_pub, .is_extern = is_extern, .absolute_type_name_args = absolute_type_name_args, .line = line}};
+        result = NodeStmt{NodeStmtDefFunc{.name = name, .args = args, .return_type = return_type, .code_branch = code_branch, .is_pub = is_pub, .is_extern = is_extern, .absolute_type_name_args = absolute_type_name_args, .is_vargs = vargs, .line = line}};
     }
 
     /*else if (peek().has_value() && peek().value().type == TokenType::ident &&
@@ -1205,8 +1208,42 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         consume();
         NodeStmtImport stmt_import;
 
-        stmt_import.to_import = consume();
+        stmt_import.mod_name = consume();
         stmt_import.line = line;
+
+        if (!peek().has_value() || peek().value().type != TokenType::dp || !peek(1).has_value() || peek(1).value().type != TokenType::dp) {
+          add_error("Expected element(s) to import", line);
+        }
+
+        consume(); consume();
+        if (!peek().has_value()) {
+          add_error("Expected element(s) to import after '::'", line);
+        }
+
+        std::vector<std::string> elements;
+        if (peek().value().type == TokenType::l_key) {
+          consume();
+          while (peek().has_value() && peek().value().type != TokenType::r_key) {
+            if (!peek().has_value() || peek().value().type != TokenType::ident) {
+              add_error("Expected element in import list", line);
+              break;
+            }
+            elements.push_back(consume().value.value());
+
+            if (peek().has_value() && peek().value().type == TokenType::comma) {
+              consume();
+              continue;
+            }
+          }
+          if (!peek().has_value() || peek().value().type != TokenType::r_key) {
+            add_error("Expected '}' to close import list", line);
+          }
+          consume();
+        } else if (peek().value().type == TokenType::ident) {
+          elements = {consume().value.value()};
+        }
+
+        stmt_import.to_import = elements;
 
         result = NodeStmt{.var = stmt_import};
     }

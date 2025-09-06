@@ -1,4 +1,4 @@
-use std;
+use std::{exit, println};
 
 fun panic(msg: str) -> none {
   println("%s", msg);

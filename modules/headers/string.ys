@@ -35,6 +35,6 @@ extern fun strcontains(string: str, substr: str) -> str;
 extern fun strcontains_case(string: str, substr: str) -> str;
 extern fun strfind(string: str, substr: str) -> int;
 
-cnst STR_EMPTY: str = 0;
-cnst STR_WHITE: str = 0;
-cnst STR_NULLT: str = 0;
+#*cnst STR_EMPTY: str = "";
+cnst STR_WHITE: str = " ";
+cnst STR_NULLT: str = "";*#

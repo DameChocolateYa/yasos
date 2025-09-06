@@ -1,1 +1,0 @@
-extern fun push_back(l: list, value: any);
