@@ -792,6 +792,67 @@ str_lower:                              # @str_lower
 	.size	str_lower, .Lfunc_end1-str_lower
 	.cfi_endproc
                                         # -- End function
+	.globl	is_whitespace                   # -- Begin function is_whitespace
+	.p2align	4
+	.type	is_whitespace,@function
+is_whitespace:                          # @is_whitespace
+	.cfi_startproc
+# %bb.0:                                # %is_whitespace
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register %rbp
+	pushq	%rbx
+	subq	$24, %rsp
+	.cfi_offset %rbx, -24
+	movq	%rdi, -32(%rbp)
+	callq	len@PLT
+	movl	%eax, -20(%rbp)
+	movl	$1, -16(%rbp)
+	movl	$0, -12(%rbp)
+	leaq	.Lstr.110(%rip), %rbx
+	jmp	.LBB2_1
+	.p2align	4
+.LBB2_3:                                # %endif_2
+                                        #   in Loop: Header=BB2_1 Depth=1
+	incl	-12(%rbp)
+.LBB2_1:                                # %for_start_3
+                                        # =>This Inner Loop Header: Depth=1
+	movl	-12(%rbp), %eax
+	cmpl	-20(%rbp), %eax
+	jge	.LBB2_5
+# %bb.2:                                # %for_body_3
+                                        #   in Loop: Header=BB2_1 Depth=1
+	movq	-32(%rbp), %rdi
+	movl	-12(%rbp), %esi
+	leal	1(%rsi), %edx
+                                        # kill: def $esi killed $esi killed $rsi
+	callq	strsub@PLT
+	movq	%rsp, %rcx
+	leaq	-16(%rcx), %rsp
+	movq	%rax, -16(%rcx)
+	movq	%rax, %rdi
+	movq	%rbx, %rsi
+	callq	strcmp@PLT
+	testl	%eax, %eax
+	jne	.LBB2_3
+# %bb.4:                                # %if_2
+                                        #   in Loop: Header=BB2_1 Depth=1
+	movl	$0, -16(%rbp)
+	incl	-12(%rbp)
+	jmp	.LBB2_1
+.LBB2_5:                                # %for_end_3
+	movl	-16(%rbp), %eax
+	leaq	-8(%rbp), %rsp
+	popq	%rbx
+	popq	%rbp
+	.cfi_def_cfa %rsp, 8
+	retq
+.Lfunc_end2:
+	.size	is_whitespace, .Lfunc_end2-is_whitespace
+	.cfi_endproc
+                                        # -- End function
 	.type	.Lstr,@object                   # @str
 	.section	.rodata.str1.1,"aMS",@progbits,1
 .Lstr:
@@ -1342,5 +1403,10 @@ str_lower:                              # @str_lower
 .Lstr.109:
 	.asciz	"z"
 	.size	.Lstr.109, 2
+
+	.type	.Lstr.110,@object               # @str.110
+.Lstr.110:
+	.asciz	" "
+	.size	.Lstr.110, 2
 
 	.section	".note.GNU-stack","",@progbits

@@ -11,6 +11,7 @@ enum class TokenType {
   null_tok,
     int_lit,
     str_lit,
+    char_lit,
     float_lit,
     semi,
     comma,
@@ -21,6 +22,7 @@ enum class TokenType {
     cnst,
     eq,
     str_type,
+    char_type,
     int_type,
     double_type,
 	any_type,
@@ -63,6 +65,7 @@ enum class TokenType {
     bang_eq,
     bang,
     none,
+    _nullptr,
     no_arg,
     cr,
 	  _fnc,
@@ -100,6 +103,17 @@ enum class TokenType {
 	_struct,
 	_nwstruct,
   _new,
+  _def,
+  _undef,
+  _is_def,
+  _is_ndef,
+  _pre_if,
+  _pre_else,
+  _pre_elif,
+  _pre_endif,
+  _pre_error,
+  _pre_warning,
+  _size_of
 };
 
 struct Token {

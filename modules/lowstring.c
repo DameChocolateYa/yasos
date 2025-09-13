@@ -233,6 +233,10 @@ int strcmp(const char* s1, const char* s2) {
     return *s1 == *s2;  // Ambos deben llegar al final ('\0') al mismo tiempo
 }
 
+int charcmp(const char c1, const char c2) {
+  return c1 == c2;
+}
+
 char* dig_to_abc(const int n) {
     if (n >= 0 && n < 26) {
         char* res = (char*)malloc(2);  // 1 para la letra, 1 para '\0'
@@ -256,15 +260,6 @@ bool strempty(const char* s) {
   }
 
   return empty;
-}
-
-bool is_whitespace(const char* s) {
-  bool is_whitespace = true;
-  for (int i = 0; i < strlen(s); ++i) {
-    if (s[1] != ' ') is_whitespace = false;
-  }
-
-  return is_whitespace;
 }
 
 char* trim(const char* s) {

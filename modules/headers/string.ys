@@ -17,6 +17,7 @@ extern fun itostr(n: int) -> str;
 extern fun dbtostr(n: double, decimals: int) -> str;
 
 extern fun strcmp(s1: str, s2: str) -> int;
+extern fun charcmp(ch1: char, ch2: char) -> int;
 extern fun dig_to_abc(n: int) -> str;
 
 extern fun strempty(s: str) -> int;
@@ -35,6 +36,6 @@ extern fun strcontains(string: str, substr: str) -> str;
 extern fun strcontains_case(string: str, substr: str) -> str;
 extern fun strfind(string: str, substr: str) -> int;
 
-#*cnst STR_EMPTY: str = "";
+cnst STR_EMPTY: str = "";
 cnst STR_WHITE: str = " ";
-cnst STR_NULLT: str = "";*#
+cnst STR_NULLT: str = "\0";

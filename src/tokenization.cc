@@ -9,7 +9,7 @@ std::vector<Token> Tokenizer::tokenize() {
     int tokens_in_current_line = 0;
 
     while(peek().has_value()) {
-        if (std::isalpha(peek().value()) || peek().value() == '_') {
+        if (std::isalpha(peek().value()) || peek().value() == '_' || peek().value() == '$') {
             buf.push_back(consume());
             while(peek().has_value() && (std::isalnum(peek().value()) || peek().value() == '_')) {
                 buf.push_back(consume());
@@ -26,6 +26,10 @@ std::vector<Token> Tokenizer::tokenize() {
             }
             else if (buf == "str") {
                 tokens.push_back({.type = TokenType::str_type, .line = local_lines});
+                buf.clear();
+                continue;
+            } else if (buf == "char") {
+                tokens.push_back({.type = TokenType::char_type, .line = local_lines});
                 buf.clear();
                 continue;
             }
@@ -159,8 +163,12 @@ std::vector<Token> Tokenizer::tokenize() {
                 buf.clear();
                 continue;
             }
-            else if (buf == "none" || buf == "None") {
+            else if (buf == "none") {
                 tokens.push_back({.type = TokenType::none, .line = local_lines});
+                buf.clear();
+                continue;
+            } else if (buf == "nullptr") {
+                tokens.push_back({.type = TokenType::_nullptr, .value = "nullptr", .line = local_lines});
                 buf.clear();
                 continue;
             }
@@ -282,21 +290,6 @@ std::vector<Token> Tokenizer::tokenize() {
         buf.clear();
         continue;
       }
-			else if (buf == "gptr") {
-				tokens.push_back({.type = TokenType::_gptr, .line = local_lines});
-				buf.clear();
-				continue;
-			}
-			else if (buf == "sptr") {
-				tokens.push_back({.type = TokenType::_sptr, .line = local_lines});
-				buf.clear();
-				continue;
-			}
-			else if (buf == "ptr") {
-				tokens.push_back({.type = TokenType::_ptr, .line = local_lines});
-				buf.clear();
-				continue;
-			}
 			else if (buf == "globl") {
 				tokens.push_back({.type = TokenType::_globl, .line = local_lines});
 				buf.clear();
@@ -344,11 +337,95 @@ std::vector<Token> Tokenizer::tokenize() {
         tokens.push_back({.type = TokenType::_new, .line = local_lines});
         buf.clear();
         continue;
-      } 
+      } else if (buf == "$def") {
+        tokens.push_back({.type = TokenType::_def, .value = "$def", .line = local_lines});
+        buf.clear();
+        continue;
+      } else if (buf == "$undef") {
+        tokens.push_back({.type = TokenType::_undef, .value = "$undef", .line = local_lines});
+        buf.clear();
+        continue;
+      } else if (buf == "$isdef") {
+        tokens.push_back({.type = TokenType::_is_def, .value = "$isdef", .line = local_lines});
+        buf.clear();
+        continue;
+      } else if (buf == "$isndef") {
+        tokens.push_back({.type = TokenType::_is_ndef, .value = "$isndef", .line = local_lines});
+        buf.clear();
+        continue;
+      } else if (buf == "$if") {
+        tokens.push_back({.type = TokenType::_pre_if, .value = "$if", .line = local_lines});
+        buf.clear();
+        continue;
+      } else if (buf == "$elif") {
+        tokens.push_back({.type = TokenType::_pre_elif, .value = "$elif", .line = local_lines});
+        buf.clear();
+        continue;
+      } else if (buf == "$else") {
+        tokens.push_back({.type = TokenType::_pre_else, .value = "$else", .line = local_lines});
+        buf.clear();
+        continue;
+      } else if (buf == "$endif") {
+        tokens.push_back({.type = TokenType::_pre_endif, .value = "$endif", .line = local_lines});
+        buf.clear();
+        continue; 
+      } else if (buf == "$error") {
+        tokens.push_back({.type = TokenType::_pre_error, .value = "$error", .line = local_lines});
+        buf.clear();
+        continue; 
+      } else if (buf == "$warn") {
+        tokens.push_back({.type = TokenType::_pre_warning, .value = "$warning", .line = local_lines});
+        buf.clear();
+        continue; 
+      } else if (buf == "$sizeof") {
+        tokens.push_back({.type = TokenType::_size_of, .value = "$sizeof", .line = local_lines});
+        buf.clear();
+        continue; 
+      }
             else {
                 tokens.push_back({.type = TokenType::ident, .value = buf, .line = local_lines});
                 buf.clear();
             }
+            ++tokens_in_current_line;
+        } else if (
+          ((peek().value() == '-' || peek().value() == '+') &&
+          peek(1).has_value() &&
+    (std::isdigit(peek(1).value()) || peek(1).value() == '.')) ||
+
+    std::isdigit(peek().value()) ||
+
+    (peek().value() == '.' && peek(1).has_value() && std::isdigit(peek(1).value()))) { 
+            if (peek().value() == '-' || peek().value() == '+') {
+                buf.push_back(consume());
+            }
+
+            bool is_float = false;
+            if (peek().has_value() && peek().value() == '.') {
+              is_float = true;
+              buf.push_back(consume());
+            }
+
+            while (peek().has_value() && std::isdigit(peek().value())) {
+                buf.push_back(consume());
+            }
+
+            if (peek().has_value() && peek().value() == '.' && !is_float) {
+                is_float = true;
+                buf.push_back(consume());  // Consume '.'
+
+                while (peek().has_value() && std::isdigit(peek().value())) {
+                  buf.push_back(consume());
+                }
+            } else if (peek().has_value() && peek().value() == '.' && is_float) {
+              add_error("'.' found after another one in decimal expression", local_lines);
+            }
+
+            tokens.push_back({
+                .type = is_float ? TokenType::float_lit : TokenType::int_lit,
+                .value = buf,
+                .line = local_lines
+            });
+            buf.clear();
             ++tokens_in_current_line;
         }
         else if (peek().value() == '"') {
@@ -365,19 +442,25 @@ std::vector<Token> Tokenizer::tokenize() {
             tokens.push_back({.type = TokenType::str_lit, .value = buf, .line = local_lines});
             buf.clear();
             ++tokens_in_current_line;
-        }
-		else if (peek().value() == '\'') {
+        } else if (peek().value() == '\'') {
             consume();
+            int counter = 0; // max 1 - else it is not a true char
             while (peek().has_value() && peek().value() != '\'') {
                 buf.push_back(consume());
-            }
+                ++counter;
+            } 
             if (!peek().has_value() || peek().value() != '\'') {
-                add_error("Undeterminated string literal");
+                add_error("Undeterminated char literal");
                 exit(EXIT_FAILURE);
             }
             consume();
 
-            tokens.push_back({.type = TokenType::str_lit, .value = buf, .line = local_lines});
+             /*if (counter > 1) {
+              add_error("Expected a unique character in char literal", local_lines);
+              continue;
+            }*/
+
+            tokens.push_back({.type = TokenType::char_lit, .value = buf, .line = local_lines});
             buf.clear();
             ++tokens_in_current_line;
         }
@@ -610,50 +693,8 @@ std::vector<Token> Tokenizer::tokenize() {
         else if (std::isspace(peek().value())) {
             consume();
             continue;
-        } 
-        else if (peek().value() == '-' && std::isdigit(peek(1).value())
-            || peek().value() == '+' && std::isdigit(peek(1).value()) 
-            || std::isdigit(peek().value())) {
-            if (peek().value() == '-' || peek().value() == '+') {
-                buf.push_back(consume());
-            }
-
-            buf.push_back(consume());  // Primer dígito
-            bool is_float = false;
-
-            // Parte entera
-            while (peek().has_value() && std::isdigit(peek().value())) {
-                buf.push_back(consume());
-            }
-
-            // Parte decimal
-            if (peek().has_value() && peek().value() == '.') {
-                is_float = true;
-                buf.push_back(consume());  // Consume '.'
-
-                // Requiere al menos un dígito después del punto
-                if (peek().has_value() && std::isdigit(peek().value())) {
-                    while (peek().has_value() && std::isdigit(peek().value())) {
-                        buf.push_back(consume());
-                    }
-                } else {
-                    // Error léxico: punto sin decimales
-                    // Puedes manejarlo como quieras, por ejemplo:
-                    add_error("Decimal dot with not digits after");
-                }
-            }
-
-            tokens.push_back({
-                .type = is_float ? TokenType::float_lit : TokenType::int_lit,
-                .value = buf,
-                .line = local_lines
-            });
-            buf.clear();
-            ++tokens_in_current_line;
-        }
-
-        else {
-            add_error("TOKEN ERROR" + std::to_string(peek().value()), local_lines);
+        } else {
+            add_error("TOKEN ERROR: " + std::to_string(peek().value()), local_lines);
             exit(EXIT_FAILURE);
         }
     }

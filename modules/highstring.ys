@@ -4,7 +4,7 @@ fun str_upper(string: str) -> str {
   cnst len: int = len(string);
   var result: str = "";
 
-  for (var i: int = 0; i < len; i += 1) {
+  for var i: int = 0; i < len; i += 1 {
     var c: str = strsub(string, i, i + 1);
 
     if (strcmp(c, "a")) {result = strcat(result, "A");}
@@ -44,7 +44,7 @@ fun str_lower(string: str) -> str {
   cnst len: int = len(string);
   var result: str = "";
 
-  for (var i: int = 0; i < len; i += 1) {
+  for var i: int = 0; i < len; i += 1 {
     var c: str = strsub(string, i, i + 1);
 
     if (strcmp(c, "A")) {result = strcat(result, "a");}
@@ -78,4 +78,16 @@ fun str_lower(string: str) -> str {
   }
 
   ret result;
+} pub;
+
+fun is_whitespace(s: str) -> int {
+  var len: int = len(s);
+  var is_whitespace: int = true;
+
+  for var i: int = 0; i < len; i += 1 {
+    var c: str = strsub(s, i, i + 1);
+    if (!strcmp(c, " ")) {is_whitespace = false;}
+  }
+
+  ret is_whitespace;
 } pub;
