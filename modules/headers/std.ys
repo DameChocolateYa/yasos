@@ -22,15 +22,15 @@ extern fun panic(msg: str) -> none;
 extern fun cuspanic(msg: str, status: int) -> none;
 
 #- LIBC FUNCTIONS
-extern fun malloc(size: int) -> any;
-extern fun calloc(amount: int, size: int) -> any;
-extern fun free(pointer: any) -> none;
-extern fun realloc(pointer: any, size: int) -> any;
-extern fun sprintf(buffer: &str, format: str, undefan) -> any;
-extern fun snprintf(buffer: &str, size: int, format: str, undefan) -> any;
-extern fun asprintf(buffer, &str, format: str, undefan) -> any;
+extern fun malloc(size: int) -> &any;
+extern fun calloc(amount: int, size: int) -> &any;
+extern fun free(pointer: ptr) -> none;
+extern fun realloc(pointer: ptr, size: int) -> &any;
+extern fun sprintf(buffer: &str, format: str, undefan) -> &any;
+extern fun snprintf(buffer: &str, size: int, format: str, undefan) -> &any;
+extern fun asprintf(buffer, &str, format: str, undefan) -> &any;
 extern fun format(format: str, undefan) -> str;
-extern fun bufformat(buf_and_format: &str, undefan) -> any;
+extern fun bufformat(buf_and_format: &str, undefan) -> &any;
 
 extern fun system(proc: str) -> int;
 extern fun exit(status: int) -> none;

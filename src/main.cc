@@ -1,5 +1,5 @@
 #include "error.hh"
-#include "tokenization.hh"
+#include "lexer.hh"
 #include "parser.hh"
 #include "generation.hh"
 #include "global.hh"
@@ -172,8 +172,8 @@ m_preprocessor.insert("__YASOS_ORIGINAL_COMPILER__");
 
         std::string source_code = full_source.str();
 
-        Tokenizer tokenizer(std::move(source_code));
-        std::vector<Token> tokens = tokenizer.tokenize();
+         Lexer lexer(std::move(source_code));
+        std::vector<Token> tokens = lexer.tokenize();
 
         Parser parser(std::move(tokens));
         std::optional<NodeProg> program = parser.parse_prog();

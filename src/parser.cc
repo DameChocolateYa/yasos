@@ -1,6 +1,6 @@
 #include "parser.hh"
 #include "error.hh"
-#include "tokenization.hh"
+#include "lexer.hh"
 #include <cstdlib>
 #include <memory>
 #include <optional>
@@ -33,6 +33,7 @@ bool is_type(Token tok) {
     case TokenType::any_type:
     case TokenType::none:
     case TokenType::char_type:
+    case TokenType::ptr_type:
       return true;
     default:
       return false;
@@ -77,6 +78,8 @@ static Type get_type_from_tok(Token tok) {
       break;
     case TokenType::any_type:
       return Type{Type::Kind::Any};
+    case TokenType::ptr_type:
+      return Type{Type::Kind::Ptr};
     case TokenType::none:
       return Type{Type::Kind::None};
     case TokenType::ident:
@@ -103,7 +106,7 @@ int get_precedence(TokenType token_type) {
 
 std::optional<NodeExpr> Parser::parse_property_chain(std::optional<NodeExpr> base_expr) {
     //std::optional<NodeExpr> expr = base_expr;
-    std::optional<NodeExpr> expr;
+    std::optional<NodeExpr> expr = base_expr;
 
     while (peek().has_value() && peek().value().type == TokenType::dot) {
         consume(); // consume '.'
@@ -146,7 +149,7 @@ std::optional<NodeExpr> Parser::parse_property_chain(std::optional<NodeExpr> bas
         }
 
         expr = NodeExpr(NodeExprProperty{
-            .base = std::make_shared<NodeExpr>(*base_expr),
+            .base = std::make_shared<NodeExpr>(*expr),
             .property = property,
             .is_func = is_func,
             .args = args,
@@ -184,7 +187,31 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
     Token name = consume();
 
     return NodeExpr(NodeExprIsDef {.name = name, .line = line});
-  } else if (peek().has_value() && peek().value().type == TokenType::_is_ndef) {
+  } else if (peek().has_value() && peek().value().type == TokenType::open_paren && peek(1).has_value() && (peek(1).value().type == TokenType::amp || is_type(peek(1).value()))) {
+      int line = consume().line;
+      bool is_ref = false;
+
+      if (peek().has_value() && peek().value().type == TokenType::amp) {
+        consume();
+        is_ref = true;
+      }
+      Type type = get_type_from_tok(consume());
+      type.is_ref = is_ref;
+      
+      if (!peek().has_value() || peek().value().type != TokenType::close_paren) {
+          add_error("Expected ')'", line);
+          return std::nullopt;
+      }
+      consume();
+
+      auto e = parse_expr();
+      if (!e.has_value()) {
+        add_error("Malformed expression", line);
+        return std::nullopt;
+      }
+
+      return NodeExpr(NodeExprCast{.expr = std::make_shared<NodeExpr>(*e), .target_type = type, .line = line});
+    } else if (peek().has_value() && peek().value().type == TokenType::_is_ndef) {
     int line = consume().line;
 
     if (!peek().has_value() || peek().value().type != TokenType::ident) {
@@ -370,15 +397,18 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
 		
 		return NodeExpr(NodeExprStruct{.template_name = struct_template_name, .fields = fields, .line = line});
 	}
-	else if (peek().has_value() && peek().value().type == TokenType::ident && peek(1).has_value() && peek(1).value().type == TokenType::l_bracket) {
+	else if (peek().has_value() && is_expr_start(peek().value()) && peek(1).has_value() && peek(1).value().type == TokenType::l_bracket && !recursive_expr) {
 		int line = peek().value().line;
-		Token list_name = consume();
-		consume();
-
-		if (!peek().has_value()) {
-			add_error("Expected expression", line);
-		}
-		auto e = parse_expr();
+    recursive_expr = true;
+		auto e = parse_primary_expr();
+    recursive_expr = false;
+    if (!e.has_value()) {
+      add_error("Malformed expression", line);
+    }
+    NodeExpr list_expr = *e;
+    
+    consume();
+		e = parse_expr();
 		if (!e.has_value()) {
 			add_error("Malformed expression", line);
 		}
@@ -390,7 +420,7 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
 		}
 		consume();
 
-		return NodeExpr(NodeExprListElement{.list_name = list_name, .index = index, .line = line});
+		return NodeExpr(NodeExprListElement{.list_expr = std::make_shared<NodeExpr>(list_expr), .index = index, .line = line});
 	} 
     else if (peek().has_value() && peek().value().type == TokenType::int_lit) {
         return NodeExpr(NodeExprIntLit{consume()});
@@ -1345,24 +1375,6 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
         result = NodeStmt{.var = NodeStmtContinue{.line = line}};
     }
-    else if (peek().has_value() && peek().value().type == TokenType::ident
-            && peek(1).has_value() && peek(1).value().type == TokenType::dot
-			&& peek(2).has_value() && peek(2).value().type == TokenType::ident
-			&& peek(3).has_value() && peek(3).value().type == TokenType::eq) {
-        Token ident = consume();
-        int line = ident.line;
-        consume(); // .
-        Token property = consume();
-		consume(); // =
-
-		auto e = parse_expr();
-		if (!e.has_value()) {
-			add_error("Malformed expression", line);
-		}
-		NodeExpr expr = e.value();
-
-        result = NodeStmt{.var = NodeStmtProperty{.ident = ident, .property = property, .expr = expr, .line = line}};
-    }
     else if (peek().has_value() && peek().value().type == TokenType::_declmod) {
         consume(); // declmod
         int line = peek().value().line;
@@ -1562,23 +1574,9 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 			if (!peek().has_value()) {
 				add_error("Expected type");
 			}
-			Token type_tok = consume();
 
 			const std::string& field_name = name.value.value();
-			Type type;
-			switch (type_tok.type) {
-				case TokenType::int_type:
-				type = Type{Type::Kind::Int}; break;
-
-				case TokenType::double_type:
-				type = Type{Type::Kind::Float}; break;
-
-				case TokenType::str_type:
-				type = Type{Type::Kind::Str}; break;
-
-        case TokenType::ident:
-        type = Type{Type::Kind::UserDefined, is_ref, type_tok.value.value()}; break;
-			}
+			Type type = get_type_from_tok(consume());
 			fields.push_back({field_name, type});
 
       if (!peek().has_value() || peek().value().type != TokenType::semi) {
@@ -1742,7 +1740,6 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
       result = NodeStmt(NodeStmtPrint{fmt, args, line});
   } else {
-
       int line = peek()->line;
       auto target_expr_opt = parse_expr();
       if (!target_expr_opt.has_value()) return std::nullopt;

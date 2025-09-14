@@ -88,13 +88,20 @@ public:
   std::unique_ptr<llvm::Module> ModModule;
 
 	struct Var {
-      llvm::Type* type; // This can be a pointer to i32 for example
-      llvm::Type* base_type; // And this the base, for example i32 (primitive data)
-	    std::string name;
-      llvm::Value* var_ptr;
-	    bool is_mutable;
-      bool is_globl;
-		  std::string struct_template = "";
+    Var* parent = nullptr; 
+    llvm::Type* type; // This can be a pointer to i32 for example
+    llvm::Type* base_type; // And this the base, for example i32 (primitive data)
+	  std::string name;
+    llvm::Value* var_ptr;
+	  bool is_mutable;
+    bool is_globl;
+		std::string struct_template = "";
+
+    bool operator<(const Var& other) const {
+        if (name != other.name)
+            return name < other.name;
+        return parent < other.parent;
+    }
 	};
   struct GlobVar {
 	    NodeExpr expr;
@@ -122,9 +129,9 @@ public:
 	std::vector<float> m_float_literals;
 	std::stack<std::pair<llvm::BasicBlock*, std::pair<llvm::BasicBlock*, llvm::BasicBlock*>>> stmt_orde; // 1 - start | 2- end | 3- update (for)
 
-	std::map<llvm::StructType*, std::map<std::string, Type>> m_struct_templates;
-  std::map<std::string, llvm::StructType*> m_structtypes;
-  std::map<llvm::Value*, llvm::StructType*> m_structs;
+  std::map<std::string, llvm::StructType*> m_struct_templates;
+  std::map<std::string, std::map<std::string, std::pair<int, llvm::Type*>>> m_struct_arg_templates;
+
 	std::map<std::string, std::vector<NodeExpr>> m_vars_in_structs;
 	std::vector<NodeExpr> m_struct_temp_args; // shitty way
 
@@ -163,9 +170,10 @@ public:
 	    else main_buffer << output << (newline ? "\n" : "");
 	}
 
-	inline void insert_var(const std::string& name, llvm::Type* type, llvm::Type* base_type, llvm::Value* var_ptr, int is_mutable = true, bool is_globl = false, std::string struct_template = "") {
-      m_vars.insert({name, Var{.type = type, .base_type = base_type, .name = name, .var_ptr = var_ptr, .is_mutable = is_mutable, .is_globl = is_globl, .struct_template = struct_template}});
+	inline Var insert_var(const std::string& name, Var* parent, llvm::Type* type, llvm::Type* base_type, llvm::Value* var_ptr, int is_mutable = true, bool is_globl = false, std::string struct_template = "") {
+      m_vars.insert({name, Var{.parent = parent, .type = type, .base_type = base_type, .name = name, .var_ptr = var_ptr, .is_mutable = is_mutable, .is_globl = is_globl, .struct_template = struct_template}});
       m_vars_order.push_back(name); 
+      return m_vars.at(name);
 	} 
 
     inline explicit Generator(NodeProg root, std::string filename, std::unique_ptr<llvm::Module> module) : m_prog(std::move(root)), filename(filename), Builder(TheContext), ModModule(std::move(module)){}
@@ -173,7 +181,7 @@ public:
     std::vector<std::string> libraries;
     std::vector<std::string> libpaths;
 
-    llvm::Value* gen_expr(const NodeExpr& expr, bool as_lvalue = false, bool for_store = false);
+    llvm::Value* gen_expr(const NodeExpr& expr, bool as_lvalue = false, bool get_pointer = false);
     void gen_stmt(const NodeStmt& stmt);
     void gen_prog();
 };

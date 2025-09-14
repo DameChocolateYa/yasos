@@ -1,0 +1,13 @@
+struct Vec {
+  internal_array: &any;
+  capacity: int;
+  size: int;
+};
+
+extern fun vec_new() -> Vec;
+extern fun vec_push(vec: &Vec, n: any) -> none;
+extern fun vec_pop(vec: &Vec) -> int;
+extern fun vec_get(vec: Vec, index: int) -> int;
+extern fun vec_front(vec: Vec) -> int;
+extern fun vec_back(vec: Vec) -> int;
+extern fun vec_del(vec: &Vec) -> none;

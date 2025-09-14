@@ -1,7 +1,7 @@
-#include "tokenization.hh"
+#include "lexer.hh"
 #include "error.hh"
 
-std::vector<Token> Tokenizer::tokenize() {
+std::vector<Token> Lexer::tokenize() {
     std::vector<Token> tokens {};
 
     std::string buf = "";
@@ -45,6 +45,11 @@ std::vector<Token> Tokenizer::tokenize() {
             }
 			else if (buf == "any") {
 				tokens.push_back({.type = TokenType::any_type, .line = local_lines});
+				buf.clear();
+				continue;
+			}
+      else if (buf == "ptr") {
+				tokens.push_back({.type = TokenType::ptr_type, .line = local_lines});
 				buf.clear();
 				continue;
 			}

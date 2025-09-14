@@ -32,7 +32,7 @@
 #include "global.hh"
 #include "parser.hh"
 #include "error.hh"
-#include "tokenization.hh"
+#include "lexer.hh"
 
 namespace fs = std::filesystem;
 
@@ -128,17 +128,41 @@ TypeMapping map_type_to_llvm(const Type& t, Generator* gen, bool is_ref = false,
             /*type.type = llvm::StructType::create(TheContext, t.user_type);
             break;*/
         case Kind::UserDefined:
-            if (gen->m_structtypes.contains(t.user_type)) {
-              type.type = gen->m_structtypes.at(t.user_type);
-              type.base_type = gen->m_structtypes.at(t.user_type);
+            if (gen->m_struct_templates.contains(t.user_type)) {
+              if (is_ref) {
+                type.type = llvm::PointerType::getUnqual(gen->m_struct_templates.at(t.user_type));
+                type.base_type = gen->m_struct_templates.at(t.user_type);
+                break;
+              }
+
+              type.type = gen->m_struct_templates.at(t.user_type);
+              type.base_type = gen->m_struct_templates.at(t.user_type);
             }
             break;
-        case Kind::Any:
-            /*type.base_type = llvm::Type::getInt8Ty(TheContext);
-            type.type = llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(TheContext));*/
-            type.type = llvm::PointerType::getUnqual(TheContext);
-            type.base_type = nullptr;
+        case Kind::Ptr:
+          type.type = llvm::PointerType::getInt8Ty(TheContext);
+              type.base_type = llvm::PointerType::getInt8Ty(TheContext);
             break;
+        case Kind::Any:
+            /*if (!is_ref) {
+              type.type = llvm::PointerType::getInt8Ty(TheContext);
+              type.base_type = llvm::PointerType::getInt8Ty(TheContext);
+              break;
+            }
+            type.type = llvm::PointerType::getUnqual(TheContext);
+            type.base_type = llvm::Type::getInt8Ty(TheContext);
+            break;*/
+            
+             
+if (!is_ref) {
+    type.type = llvm::PointerType::get(llvm::Type::getInt8Ty(TheContext), 0);  // i8*
+    type.base_type = llvm::Type::getInt8Ty(TheContext);                        // i8
+} else {
+    type.type = llvm::PointerType::get(llvm::Type::getInt8Ty(TheContext), 0);  // i8*
+    type.base_type = llvm::Type::getInt8Ty(TheContext);                        // i8
+}
+break;
+             
         default:
             type.type = nullptr;
             type.base_type = nullptr;
@@ -146,6 +170,14 @@ TypeMapping map_type_to_llvm(const Type& t, Generator* gen, bool is_ref = false,
     }
 
     return type;
+}
+
+static llvm::Type* get_base_type_from_opaque(llvm::Type* t) {
+  //if (!t->isPointerTy()) return t;
+
+  if (t->isIntegerTy()) return llvm::Type::getInt32Ty(TheContext);
+
+  return t;
 }
 
 static llvm::Type* get_type(const NodeExpr& e, Generator* gen, bool get_base_type = true) {
@@ -157,7 +189,25 @@ static llvm::Type* get_type(const NodeExpr& e, Generator* gen, bool get_base_typ
       else return gen->m_vars.at(name).type;
     }
     return nullptr;
+  } else if (std::holds_alternative<NodeExprProperty>(e.var)) {
+      NodeExprProperty expr_property = std::get<NodeExprProperty>(e.var);
+      llvm::Value* base = gen->gen_expr(*expr_property.base, false, false);
+      llvm::Value* base2 = gen->gen_expr(*expr_property.base, false, true);
+
+          if (!base->getType()->isStructTy()) {
+            add_error("Expected struct as base", expr_property.line);
+            return nullptr;
+          }
+
+       std::map<std::string, std::pair<int, llvm::Type*>> struct_type = gen->m_struct_arg_templates.at(base->getType()->getStructName().str());
+      if (struct_type.contains(expr_property.property.value.value())) {
+        llvm::Type* opaque_type = struct_type.at(expr_property.property.value.value()).second;
+        if (get_base_type) return get_base_type_from_opaque(opaque_type);
+        return opaque_type;
+      }
   }
+
+  return nullptr;
 }
 
 bool is_string_literal(llvm::Value* val) {
@@ -178,9 +228,9 @@ static Type replace_user_defined_type_with_generic(Type type, Generator* gen) {
   const std::string& name = type.user_type;
 
   // Is a struct?
-  for (const auto& strct : gen->m_structtypes) {
+  /*for (const auto& strct : gen->m_structtypes) {
     if (strct.first == name) return Type{Type::Kind::Struct};
-  }
+  }*/
 
   return type;
 }
@@ -319,11 +369,11 @@ static std::optional<llvm::Value*> call_func(const std::string& fn, std::vector<
   return std::nullopt;
 }
 
-llvm::Value* Generator::gen_expr(const NodeExpr& expr, bool as_lvalue, bool for_store) {
+llvm::Value* Generator::gen_expr(const NodeExpr& expr, bool as_lvalue, bool get_pointer) {
     struct ExprVisitor {
         Generator* gen;
         bool as_lvalue;
-        bool for_store;
+        bool get_pointer;
 
     llvm::Value* operator()(const NodeExprIntLit& expr_int_lit) {
           return llvm::ConstantInt::get(
@@ -545,7 +595,6 @@ llvm::Value* Generator::gen_expr(const NodeExpr& expr, bool as_lvalue, bool for_
             //if (push_result) gen->push("rax");*/
         }
         llvm::Value* operator()(const NodeExprUnaryIncDec& expr_unary_operator) const {
-          //NodeStmt un_stmt = NodeStmt{.var = NodeStmtAssign{.}}
         };
 
         llvm::Value* operator()(const NodeExprIdent& expr_ident) const {
@@ -557,6 +606,7 @@ llvm::Value* Generator::gen_expr(const NodeExpr& expr, bool as_lvalue, bool for_
               return gen->Builder.CreateLoad(var->getValueType(), var, name);
             } else {
               llvm::Value* var = gen->m_vars.at(name).var_ptr;
+              if (get_pointer) return var;
               return gen->Builder.CreateLoad(gen->m_vars.at(name).type, var, name);
             }
           }
@@ -627,11 +677,33 @@ llvm::Value* Generator::gen_expr(const NodeExpr& expr, bool as_lvalue, bool for_
 		}
 
         llvm::Value* operator()(const NodeExprProperty& expr_property) const {
-          llvm::Value* var_ptr = gen->gen_expr(*expr_property.base);
-          llvm::StructType* base_struct = gen->m_structs.at(var_ptr);
-          Type raw_type = gen->m_struct_templates.at(base_struct).at(expr_property.property.value.value());
-          llvm::Type* prop_type = map_type_to_llvm(raw_type, gen, raw_type.is_ref).base_type;
-          llvm::Value* property = gen->Builder.CreateStructGEP(base_struct, var_ptr, 0, expr_property.property.value.value());
+          llvm::Value* base = gen->gen_expr(*expr_property.base, false, false);
+          llvm::Value* base2 = gen->gen_expr(*expr_property.base, false, true);
+
+          if (!base->getType()->isStructTy()) {
+            add_error("Expected struct as base", expr_property.line);
+            return nullptr;
+          }
+
+          llvm::StructType* struct_type = gen->m_struct_templates.at(base->getType()->getStructName().str());
+          llvm::Type* ptr_type = struct_type->getPointerTo();
+
+          llvm::Value* base_ptr = nullptr;
+          if (!base2->getType()->isPointerTy()) {
+            base_ptr = gen->Builder.CreateAlloca(base2->getType(), nullptr, "tmp_struct");
+            gen->Builder.CreateStore(base2, base_ptr);
+          } else {
+            base_ptr = base2;
+          }
+
+          int index = gen->m_struct_arg_templates.at(base->getType()->getStructName().str()).at(expr_property.property.value.value()).first;
+          llvm::Type* type = gen->m_struct_arg_templates.at(base->getType()->getStructName().str()).at(expr_property.property.value.value()).second;
+          llvm::Value* property = gen->Builder.CreateStructGEP(struct_type, base_ptr, index, expr_property.property.value.value());
+          if (!as_lvalue && !property->getType()->isStructTy()) {
+            return gen->Builder.CreateLoad(type, property, "deref");
+          }
+
+          return property;
 		    }	
 		
         llvm::Value* operator()(const NodeExprGetPtr& expr_ptr) const {
@@ -662,7 +734,7 @@ llvm::Value* Generator::gen_expr(const NodeExpr& expr, bool as_lvalue, bool for_
 
           llvm::Type* base_type = get_type(*expr_ref.expr, gen, true);
 
-          if (for_store) {
+          if (as_lvalue) {
             return ptr_val;
           } else {
             return gen->Builder.CreateLoad(base_type, ptr_val, "deref");
@@ -673,27 +745,31 @@ llvm::Value* Generator::gen_expr(const NodeExpr& expr, bool as_lvalue, bool for_
 
         llvm::Value* operator()(const NodeExprListElement& expr_list_element) const {
           llvm::Value* index = gen->gen_expr(*expr_list_element.index);
+          llvm::Value* list_val = gen->gen_expr(*expr_list_element.list_expr);
 
-          llvm::Type* base_type = gen->m_vars.at(expr_list_element.list_name.value.value()).base_type;
-          llvm::Type* type = gen->m_vars.at(expr_list_element.list_name.value.value()).type;
+          /*llvm::Type* base_type = gen->m_vars.at(expr_list_element.list_name.value.value()).base_type;
+          llvm::Type* type = gen->m_vars.at(expr_list_element.list_name.value.value()).type;*/
 
-          llvm::Value* array_slot = gen->m_vars.at(expr_list_element.list_name.value.value()).var_ptr;
-          llvm::Value* array_ptr = gen->Builder.CreateLoad(
+          llvm::Type* base_type = get_type(*expr_list_element.list_expr, gen, true);
+          base_type = get_base_type_from_opaque(base_type);
+          //llvm::Type* type = get_type(*expr_list_element.list_expr, gen, false);
+
+          /*llvm::Value* array_ptr = gen->Builder.CreateLoad(
             type,
-            array_slot,
+            list_val,
             "loadarr"
-          );
+          );*/
 
           llvm::Value* element_ptr = gen->Builder.CreateInBoundsGEP(
             base_type,
-            array_ptr,
+            list_val,
             index,
             "element_ptr"
           );
 
           if (as_lvalue) return element_ptr;
           return gen->Builder.CreateLoad(
-            base_type,    // i32
+            base_type,
             element_ptr,
             "loadelem"
           );
@@ -732,9 +808,20 @@ llvm::Value* Generator::gen_expr(const NodeExpr& expr, bool as_lvalue, bool for_
         );  
       }
     }
+
+    llvm::Value* operator()(const NodeExprCast& expr_cast) const {
+      llvm::Value* val = gen->gen_expr(*expr_cast.expr);
+      TypeMapping target = map_type_to_llvm(expr_cast.target_type, gen, true);
+
+      /*if (!val->getType()->isPointerTy()) {
+        add_error("Bitcast only works on pointers", expr_cast.line);
+      }*/
+
+    return gen->Builder.CreateBitCast(val, target.type);
+    }
     };
 
-    ExprVisitor visitor{.gen = this, .as_lvalue = as_lvalue, .for_store = for_store};
+    ExprVisitor visitor{.gen = this, .as_lvalue = as_lvalue, .get_pointer = get_pointer};
     llvm::Value* value = std::visit(visitor, expr.var);
 
     return value;
@@ -793,8 +880,8 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             }
             std::string source_code = full_source.str();
 
-            Tokenizer tokenizer(std::move(source_code));
-            std::vector<Token> tokens = tokenizer.tokenize();
+            Lexer lexer(std::move(source_code));
+            std::vector<Token> tokens = lexer.tokenize();
 
             Parser parser(std::move(tokens));
             std::optional<NodeProg> program = parser.parse_prog();
@@ -875,6 +962,14 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
               if (std::find(to_import.begin(), to_import.end(), fnc_custom_ret.first) == to_import.end()) continue;
               gen->m_fnc_custom_ret.insert(fnc_custom_ret);
             }
+            for (const auto& struct_template : generator.m_struct_templates) {
+              if (std::find(to_import.begin(), to_import.end(), struct_template.first) == to_import.end()) continue;
+              gen->m_struct_templates.insert(struct_template);
+            }
+            for (const auto& struct_arg_template : generator.m_struct_arg_templates) {
+              if (std::find(to_import.begin(), to_import.end(), struct_arg_template.first) == to_import.end()) continue;
+              gen->m_struct_arg_templates.insert(struct_arg_template);
+            }
         }
 
         void operator()(const NodeStmtUse& stmt_use) const {
@@ -925,28 +1020,30 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
 
           llvm::Constant* initializer = nullptr;
 
-          if (stmt_var.has_initial_value) {
-            if (llvm::Constant* c = llvm::dyn_cast<llvm::Constant>(init_val)) {
-              initializer = c;
-            } else {
-              initializer = llvm::Constant::getNullValue(llvm_type);
-            }
-          } else { 
-            if (llvm_type->isPointerTy()) {
-              init_val = llvm::ConstantPointerNull::get(
-    llvm::cast<llvm::PointerType>(llvm_type)
-);
-            }
-            else if (llvm_type->isIntegerTy()) {
-              init_val = llvm::ConstantInt::get(llvm_type, 0);
-            } else if (llvm_type->isFloatingPointTy()) {
-              init_val = llvm::ConstantFP::get(llvm_type, 0.0);
-            } else if (llvm_type->isPointerTy() || llvm_type->isStructTy()) {
-              init_val = llvm::Constant::getNullValue(llvm_type);
-            } else if (llvm_type->isVoidTy()) {
-              init_val = nullptr;
-            } 
-          }
+          if (init_val) {
+    // Solo usar Constant si realmente es un literal
+    if (llvm::isa<llvm::Constant>(init_val)) {
+        initializer = llvm::cast<llvm::Constant>(init_val);
+    } else {
+        // init_val no es constante: usa null initializer
+        initializer = llvm::Constant::getNullValue(llvm_type);
+    }
+} else {
+    // No hay valor inicial: inicializa con null o 0 según el tipo
+    if (llvm_type->isPointerTy()) {
+        initializer = llvm::ConstantPointerNull::get(
+            llvm::cast<llvm::PointerType>(llvm_type)
+        );
+    } else if (llvm_type->isIntegerTy()) {
+        initializer = llvm::ConstantInt::get(llvm_type, 0);
+    } else if (llvm_type->isFloatingPointTy()) {
+        initializer = llvm::ConstantFP::get(llvm_type, 0.0);
+    } else if (llvm_type->isStructTy()) {
+        initializer = llvm::Constant::getNullValue(llvm_type);
+    } else {
+        initializer = nullptr; // void o tipos no manejados
+    }
+} 
 
           if (gen->current_mode == Mode::Global) {
             llvm::Constant* global_init_val;
@@ -976,11 +1073,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             }
           }
 
-          gen->insert_var(stmt_var.ident.value.value(), llvm_type, base_type, var_ptr, stmt_var.is_mutable, gen->current_mode == Mode::Global);
-
-          if (llvm::isa<llvm::StructType>(llvm_type)) {
-            gen->m_structs.insert({var_ptr, gen->m_structtypes.at(stmt_var.type.user_type)});
-          }
+          Var var = gen->insert_var(stmt_var.ident.value.value(), nullptr, llvm_type, base_type, var_ptr, stmt_var.is_mutable, gen->current_mode == Mode::Global);
         }
          
         void operator()(const NodeStmtAssign& stmt) const { // -> value, target, op_token
@@ -998,13 +1091,17 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
               add_error("Variable (" + name + ") is not mutable", stmt.line);
               return;
             }
+
             target_ptr = gen->m_vars.at(name).var_ptr;
           } else if (std::holds_alternative<NodeExprListElement>(stmt.target.var)) {
             NodeExprListElement expr_ele = std::get<NodeExprListElement>(stmt.target.var);
             target_ptr = gen->gen_expr(expr_ele, true);
           } else if (std::holds_alternative<NodeExprDeref>(stmt.target.var)) {
             NodeExprDeref expr_deref = std::get<NodeExprDeref>(stmt.target.var);
-            target_ptr = gen->gen_expr(expr_deref, false, true);
+            target_ptr = gen->gen_expr(expr_deref, true);
+          } else if (std::holds_alternative<NodeExprProperty>(stmt.target.var)) {
+            NodeExprProperty expr_property = std::get<NodeExprProperty>(stmt.target.var);
+            target_ptr = gen->gen_expr(expr_property, true);
           } else {
             throw std::runtime_error("Solo asignaciones a identificadores soportadas por ahora");
           }
@@ -1027,8 +1124,10 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             value = gen->gen_expr(expr_bin); 
           }
           llvm::Value* store_ptr = target_ptr;
+          llvm::Type* type = target_ptr->getType();
 
-          if (target_ptr->getType()->isPointerTy() && value->getType() != target_ptr->getType()) {
+
+          if (type->isPointerTy() && value->getType() != type) {
             store_ptr = gen->Builder.CreateBitCast(target_ptr, value->getType()->getPointerTo());
           }
 
@@ -1336,7 +1435,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
           TypeMapping type_mapping = map_type_to_llvm(c_arg.arg_type, gen, c_arg.arg_type.is_ref);
           llvm::Type* type = type_mapping.type;
           llvm::Type* base_type = type_mapping.base_type;
-          gen->insert_var(c_arg.name, type, base_type, alloca_inst, false, false);
+          gen->insert_var(c_arg.name, nullptr, type, base_type, alloca_inst, false, false);
           
           ++argIt;
         }
@@ -1493,8 +1592,8 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
             }
             std::string source_code = full_source.str();
 
-            Tokenizer tokenizer(std::move(source_code));
-            std::vector<Token> tokens = tokenizer.tokenize();
+            Lexer lexer(std::move(source_code));
+            std::vector<Token> tokens = lexer.tokenize();
 
             Parser parser(std::move(tokens));
             std::optional<NodeProg> program = parser.parse_prog();
@@ -1590,15 +1689,25 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
       llvm::StructType* the_struct = llvm::StructType::create(TheContext, name);
       std::vector<llvm::Type*> parsed_fields;
       std::map<std::string, Type> raw_types;
+      std::map<std::string, std::pair<int, llvm::Type*>> args;
 
+      int index = 0;
       for (const auto& field : stmt_struct.fields) {
-        parsed_fields.push_back(map_type_to_llvm(field.second, gen, field.second.is_ref).type);
+        auto llvm_field_type = map_type_to_llvm(field.second, gen, field.second.is_ref).type;
+        if (!llvm_field_type) {
+          std::cerr << "Error: type for field " << field.first << " is nullptr!\n";
+          continue;
+        }
+
+        parsed_fields.push_back(llvm_field_type);
         raw_types.insert({field.first, field.second});
-      }
+        args.insert({field.first, {index, llvm_field_type}});
+        ++index;
+      } 
       
       the_struct->setBody(parsed_fields);
-      gen->m_struct_templates.insert({the_struct, raw_types});
-      gen->m_structtypes.insert({name, the_struct});
+      gen->m_struct_templates.insert({name, the_struct});
+      gen->m_struct_arg_templates.insert({name, args});
 		}
 
     void operator()(const NodeStmtDefine& stmt_def) const {
@@ -1653,7 +1762,7 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
       const std::string& fn = "print";
       std::vector<llvm::Value*> values;
 
-      values.push_back(gen->gen_expr(NodeExpr(NodeExprStrLit {.str_lit = stmt_print.fmt, .line = stmt_print.line}), false, false));
+      values.push_back(gen->gen_expr(NodeExpr(NodeExprStrLit {.str_lit = stmt_print.fmt, .line = stmt_print.line}), false));
       for (const auto& arg_val : stmt_print.args) {
         values.push_back(gen->gen_expr(arg_val, false));
       }

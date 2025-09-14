@@ -10,7 +10,7 @@
 #include <memory>
 #include <iostream>
 
-#include "tokenization.hh"
+#include "lexer.hh"
 
 #undef __FILE__
 #define __FILE__ "src/parser.hh"
@@ -154,7 +154,7 @@ struct NodeExprList {
 };
 
 struct NodeExprListElement {
-	Token list_name;
+	NodeExprPtr list_expr;
 	NodeExprPtr index;
 	int line;
 };
@@ -185,6 +185,12 @@ struct NodeExprSizeOf {
   int line;
 };
 
+struct NodeExprCast {
+  NodeExprPtr expr;
+  Type target_type;
+  int line;
+};
+
 struct NodeExpr {
     std::variant<
         NodeExprIntLit,
@@ -211,7 +217,8 @@ struct NodeExpr {
     NodeExprNew,
     NodeExprIsDef,
     NodeExprIsNotDef,
-    NodeExprSizeOf
+    NodeExprSizeOf,
+    NodeExprCast
     > var;
 
     NodeExpr() = default;

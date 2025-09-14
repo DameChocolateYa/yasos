@@ -26,6 +26,7 @@ enum class TokenType {
     int_type,
     double_type,
 	any_type,
+  ptr_type,
     dp,
     comment_begin,
     comment_end,
@@ -122,7 +123,7 @@ struct Token {
     int line;
 };
 
-class Tokenizer {
+class Lexer {
     private:
         [[nodiscard]] inline std::optional<char> peek(int offset = 0) const {
             if (m_index + offset >= m_src.length()) {
@@ -141,7 +142,7 @@ class Tokenizer {
         size_t m_index = 0;
 
     public:
-        inline explicit Tokenizer(const std::string& src) : m_src(std::move(src)) {
+        inline explicit Lexer(const std::string& src) : m_src(std::move(src)) {
         }
 
         std::vector<Token> tokenize();
