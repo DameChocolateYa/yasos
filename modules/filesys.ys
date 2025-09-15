@@ -40,7 +40,7 @@ fun file_open(path: str, flags: int) -> File {
 
 fun file_close(f: &File) -> none {
   var local_f: File;
-  local_f = deref f;
+  local_f = *f;
 
   if local_f.fd >= 0 {
     sys_close(local_f.fd);
@@ -49,11 +49,18 @@ fun file_close(f: &File) -> none {
   if local_f.buffer != nullptr {
     free(local_f.buffer);
   }
-  deref f = nullptr;
+  local_f.buffer = nullptr;
+
+  *f = local_f;
+} pub;
+
+fun file_isopen(f: File) -> int {
+  if f.buffer == nullptr {ret false;}
+  ret true;
 } pub;
 
 fun file_write(f: &File, data: str) -> int {
-  var local_f: File = deref f;
+  var local_f: File = *f;
   if local_f.fd < 0 {
     "ERROR: file not open\n";
     ret -1;

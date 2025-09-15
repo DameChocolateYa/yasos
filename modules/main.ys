@@ -1,0 +1,5 @@
+fun main(none) -> int {
+  
+
+  ret 0;
+}

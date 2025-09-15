@@ -128,6 +128,7 @@ public:
 	std::vector<std::string> m_string_literals;
 	std::vector<float> m_float_literals;
 	std::stack<std::pair<llvm::BasicBlock*, std::pair<llvm::BasicBlock*, llvm::BasicBlock*>>> stmt_orde; // 1 - start | 2- end | 3- update (for)
+  std::unordered_map<std::string, llvm::BasicBlock*> m_declared_blocks;
 
   std::map<std::string, llvm::StructType*> m_struct_templates;
   std::map<std::string, std::map<std::string, std::pair<int, llvm::Type*>>> m_struct_arg_templates;

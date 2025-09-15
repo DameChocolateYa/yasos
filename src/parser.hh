@@ -35,6 +35,8 @@ struct Type {
   Kind kind; 
   bool is_ref = false; // if type has & before type ident
   std::string user_type = "";
+
+  std::shared_ptr<Type> pointee = nullptr;
 };
 
 struct NodeExpr;
@@ -469,8 +471,22 @@ struct NodeStmtPrint {
   int line;
 };
 
+struct NodeStmtLabel {
+  Token ident;
+  int line;
+};
+struct NodeStmtGoto {
+  Token ident;
+  int line;
+};
+
+struct NodeStmtScope {
+  std::vector<NodeStmt> code_branch;
+  int line;
+};
+
 struct NodeStmt {
-    std::variant<NodeStmtAsmUserWrite, NodeStmtAssign, NodeStmtVar, NodeStmtVarRe, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtLoop, NodeStmtFor, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtMkpub, NodeStmtUnload, NodeStmtStop, NodeStmtContinue, NodeStmtProperty, NodeStmtDeclmod, NodeStmtEndmod, NodeStmtUmod, NodeStmtUbeepmod, NodeStmtLlibrary, NodeStmtLibpath, NodeStmtSetPtr, NodeStmtGlobl, NodeStmtHeader, NodeStmtUhead, NodeStmtLeave, NodeStmtListElement, NodeStmtStruct, NodeStmtDefine, NodeStmtUndef, NodeStmtPreprocessorCond, NodeStmtPreError, NodeStmtPreWarning, NodeStmtPrint> var;
+    std::variant<NodeStmtAsmUserWrite, NodeStmtAssign, NodeStmtVar, NodeStmtVarRe, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtLoop, NodeStmtFor, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtMkpub, NodeStmtUnload, NodeStmtStop, NodeStmtContinue, NodeStmtProperty, NodeStmtDeclmod, NodeStmtEndmod, NodeStmtUmod, NodeStmtUbeepmod, NodeStmtLlibrary, NodeStmtLibpath, NodeStmtSetPtr, NodeStmtGlobl, NodeStmtHeader, NodeStmtUhead, NodeStmtLeave, NodeStmtListElement, NodeStmtStruct, NodeStmtDefine, NodeStmtUndef, NodeStmtPreprocessorCond, NodeStmtPreError, NodeStmtPreWarning, NodeStmtPrint, NodeStmtLabel, NodeStmtGoto, NodeStmtScope> var;
     int line;
 };
 
@@ -504,6 +520,7 @@ class Parser {
 
     public:
         inline explicit Parser(std::vector<Token> tokens) : m_tokens(std::move(tokens)) {}
+        Type parse_type();
         std::optional<NodeExpr> parse_property_chain(std::optional<NodeExpr> base_expr = std::nullopt); 
         std::optional<NodeExpr> parse_primary_expr();
         std::optional<NodeExpr> parse_expr(int min_precedence = 0);

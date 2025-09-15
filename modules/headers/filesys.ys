@@ -8,6 +8,7 @@ struct File {
 
 extern fun file_open(path: str, flags: int) -> File;
 extern fun file_close(f: &File);
+extern fun file_isopen(f: File) -> int;
 extern fun file_write(f: &File, data: str) -> int;
 extern fun file_read(f: &File) -> str;
 extern fun file_seek(f: &File, pos: int, whence: int) -> none;

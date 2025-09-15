@@ -104,6 +104,7 @@ enum class TokenType {
 	_struct,
 	_nwstruct,
   _new,
+  _goto,
   _def,
   _undef,
   _is_def,

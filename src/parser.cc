@@ -63,6 +63,19 @@ bool is_unary_op(Token tok) {
   }
 }
 
+static int get_precedence(TokenType token_type) {
+  if (token_type == TokenType::plus || token_type == TokenType::minus) return 5;
+  else if (token_type == TokenType::star || token_type == TokenType::slash || token_type == TokenType::percent) return 6;
+  else if (token_type == TokenType::l_arrow || token_type == TokenType::lte ||
+    token_type == TokenType::lt || token_type == TokenType::r_arrow || 
+    token_type == TokenType::gt || token_type == TokenType::gte ) return 4;
+  else if (token_type == TokenType::eq_eq || token_type == TokenType::bang_eq) return 3;
+  else if (token_type == TokenType::_and) return 2;
+  else if (token_type == TokenType::_or) return 1;
+  else if (token_type == TokenType::bang) return 7;
+  else return 0; 
+}
+
 static Type get_type_from_tok(Token tok) {
   switch (tok.type) {
     case TokenType::str_type:
@@ -91,17 +104,23 @@ static Type get_type_from_tok(Token tok) {
   }
 }
 
-int get_precedence(TokenType token_type) {
-  if (token_type == TokenType::plus || token_type == TokenType::minus) return 5;
-  else if (token_type == TokenType::star || token_type == TokenType::slash || token_type == TokenType::percent) return 6;
-  else if (token_type == TokenType::l_arrow || token_type == TokenType::lte ||
-    token_type == TokenType::lt || token_type == TokenType::r_arrow || 
-    token_type == TokenType::gt || token_type == TokenType::gte ) return 4;
-  else if (token_type == TokenType::eq_eq || token_type == TokenType::bang_eq) return 3;
-  else if (token_type == TokenType::_and) return 2;
-  else if (token_type == TokenType::_or) return 1;
-  else if (token_type == TokenType::bang) return 7;
-  else return 0; 
+Type Parser::parse_type() {
+  Type type;
+  std::shared_ptr<Type> pointee = nullptr;
+  bool is_ref = false;
+  if (peek().has_value() && peek().value().type == TokenType::amp) {
+    consume();
+    pointee = std::make_shared<Type>(parse_type());
+    is_ref = true;
+  }
+  if (peek().has_value() && is_type(peek().value())) {
+    type = get_type_from_tok(peek().value());
+  }
+
+  type.is_ref = is_ref;
+  type.pointee = pointee;
+  
+  return type;
 }
 
 std::optional<NodeExpr> Parser::parse_property_chain(std::optional<NodeExpr> base_expr) {
@@ -576,6 +595,12 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
     result = NodeStmt{.var = NodeStmtAsmUserWrite {.format_instructions = format_instructions, .exprs = exprs, .line = line}};
 
+  } else if (peek().has_value() && peek().value().type == TokenType::ident && peek(1).has_value() && peek(1).value().type == TokenType::dp) {
+    Token ident = consume();
+    consume();
+
+    need_semi = false;
+    result = NodeStmt{.var = NodeStmtLabel{.ident = ident, .line = line}};
   } else if (peek().has_value() && (peek().value().type == TokenType::var || peek().value().type == TokenType::cnst) && peek(1).has_value() && peek(1).value().type == TokenType::ident)
     {
         int mut = peek().value().type == TokenType::var ? true : false;
@@ -593,14 +618,16 @@ std::optional<NodeStmt> Parser::parse_stmt() {
             add_error("Expected type after ':'", line);
           }
 
-          bool is_ref = false;
+          stmt_var.type = parse_type();
+          consume(); // parse_type does not consum the main tok
+          /*bool is_ref = false;
           if (peek().has_value() && peek().value().type == TokenType::amp) {
             consume();
             is_ref = true;
           }
           type = consume();
           stmt_var.type = get_type_from_tok(type);
-          stmt_var.type.is_ref = is_ref;
+          stmt_var.type.is_ref = is_ref;*/
         }
 
 		if (!peek().has_value()) {
@@ -671,15 +698,8 @@ std::optional<NodeStmt> Parser::parse_stmt() {
                     add_error("Malformed expression\n", line);
                   }
 
-                  bool is_ref = false;
-                  if (peek().has_value() && peek().value().type == TokenType::amp) {
-                    is_ref = true;
-                    consume();
-                  }
-
-                  arg_type_tok = consume();
-                  arg_type = get_type_from_tok(arg_type_tok);
-                  arg_type.is_ref = is_ref;
+                  arg_type = parse_type();
+                  consume();
               }
                 args.push_back({.name = arg_name, .arg_type = arg_type});
 				        absolute_type_name_args.push_back(arg_type_tok.value.value());
@@ -718,23 +738,8 @@ std::optional<NodeStmt> Parser::parse_stmt() {
                 add_error("Expected a type for return specification", line);
             }
 
-            bool is_ref = false;
-            if (peek().has_value() && peek().value().type == TokenType::amp) {
-              consume();
-              is_ref = true;
-            }
-
-            if (peek().value().type == TokenType::str_type) return_type = Type{Type::Kind::Str};
-            else if (peek().value().type == TokenType::char_type) return_type = Type{Type::Kind::Char};
-            else if (peek().value().type == TokenType::int_type) return_type = Type{Type::Kind::Int};
-            else if (peek().value().type == TokenType::double_type) return_type = Type{Type::Kind::Float};
-			      else if (peek().value().type == TokenType::none) return_type = Type{Type::Kind::None};
-            else if (peek().value().type == TokenType::any_type) return_type = Type {Type::Kind::Any};
-            else if (peek().value().type == TokenType::ident) {
-              return_type = Type{Type::Kind::UserDefined, false, peek().value().value.value()};
-            }
-            consume();
-            return_type.is_ref = is_ref;
+            return_type = parse_type();
+            consume(); // parse_type does not consume main token
         }
 
 		std::vector<NodeStmt> code_branch;
@@ -1565,18 +1570,9 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 			}
 			consume();
 
-      bool is_ref = false;
-      if (peek().has_value() && peek().value().type == TokenType::amp) {
-        consume();
-        is_ref = true;
-      }
-
-			if (!peek().has_value()) {
-				add_error("Expected type");
-			}
-
 			const std::string& field_name = name.value.value();
-			Type type = get_type_from_tok(consume());
+			Type type = parse_type();
+      consume();
 			fields.push_back({field_name, type});
 
       if (!peek().has_value() || peek().value().type != TokenType::semi) {
@@ -1739,6 +1735,34 @@ std::optional<NodeStmt> Parser::parse_stmt() {
       }
 
       result = NodeStmt(NodeStmtPrint{fmt, args, line});
+  } else if (peek().has_value() && peek().value().type == TokenType::_goto) {
+    consume();
+    Token ident;
+
+    if (!peek().has_value() || peek().value().type != TokenType::ident) {
+      add_error("Expected identifier in 'goto' instruction", line);
+    } else ident = consume();
+
+    result = NodeStmt{.var = NodeStmtGoto{.ident = ident, .line = line}};
+  } else if (peek().has_value() && peek().value().type == TokenType::l_key) {
+    consume();
+    std::vector<NodeStmt> code_branch;
+
+    while (peek().has_value() && peek().value().type != TokenType::r_key) {
+      auto maybe_stmt = parse_stmt();
+      if (!maybe_stmt.has_value()) {
+        add_error("Malfored instruction", line);
+        continue;
+      }
+      code_branch.push_back(*maybe_stmt);
+    }
+
+    if (!peek().has_value() || peek().value().type != TokenType::r_key) {
+      add_error("Expected '}", line);
+    } else consume();
+
+    need_semi = false;
+    result = NodeStmt{.var = NodeStmtScope {.code_branch = code_branch, .line = line}};
   } else {
       int line = peek()->line;
       auto target_expr_opt = parse_expr();

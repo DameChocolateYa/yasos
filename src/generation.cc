@@ -79,95 +79,95 @@ TypeMapping map_type_to_llvm(const Type& t, Generator* gen, bool is_ref = false,
     switch (t.kind) {
         case Kind::Int:
           type.base_type = llvm::Type::getInt32Ty(TheContext);
-            if (is_ref) { 
-              type.type = llvm::PointerType::getUnqual(llvm::Type::getInt32Ty(TheContext)); 
-            } else {
-              type.type = llvm::Type::getInt32Ty(TheContext);   // i32 
-            }
+          if (t.pointee != nullptr) {
+            auto pointee_mapping = map_type_to_llvm(*t.pointee, gen);
+            type.type = llvm::PointerType::getUnqual(pointee_mapping.type);
+            type.base_type = pointee_mapping.type;
+          } else {
+            type.type = type.base_type;
+          }
             break;
         case Kind::Float:
-            type.base_type = llvm::Type::getDoubleTy(TheContext);   // float
-            if (is_ref) {
-              type.type = llvm::PointerType::getUnqual(llvm::Type::getDoubleTy(TheContext));
-            } else {
-              type.type = llvm::Type::getDoubleTy(TheContext);
-            }
-            break;
+          type.base_type = llvm::Type::getDoubleTy(TheContext);
+          if (t.pointee != nullptr) {
+            auto pointee_mapping = map_type_to_llvm(*t.pointee, gen);
+            type.type = llvm::PointerType::getUnqual(pointee_mapping.type);
+            type.base_type = pointee_mapping.type;
+          } else type.type = type.base_type;
+
+          break;
         case Kind::Str:
-            type.base_type = llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(TheContext));
-            
-            if (is_ref) {
-              type.type = llvm::PointerType::getUnqual(llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(TheContext)));
-            } else {
-              type.type = llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(TheContext));
-            }
-            break;
+          type.base_type = llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(TheContext));
+          if (t.pointee != nullptr) {
+            auto pointee_mapping = map_type_to_llvm(*t.pointee, gen);
+            type.type = llvm::PointerType::getUnqual(pointee_mapping.type);
+            type.base_type = pointee_mapping.type;
+          } else type.type = type.base_type;
+          break;
         case Kind::Char:
-            type.base_type = llvm::Type::getInt8Ty(TheContext);
-            
-            if (is_ref) {
-              type.type = llvm::Type::getInt8Ty(TheContext);
-            } else {
-              type.type = llvm::Type::getInt8Ty(TheContext);
-            }
-            break;
+          type.base_type = llvm::Type::getInt8Ty(TheContext);
+          if (t.pointee != nullptr) {
+            auto pointee_mapping = map_type_to_llvm(*t.pointee, gen);
+            type.type = llvm::PointerType::getUnqual(pointee_mapping.type);
+            type.base_type = pointee_mapping.type;
+          } else type.type = type.base_type; 
+          break;
         case Kind::None:
-            if (none_as_void) {
-              type.type = llvm::Type::getVoidTy(TheContext);
-              type.base_type = nullptr;
-            }
-            else {
-              type.type = llvm::Type::getInt8Ty(TheContext);   // i32eturn nullptr;
-              type.base_type = llvm::Type::getInt8Ty(TheContext);
-            }
-            break;
-        case Kind::List:
-            type.type = llvm::PointerType::getUnqual(llvm::Type::getInt32Ty(TheContext));
-            break;
-        case Kind::Struct:
+          if (none_as_void) {
+            type.type = llvm::Type::getVoidTy(TheContext);
+            type.base_type = nullptr;
+          }
+          else {
+            type.type = llvm::Type::getInt8Ty(TheContext);   // i32eturn nullptr;
+            type.base_type = llvm::Type::getInt8Ty(TheContext);
+          }
+          break;
+        case Kind::List: // OBSOLETE AND UNSAFE
+          type.type = llvm::PointerType::getUnqual(llvm::Type::getInt32Ty(TheContext));
+          break;
+        case Kind::Struct: // OBSOLETE AND UNSAFE
             /*type.type = llvm::StructType::create(TheContext, t.user_type);
             break;*/
         case Kind::UserDefined:
-            if (gen->m_struct_templates.contains(t.user_type)) {
-              if (is_ref) {
-                type.type = llvm::PointerType::getUnqual(gen->m_struct_templates.at(t.user_type));
-                type.base_type = gen->m_struct_templates.at(t.user_type);
-                break;
-              }
-
-              type.type = gen->m_struct_templates.at(t.user_type);
-              type.base_type = gen->m_struct_templates.at(t.user_type);
-            }
-            break;
-        case Kind::Ptr:
-          type.type = llvm::PointerType::getInt8Ty(TheContext);
-              type.base_type = llvm::PointerType::getInt8Ty(TheContext);
-            break;
-        case Kind::Any:
-            /*if (!is_ref) {
-              type.type = llvm::PointerType::getInt8Ty(TheContext);
-              type.base_type = llvm::PointerType::getInt8Ty(TheContext);
-              break;
-            }
-            type.type = llvm::PointerType::getUnqual(TheContext);
+          if (gen->m_struct_templates.contains(t.user_type)) {
+            type.base_type = gen->m_struct_templates.at(t.user_type);
+            if (t.pointee != nullptr) {
+              auto pointee_mapping = map_type_to_llvm(*t.pointee, gen);
+              type.type = llvm::PointerType::getUnqual(pointee_mapping.type);
+              type.base_type = pointee_mapping.type;
+            } else type.type = type.base_type; 
+          }
+          break;
+        
+        case Kind::Ptr: { // NOT RECOMMENDED TO USE. DELETE LATER PLS
+          if (!t.pointee) {
             type.base_type = llvm::Type::getInt8Ty(TheContext);
-            break;*/
-            
-             
-if (!is_ref) {
-    type.type = llvm::PointerType::get(llvm::Type::getInt8Ty(TheContext), 0);  // i8*
-    type.base_type = llvm::Type::getInt8Ty(TheContext);                        // i8
-} else {
-    type.type = llvm::PointerType::get(llvm::Type::getInt8Ty(TheContext), 0);  // i8*
-    type.base_type = llvm::Type::getInt8Ty(TheContext);                        // i8
-}
-break;
+            type.type = llvm::PointerType::getUnqual(type.base_type);
+            break;
+          }
+
+          auto pointee_mapping = map_type_to_llvm(*t.pointee, gen);
+
+          type.base_type = pointee_mapping.type;
+          type.type = llvm::PointerType::getUnqual(type.base_type);
+          break;
+        }
+        case Kind::Any:
+          type.base_type = llvm::Type::getInt8Ty(TheContext);
+          if (t.pointee != nullptr) {
+            auto pointee_mapping = map_type_to_llvm(*t.pointee, gen);
+            type.type = llvm::PointerType::getUnqual(pointee_mapping.type);
+            type.base_type = pointee_mapping.type;
+          } else type.type = type.base_type;
+          break;
+          
              
         default:
-            type.type = nullptr;
-            type.base_type = nullptr;
-            break;
-    }
+          llvm::errs() << "Error: cannot map type kind " << (int)t.kind << " to LLVM\n";
+          type.type = nullptr;
+          type.base_type = nullptr;
+          break;
+      }
 
     return type;
 }
@@ -189,6 +189,11 @@ static llvm::Type* get_type(const NodeExpr& e, Generator* gen, bool get_base_typ
       else return gen->m_vars.at(name).type;
     }
     return nullptr;
+  } else if (std::holds_alternative<NodeExprDeref>(e.var)) {
+    NodeExprDeref deref = std::get<NodeExprDeref>(e.var);
+    if (!deref.expr) return nullptr;
+    llvm::Value* val = gen->gen_expr(*deref.expr);
+    return val->getType();
   } else if (std::holds_alternative<NodeExprProperty>(e.var)) {
       NodeExprProperty expr_property = std::get<NodeExprProperty>(e.var);
       llvm::Value* base = gen->gen_expr(*expr_property.base, false, false);
@@ -1025,8 +1030,21 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
     if (llvm::isa<llvm::Constant>(init_val)) {
         initializer = llvm::cast<llvm::Constant>(init_val);
     } else {
-        // init_val no es constante: usa null initializer
-        initializer = llvm::Constant::getNullValue(llvm_type);
+      if (llvm_type->isPointerTy()) {
+            initializer = llvm::ConstantPointerNull::get(
+                llvm::cast<llvm::PointerType>(llvm_type)
+            );
+        } else if (llvm_type->isIntegerTy()) {
+            initializer = llvm::ConstantInt::get(llvm_type, 0);
+        } else if (llvm_type->isFloatingPointTy()) {
+            initializer = llvm::ConstantFP::get(llvm_type, 0.0);
+        } else if (llvm_type->isStructTy() && 
+                   !llvm::cast<llvm::StructType>(llvm_type)->isOpaque()) {
+            initializer = llvm::Constant::getNullValue(llvm_type);
+        } else {
+            initializer = nullptr;
+            add_error("Cannot create null initializer for this type", stmt_var.line);
+        } 
     }
 } else {
     // No hay valor inicial: inicializa con null o 0 según el tipo
@@ -1786,6 +1804,73 @@ void Generator::gen_stmt(const NodeStmt& stmt) {
       }
  
       llvm::Value* call = gen->Builder.CreateCall(func, values);
+    }
+
+    void operator()(const NodeStmtLabel& stmt_label) const {
+      if (gen->current_mode != Mode::Function) {
+        add_error("'label' instruction must be inside of a function", stmt_label.line);
+        return;
+      }
+
+      llvm::Function* function = gen->Builder.GetInsertBlock()->getParent();
+      llvm::BasicBlock* block;
+      auto it = gen->m_declared_blocks.find(stmt_label.ident.value.value());
+      if (it == gen->m_declared_blocks.end()) {
+        block = llvm::BasicBlock::Create(TheContext, stmt_label.ident.value.value(), function);
+        gen->m_declared_blocks[stmt_label.ident.value.value()] = block;
+      } else {
+        block = it->second;
+      }
+
+      llvm::BasicBlock* prev_block = gen->Builder.GetInsertBlock();
+      if (!prev_block->getTerminator()) {
+        gen->Builder.CreateBr(block);
+      }
+
+      gen->Builder.SetInsertPoint(block); 
+    }
+
+    void operator()(const NodeStmtGoto& stmt_goto) const {
+      if (gen->current_mode != Mode::Function) {
+        add_error("'goto' instruction must be inside of a function", stmt_goto.line);
+        return;
+      }
+
+      if (!gen->m_declared_blocks.contains(stmt_goto.ident.value.value())) {
+        llvm::Function* function = gen->Builder.GetInsertBlock()->getParent();
+        llvm::BasicBlock* block = llvm::BasicBlock::Create(TheContext, stmt_goto.ident.value.value(), function);
+        gen->m_declared_blocks.insert({stmt_goto.ident.value.value(), block});
+      }
+
+      gen->Builder.CreateBr(gen->m_declared_blocks.at(stmt_goto.ident.value.value()));
+    }
+
+    void operator()(const NodeStmtScope& stmt_scope) { 
+      static int label_counter = 0;
+      int current = ++label_counter;
+
+      llvm::Function* function = gen->Builder.GetInsertBlock()->getParent();
+
+      llvm::BasicBlock* scope = llvm::BasicBlock::Create(TheContext, "scope_" + std::to_string(current) + "_start", function);
+      gen->stmt_orde.push({scope, {nullptr, nullptr}});
+
+      gen->Builder.CreateBr(scope);
+
+      gen->Builder.SetInsertPoint(scope);
+
+      size_t var_n = gen->m_vars.size();
+      for (const auto& stmt : stmt_scope.code_branch) {
+        gen->gen_stmt(stmt);
+      }
+
+      while (gen->m_vars.size() > var_n) {
+        int i = gen->m_vars_order.size() - 1;
+        const auto& var_name = gen->m_vars_order[i];
+        gen->m_vars.erase(var_name);
+        gen->m_vars_order.pop_back();
+      }
+
+      gen->stmt_orde.pop();
     }
   };
 

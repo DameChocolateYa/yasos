@@ -342,6 +342,10 @@ std::vector<Token> Lexer::tokenize() {
         tokens.push_back({.type = TokenType::_new, .line = local_lines});
         buf.clear();
         continue;
+      } else if (buf == "goto") {
+        tokens.push_back({.type = TokenType::_goto, .value = "goto", .line = local_lines});
+        buf.clear();
+        continue;
       } else if (buf == "$def") {
         tokens.push_back({.type = TokenType::_def, .value = "$def", .line = local_lines});
         buf.clear();
