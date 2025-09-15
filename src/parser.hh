@@ -10,7 +10,7 @@
 #include <memory>
 #include <iostream>
 
-#include "tokenization.hh"
+#include "lexer.hh"
 
 #undef __FILE__
 #define __FILE__ "src/parser.hh"
@@ -20,6 +20,7 @@ struct Type {
     Int,
     Float,
     Str,
+    Char,
     None,
     List,
     Struct,
@@ -34,6 +35,8 @@ struct Type {
   Kind kind; 
   bool is_ref = false; // if type has & before type ident
   std::string user_type = "";
+
+  std::shared_ptr<Type> pointee = nullptr;
 };
 
 struct NodeExpr;
@@ -54,6 +57,11 @@ struct NodeExprStrLit {
     int line;
 };
 
+struct NodeExprCharLit {
+  Token char_lit;
+  int line;
+};
+
 struct NodeExprFloatLit {
     Token float_lit;
     int line;
@@ -61,6 +69,10 @@ struct NodeExprFloatLit {
 
 struct NodeExprNone {
     int line;
+};
+
+struct NodeExprNullptr {
+  int line;
 };
 
 struct NodeExprNoArg {
@@ -117,7 +129,7 @@ struct NodeExprBoolValue {
 };
 
 struct NodeExprProperty {
-    Token ident;
+    std::shared_ptr<NodeExpr> base;
     Token property;
 
     int is_func = false;
@@ -144,7 +156,7 @@ struct NodeExprList {
 };
 
 struct NodeExprListElement {
-	Token list_name;
+	NodeExprPtr list_expr;
 	NodeExprPtr index;
 	int line;
 };
@@ -160,11 +172,33 @@ struct NodeExprNew {
   int line;
 };
 
+struct NodeExprIsDef {
+  Token name;
+  int line;
+};
+
+struct NodeExprIsNotDef {
+  Token name;
+  int line;
+};
+
+struct NodeExprSizeOf {
+  Type type;
+  int line;
+};
+
+struct NodeExprCast {
+  NodeExprPtr expr;
+  Type target_type;
+  int line;
+};
+
 struct NodeExpr {
     std::variant<
         NodeExprIntLit,
         NodeExprIdent,
         NodeExprStrLit,
+        NodeExprCharLit,
         NodeExprFloatLit,
         NodeExprCall,
         NodeExprBinary,
@@ -173,6 +207,7 @@ struct NodeExpr {
         NodeExprUnaryIncDec,
         NodeExprNoArg,
         NodeExprNone,
+        NodeExprNullptr,
         NodeExprCR,
         NodeExprBoolValue,
         NodeExprProperty,
@@ -181,7 +216,11 @@ struct NodeExpr {
 		NodeExprList,
 		NodeExprListElement,
 		NodeExprStruct,
-    NodeExprNew
+    NodeExprNew,
+    NodeExprIsDef,
+    NodeExprIsNotDef,
+    NodeExprSizeOf,
+    NodeExprCast
     > var;
 
     NodeExpr() = default;
@@ -196,6 +235,12 @@ struct NodeExpr {
 struct NodeExit {
     NodeExpr expr;
     int line;
+};
+
+struct NodeStmtAsmUserWrite {
+  std::vector<std::string> format_instructions;
+  std::vector<std::vector<NodeExpr>> exprs;
+  int line;
 };
 
 struct NodeStmtAssign {
@@ -233,7 +278,8 @@ struct NodeStmtUse {
 };
 
 struct NodeStmtImport {
-    Token to_import;
+    Token mod_name;
+    std::vector<std::string> to_import;
     int line;
 };
 
@@ -301,6 +347,7 @@ struct NodeStmtDefFunc {
 	bool is_pub = false;
 	bool is_extern = false;
 	std::vector<std::string> absolute_type_name_args;
+  bool is_vargs;
     int line;
 };
 
@@ -362,7 +409,8 @@ struct NodeStmtHeader {
 };
 
 struct NodeStmtUhead {
-    Token path;
+    Token mod_name;
+    std::vector<std::string> to_import;
     int line;
 };
 
@@ -383,8 +431,62 @@ struct NodeStmtStruct {
 	int line;
 };
 
+enum DefineType {
+  Cond,
+  Value,
+  Func,
+};
+
+struct NodeStmtDefine {
+  Token name;
+  int line;
+};
+
+struct NodeStmtUndef {
+  Token name;
+  int line;
+};
+
+struct NodeStmtPreprocessorCond {
+  Token condition;
+  std::vector<NodeStmt> then_branch;
+  std::vector<Token> elif_conditions;
+  std::vector<std::vector<NodeStmt>> elif_branches;
+  std::vector<NodeStmt> else_branch;
+  int line;
+};
+
+struct NodeStmtPreError {
+  std::string err_msg;
+  int line;
+};
+struct NodeStmtPreWarning {
+  std::string warn_msg;
+  int line;
+};
+
+struct NodeStmtPrint {
+  Token fmt;
+  std::vector<NodeExpr> args;
+  int line;
+};
+
+struct NodeStmtLabel {
+  Token ident;
+  int line;
+};
+struct NodeStmtGoto {
+  Token ident;
+  int line;
+};
+
+struct NodeStmtScope {
+  std::vector<NodeStmt> code_branch;
+  int line;
+};
+
 struct NodeStmt {
-    std::variant<NodeStmtAssign, NodeStmtVar, NodeStmtVarRe, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtLoop, NodeStmtFor, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtMkpub, NodeStmtUnload, NodeStmtStop, NodeStmtContinue, NodeStmtProperty, NodeStmtDeclmod, NodeStmtEndmod, NodeStmtUmod, NodeStmtUbeepmod, NodeStmtLlibrary, NodeStmtLibpath, NodeStmtSetPtr, NodeStmtGlobl, NodeStmtHeader, NodeStmtUhead, NodeStmtLeave, NodeStmtListElement, NodeStmtStruct> var;
+    std::variant<NodeStmtAsmUserWrite, NodeStmtAssign, NodeStmtVar, NodeStmtVarRe, NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile, NodeStmtLoop, NodeStmtFor, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet, NodeStmtMkpub, NodeStmtUnload, NodeStmtStop, NodeStmtContinue, NodeStmtProperty, NodeStmtDeclmod, NodeStmtEndmod, NodeStmtUmod, NodeStmtUbeepmod, NodeStmtLlibrary, NodeStmtLibpath, NodeStmtSetPtr, NodeStmtGlobl, NodeStmtHeader, NodeStmtUhead, NodeStmtLeave, NodeStmtListElement, NodeStmtStruct, NodeStmtDefine, NodeStmtUndef, NodeStmtPreprocessorCond, NodeStmtPreError, NodeStmtPreWarning, NodeStmtPrint, NodeStmtLabel, NodeStmtGoto, NodeStmtScope> var;
     int line;
 };
 
@@ -418,6 +520,8 @@ class Parser {
 
     public:
         inline explicit Parser(std::vector<Token> tokens) : m_tokens(std::move(tokens)) {}
+        Type parse_type();
+        std::optional<NodeExpr> parse_property_chain(std::optional<NodeExpr> base_expr = std::nullopt); 
         std::optional<NodeExpr> parse_primary_expr();
         std::optional<NodeExpr> parse_expr(int min_precedence = 0);
         std::optional<NodeStmt> parse_stmt();

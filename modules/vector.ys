@@ -1,0 +1,76 @@
+use std::{malloc, free, realloc};
+
+struct Vec {
+  internal_array: &any;
+  capacity: int;
+  size: int;
+};
+
+fun vec_new() -> Vec {
+  var vec: Vec;
+  vec.internal_array = malloc(8 * 2);
+  vec.capacity = 2;
+  vec.size = 0;
+
+  ret vec;
+} pub;
+
+fun vec_push(vec: &Vec, n: any) -> none {
+  var local_vec: Vec;
+  local_vec = deref vec;
+
+  if local_vec.size + 1 == local_vec.capacity {
+    local_vec.capacity *= 2;
+    local_vec.internal_array = realloc(local_vec.internal_array, local_vec.capacity * 8);
+  }
+
+  var array: &int = local_vec.internal_array;
+  array[local_vec.size] = n;
+  local_vec.internal_array = array;
+  inc local_vec.size;
+
+  deref vec = local_vec;
+} pub;
+
+fun vec_pop(vec: &Vec) -> int {
+  var local_vec: Vec;
+  local_vec = deref vec;
+
+  if local_vec.size == 0 {
+    "ERROR: POP BACK IN EMPTY VECTOR\n";
+    ret none;
+  }
+
+  dec local_vec.size;
+  var array: &any = local_vec.internal_array;
+  var n: int = array[local_vec.size]; #- I dunno why 'iny'
+  array[local_vec.size] = 0;
+  local_vec.internal_array = array;
+
+  deref vec = local_vec;
+  ret n;
+} pub;
+
+fun vec_get(vec: Vec, index: int) -> int {
+  var array: &int = vec.internal_array;
+  ret array[index];
+} pub;
+
+fun vec_front(vec: Vec) -> int {
+  var array: &int = vec.internal_array;
+  ret array[0];
+} pub;
+
+fun vec_back(vec: Vec) -> int {
+  var array: &int = vec.internal_array;
+  ret array[vec.size - 1];
+} pub;
+
+fun vec_del(vec: &Vec) -> none {
+  var local_vec: Vec;
+  local_vec = deref vec;
+
+  free (local_vec.internal_array);
+
+  deref vec = nullptr;
+} pub;

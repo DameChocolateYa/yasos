@@ -11,6 +11,7 @@ enum class TokenType {
   null_tok,
     int_lit,
     str_lit,
+    char_lit,
     float_lit,
     semi,
     comma,
@@ -21,9 +22,11 @@ enum class TokenType {
     cnst,
     eq,
     str_type,
+    char_type,
     int_type,
     double_type,
 	any_type,
+  ptr_type,
     dp,
     comment_begin,
     comment_end,
@@ -63,6 +66,7 @@ enum class TokenType {
     bang_eq,
     bang,
     none,
+    _nullptr,
     no_arg,
     cr,
 	  _fnc,
@@ -100,6 +104,18 @@ enum class TokenType {
 	_struct,
 	_nwstruct,
   _new,
+  _goto,
+  _def,
+  _undef,
+  _is_def,
+  _is_ndef,
+  _pre_if,
+  _pre_else,
+  _pre_elif,
+  _pre_endif,
+  _pre_error,
+  _pre_warning,
+  _size_of
 };
 
 struct Token {
@@ -108,7 +124,7 @@ struct Token {
     int line;
 };
 
-class Tokenizer {
+class Lexer {
     private:
         [[nodiscard]] inline std::optional<char> peek(int offset = 0) const {
             if (m_index + offset >= m_src.length()) {
@@ -127,7 +143,7 @@ class Tokenizer {
         size_t m_index = 0;
 
     public:
-        inline explicit Tokenizer(const std::string& src) : m_src(std::move(src)) {
+        inline explicit Lexer(const std::string& src) : m_src(std::move(src)) {
         }
 
         std::vector<Token> tokenize();

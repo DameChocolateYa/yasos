@@ -1,13 +1,38 @@
-#- By the moment, special types like file wich should be a struct, will be any type
+struct File {
+  fd: int; #- Descriptor
+  buffer: &str;
+  buf_size: int;
+  pos: int;
+  flags: int;
+};
 
-extern fun openf(file: &any, path: str, mode: str) -> none;
-extern fun readf(file: &any) -> str;
-extern fun writef(file: &any, text: str) -> none;
-extern fun closef(file: &any) -> none;
-extern fun is_fopen(file: any) -> int;
+extern fun file_open(path: str, flags: int) -> File;
+extern fun file_close(f: &File);
+extern fun file_isopen(f: File) -> int;
+extern fun file_write(f: &File, data: str) -> int;
+extern fun file_read(f: &File) -> str;
+extern fun file_seek(f: &File, pos: int, whence: int) -> none;
 
-extern fun makedir(path: str) -> none;
-extern fun makedirs(path: str) -> none;
-extern fun removef(filepath: str) -> none;
-extern fun removedir(dirpath: str) -> none;
-extern fun removedirr(path: str) -> none;
+$if __LINUX__
+  cnst F_RDONLY: int = 0;
+  cnst F_WRONLY: int = 1;
+  cnst F_RDWR: int = 2;
+  cnst F_CREAT: int = 64;
+  cnst F_EXCL: int = 128;
+  cnst F_TRUNC: int = 512;
+  cnst F_APPEND: int = 1024;
+  cnst SEEK_SET: int = 0;
+  cnst SEEK_CUR: int = 1;
+  cnst SEEK_END: int = 2;
+$else #- Define anyways
+  cnst F_RDONLY: int = 0;
+  cnst F_WRONLY: int = 0;
+  cnst F_RDWR: int = 0;
+  cnst F_CREAT: int = 0;
+  cnst F_EXCL: int = 0;
+  cnst F_TRUNC: int = 0;
+  cnst F_APPEND: int = 0;
+  cnst SEEK_SET: int = 0;
+  cnst SEEK_CUR: int = 1;
+  cnst SEEK_END: int = 2;
+$endif

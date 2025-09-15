@@ -1,0 +1,1 @@
+extern fun bytostr(s: str, size: int) -> str;

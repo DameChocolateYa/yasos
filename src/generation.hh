@@ -1,16 +1,25 @@
 #pragma once
 
 #include <cstdlib>
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <set>
 #include <sstream>
 #include <string>
 #include <unistd.h>
 #include <unordered_map>
 #include <map>
 #include <stack>
+#include <any>
 
 #include "parser.hh"
 #include "global.hh"
 #include "error.hh"
+
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
 
 #undef __FILE__
 #define __FILE__ "src/generation.hpp"
@@ -49,6 +58,8 @@ extern std::unordered_map<std::string, Type> m_fnc_rets;
 
 extern std::unordered_map<std::string, std::pair<Type, std::vector<Type>>> declared_funcs;
 
+extern std::set<std::string> m_preprocessor;
+
 typedef enum { TYPE_INT, TYPE_CHAR, TYPE_DOUBLE } TypeTag;
 
 typedef struct {
@@ -60,6 +71,9 @@ typedef struct {
     } value;
 } AnyValue;
 
+extern std::unique_ptr<llvm::Module> TheModule;
+extern llvm::LLVMContext TheContext;
+
 class Generator {
 private:
 
@@ -69,13 +83,25 @@ public:
 	Mode mod;
 	std::string current_mod = "";
 	std::stringstream function_buffer, main_buffer;
+ 
+  llvm::IRBuilder<> Builder; 
+  std::unique_ptr<llvm::Module> ModModule;
 
 	struct Var {
-	    size_t stack_loc;
-	    Type type;
-	    std::string name;
-	    int is_mutable;
-		  std::string struct_template = "";
+    Var* parent = nullptr; 
+    llvm::Type* type; // This can be a pointer to i32 for example
+    llvm::Type* base_type; // And this the base, for example i32 (primitive data)
+	  std::string name;
+    llvm::Value* var_ptr;
+	  bool is_mutable;
+    bool is_globl;
+		std::string struct_template = "";
+
+    bool operator<(const Var& other) const {
+        if (name != other.name)
+            return name < other.name;
+        return parent < other.parent;
+    }
 	};
   struct GlobVar {
 	    NodeExpr expr;
@@ -96,14 +122,17 @@ public:
 	std::map<std::string, std::pair<int, int>> m_lists;
 	std::unordered_map<std::string, GlobVar> m_glob_vars;
 	std::vector<std::string> m_vars_order;
-  std::unordered_map<std::string, std::pair<Type, std::vector<Type>>> declared_funcs;
+  std::unordered_map<std::string, std::pair<llvm::Type*, std::vector<llvm::Type*>>> declared_funcs;
 	std::unordered_map<std::string, std::vector<Var>> m_fnc_args;
 	std::unordered_map<std::string, Type> m_fnc_custom_ret;
 	std::vector<std::string> m_string_literals;
 	std::vector<float> m_float_literals;
-	std::stack<std::string> stmt_orde;
+	std::stack<std::pair<llvm::BasicBlock*, std::pair<llvm::BasicBlock*, llvm::BasicBlock*>>> stmt_orde; // 1 - start | 2- end | 3- update (for)
+  std::unordered_map<std::string, llvm::BasicBlock*> m_declared_blocks;
 
-	std::map<std::string, std::vector<std::pair<std::string, Type>>> m_structs;
+  std::map<std::string, llvm::StructType*> m_struct_templates;
+  std::map<std::string, std::map<std::string, std::pair<int, llvm::Type*>>> m_struct_arg_templates;
+
 	std::map<std::string, std::vector<NodeExpr>> m_vars_in_structs;
 	std::vector<NodeExpr> m_struct_temp_args; // shitty way
 
@@ -116,6 +145,22 @@ public:
   bool write_stmt = true;
   std::stringstream buf;
 
+  static size_t size_of(Type::Kind type) {
+    switch (type) {
+      case Type::Kind::Int: return 4;
+      case Type::Kind::Str: return 8;
+      case Type::Kind::Float: return 8;
+      case Type::Kind::Any: return 8;
+      case Type::Kind::None: return 1;
+      default: return 8;
+    }
+
+    return 8;
+  }
+
+  static std::string reg_transform(const std::string& reg, size_t bytes) {
+  }
+
 	inline void write(const std::string& output, int newline = true) {
       if (!write_stmt) {
         buf << output << (newline ? "\n" : "");
@@ -126,142 +171,44 @@ public:
 	    else main_buffer << output << (newline ? "\n" : "");
 	}
 
-  const std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7"};
-  enum Op {
-    Mov,
-    Add,
-    Lea,
-    Mul,
-    Sub,
-    Div,
-  };
-  inline void mov(const std::string& reg1, const std::string& reg2, Op op = Op::Mov, bool reg1_pointer = false, bool reg2_pointer = false) {
-    std::stringstream buf;
-    buf << "  ";
-    bool is_float_op = (std::find(float_regs.begin(), float_regs.end(), reg1) != float_regs.end() || std::find(float_regs.begin(), float_regs.end(), reg2) != float_regs.end());
-    switch (op) {
-      case Op::Mov:
-        if (is_float_op) buf << "movsd ";
-        else buf << "mov ";
-        break;
-      case Op::Add:
-        if (is_float_op) buf << "addsd ";
-        else buf << "add ";
-        break;
-      case Op::Mul:
-        if (is_float_op) buf << "imul ";
-        else buf << "mulsd ";
-        break;
-      case Op::Div:
-        break;
-      case Op::Lea:
-        buf << "lea ";
-        break;
-    }
-    
-    if (reg1_pointer) buf << "(%" << reg1 << ")";
-    else buf << "%" << reg1;
+	inline Var insert_var(const std::string& name, Var* parent, llvm::Type* type, llvm::Type* base_type, llvm::Value* var_ptr, int is_mutable = true, bool is_globl = false, std::string struct_template = "") {
+      m_vars.insert({name, Var{.parent = parent, .type = type, .base_type = base_type, .name = name, .var_ptr = var_ptr, .is_mutable = is_mutable, .is_globl = is_globl, .struct_template = struct_template}});
+      m_vars_order.push_back(name); 
+      return m_vars.at(name);
+	} 
 
-    buf << ", ";
-
-    if (reg2_pointer) buf << "(%" << reg2 << ")";
-    else buf << "%" << reg2;
-    buf << "\n";
-
-    if (current_mode == Mode::Function) function_buffer << buf.str();
-	  else main_buffer << buf.str();
-  }
-
-	inline void insert_var(const std::string& name, Type type, int is_mutable = true, const std::string& struct_template = "", bool is_globl = false, NodeExpr expr = NodeExpr(NodeExprNone {.line = 0})) {
-	    if (!is_globl) {
-        m_vars.insert({name, Var{.stack_loc = m_stack_size_rel, .type = type, .name = name, .is_mutable = is_mutable, .struct_template = struct_template}});
-         m_vars_order.push_back(name);
-      } else {
-        m_glob_vars.insert({name, GlobVar{.expr = expr, .type = type, .name = name, .is_mutable = is_mutable, .struct_template = struct_template}});
-      }
-	}
-
-	void push(const std::string& reg, int newline = true) {
-	    //write("  push " + reg);
-	    //write("  push %" + reg, newline); 
-      ++m_stack_size;
-      ++m_stack_size_rel;
-      write("  mov %" + reg + ", " + std::to_string((m_stack_size_rel - 1) * 8) + "(%rsp)"); 
-	}
-
-	void push_float(const std::string& reg, int newline = true) {
-	    write("  sub $8, %rsp");
-		write("  movsd %" + reg + ", (%rsp)");
-		++m_stack_size;
-	}
-
-	void pop(const std::string& reg, int newline = true) {
-	    //write( "  pop " + reg);
-	    //write("  pop %" + reg);
-      write("  mov " + std::to_string((m_stack_size_rel - 1) * 8) + "(%rsp), %" + reg);
-	    if (m_stack_size == 0) {
-	        std::cerr << "Stack underflow!\n";
-	        exit(EXIT_FAILURE);
-	    }
-	    --m_stack_size;
-      --m_stack_size_rel;
-	}
-
-	void pop_float(const std::string& reg, int newline = true) {
-	    write("  movsd (%rsp), %" + reg);
-	    write("  add $8, %rsp", newline);
-	    if (m_stack_size == 0) {
-	        std::cerr << "Float stack underflow!\n";
-	        exit(EXIT_FAILURE);
-	    }
-	    --m_stack_size;
-	}
-
-	size_t get_var(const std::string& var_name, size_t line) {
-	    if (!m_vars.contains(var_name)) {
-	        add_error("Error trying to get an undeclared variable (" + var_name + ")", line);
-	        exit(EXIT_FAILURE);
-	    }
-	    size_t offset_bytes = (m_vars.at(var_name).stack_loc - 1) * 8; // this should be the var pos
-	    return offset_bytes;
-	}
-
-	inline void call(const std::string& name) {
-	    // Align stack pointer in 16 bytes for System V ABI
-	
-	    size_t old_stack_size = m_stack_size;
-	    if (((m_stack_size) % 2) != 0) {
-			write("  sub $8, %rsp");
-	        ++m_stack_size;
-	    }
-
-	    write("  call " + name + "@PLT");
-
-	    // Reset stack size
-	    if (m_stack_size != old_stack_size) {
-	        write("  add $8, %rsp");
-	        --m_stack_size;
-	    }
-	}
-
-    inline explicit Generator(NodeProg root, std::string filename) : m_prog(std::move(root)), filename(filename) {}
+    inline explicit Generator(NodeProg root, std::string filename, std::unique_ptr<llvm::Module> module) : m_prog(std::move(root)), filename(filename), Builder(TheContext), ModModule(std::move(module)){}
 
     std::vector<std::string> libraries;
     std::vector<std::string> libpaths;
 
-    void gen_expr(const NodeExpr& expr, bool push_result=true, const std::string& reg = "rax", bool is_value = true, bool is_func_call = false);
+    llvm::Value* gen_expr(const NodeExpr& expr, bool as_lvalue = false, bool get_pointer = false);
     void gen_stmt(const NodeStmt& stmt);
-    [[nodiscard]] std::string gen_prog();
+    void gen_prog();
 };
 
-static std::string escape_string(const std::string& raw) {
-    std::string out;
-    for (char c : raw) {
-        switch (c) {
-            case '"':  out += "\\\""; break;
-            //case '\\': out += "\\\\"; break;
-            default:   out += c;
+
+std::string escape_string(const std::string& s) {
+    std::string result;
+    result.reserve(s.size());
+    for (size_t i = 0; i < s.size(); ++i) {
+        if (s[i] == '\\' && i + 1 < s.size()) {
+            char next = s[i + 1];
+            if (next == 'n') {
+                result += '\n';
+                ++i;
+            } else if (next == 't') {
+                result += '\t';
+                ++i;
+            } else if (next == '\\') {
+                result += '\\';
+                ++i;
+            } else {
+                result += '\\';
+            }
+        } else {
+            result += s[i];
         }
     }
-    return out;
+    return result;
 }

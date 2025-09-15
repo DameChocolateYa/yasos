@@ -9,4 +9,4 @@ extern fun fabs(x: double) -> double;
 extern fun fact(x: int) -> int;
 extern fun log(x: double, base: double) -> double;
 
-cnst PI: double = 0;
+cnst PI: double = 3.141592;

@@ -1,0 +1,11 @@
+use string::{strsub, strcat};
+
+fun bytostr(s: str, size: int) -> str {
+  var result: str = "";
+
+  for var i: int = 0; i < size; inc i {
+    result = strcat(result, strsub(s, i, i + 1));
+  }
+
+  ret result;
+} pub;
