@@ -1,0 +1,5 @@
+import std;
+
+fun helloworld {
+	std::println("Hello world!");
+} pub;

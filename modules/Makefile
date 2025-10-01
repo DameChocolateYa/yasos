@@ -4,7 +4,7 @@ TARGET = libys.so
 CC = gcc
 AS = gcc
 YS = yasos
-CFLAGS = -Wall -Wextra -O2 -fPIC -g -L/usr/lib/yslib -lys
+CFLAGS = -Wall -Wextra -O2 -fPIC -g -L/usr/lib/yslib -lys -fvisibility=hidden
 LDFLAGS = -shared
 
 SRC_C       = $(wildcard *.c)

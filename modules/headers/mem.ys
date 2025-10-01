@@ -1,0 +1,6 @@
+declmod mem;
+extern fun memalloc(size: int) -> &any;
+extern fun memrealloc(pointer: &any, size: int) -> &any;
+extern fun memfree(pointer: &any) -> none;
+extern fun memcalloc(amount: int, size: int) -> &any;
+endmod;

@@ -1,41 +1,54 @@
+declmod string;
+
 extern fun len(s: str) -> int;
-extern fun strcat(s1: str, s2: str) -> str;
+extern fun cat(s1: str, s2: str) -> str;
 extern fun bufcat(buf: &str, s2: str) -> none;
 
-extern fun strcut_index(s1: str, begin: int, end: int) -> str;
-extern fun bufcut_index(buf: &str, begin: int, end: int) -> none;
+extern fun cutidx(s1: str, begin: int, end: int) -> str;
+extern fun bufcutidx(buf: &str, begin: int, end: int) -> none;
 
-extern fun strcut(string: str, substr: str) -> str;
+extern fun cut(string: str, substr: str) -> str;
 extern fun bufcut(buf: &str, substr: str) -> none;
 
-extern fun strsub(s1: str, begin: int, end: int) -> str;
+extern fun sub(s1: str, begin: int, end: int) -> str;
 extern fun bufsub(buf: &str, begin: int, end: int) -> none;
 
-extern fun stoint(s: str) -> int;
-extern fun stodb(s: str) -> double;
-extern fun itostr(n: int) -> str;
-extern fun dbtostr(n: double, decimals: int) -> str;
+extern fun to_int(s: str) -> int;
+extern fun to_double(s: str) -> double;
 
-extern fun strcmp(s1: str, s2: str) -> int;
-extern fun charcmp(ch1: char, ch2: char) -> int;
+extern fun cmp(s1: str, s2: str) -> int;
 extern fun dig_to_abc(n: int) -> str;
 
-extern fun strempty(s: str) -> int;
+extern fun is_empty(s: str) -> int;
 extern fun is_whitespace(s: str) -> int;
 
 extern fun trim(s: str) -> str;
 extern fun buftrim(buf: &str) -> none;
 
-extern fun strreplace(s: str, old_sub: str, new_sub: str) -> str;
-extern fun bufreplace(buf: &str, old_sub: str, new_sub: str) -> none;
+extern fun repl(s: str, old_sub: str, new_sub: str) -> str;
+extern fun bufrepl(buf: &str, old_sub: str, new_sub: str) -> none;
 
-extern fun str_upper(string: str) -> str;
-extern fun str_lower(string: str) -> str;
+extern fun to_upper(string: str) -> str;
+extern fun to_lower(string: str) -> str;
 
-extern fun strcontains(string: str, substr: str) -> str;
-extern fun strcontains_case(string: str, substr: str) -> str;
-extern fun strfind(string: str, substr: str) -> int;
+extern fun contains(string: str, substr: str) -> str;
+extern fun contains_case(string: str, substr: str) -> str;
+extern fun find(string: str, substr: str) -> int;
 
 cnst STR_EMPTY: str = "";
 cnst STR_WHITE: str = " ";
 cnst STR_NULLT: str = "\0";
+
+endmod;
+
+declmod integer;
+extern fun to_str(n: int) -> str;
+endmod;
+
+declmod decimal;
+extern fun to_str(n: double, decimals: int) -> str;
+endmod;
+
+declmod character;
+extern fun cmp(ch1: char, ch2: char) -> int;
+endmod;
