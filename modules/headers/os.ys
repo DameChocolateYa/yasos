@@ -1,0 +1,7 @@
+declmod os;
+
+extern fun execute(cmd: str) -> int;
+
+extern fun getenv(name: str) -> str;
+
+endmod;

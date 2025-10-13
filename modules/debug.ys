@@ -1,5 +1,9 @@
 import std;
+import string;
 
+declmod debug;
 fun helloworld {
-	std::println("Hello world!");
+  cnst msg: str = "Hello world!\n";
+  std::write(2, msg, string::len(msg));
 } pub;
+endmod;

@@ -31,9 +31,11 @@ extern fun bufrepl(buf: &str, old_sub: str, new_sub: str) -> none;
 extern fun to_upper(string: str) -> str;
 extern fun to_lower(string: str) -> str;
 
-extern fun contains(string: str, substr: str) -> str;
-extern fun contains_case(string: str, substr: str) -> str;
+extern fun contains(string: str, substr: str) -> int;
+extern fun contains_case(string: str, substr: str) -> int;
 extern fun find(string: str, substr: str) -> int;
+
+extern fun get_splited(string: str, delimiter: str, bufsize: &int) -> &str;
 
 cnst STR_EMPTY: str = "";
 cnst STR_WHITE: str = " ";

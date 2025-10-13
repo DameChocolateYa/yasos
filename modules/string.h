@@ -1,0 +1,1 @@
+int len$MODstring(const char* s);

@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
 #elif INTPTR_MAX == INT32_MAX
   m_preprocessor_bool.insert("__32BYTES__");
 #else
-#error "Arquitectura desconocida"
+#error "Architecture not compatible"
 #endif
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__

@@ -195,6 +195,11 @@ struct NodeExprFact {
   int line;
 };
 
+struct NodeExprAbs {
+  NodeExprPtr expr;
+  int line;
+};
+
 struct NodeExpr {
   std::variant<NodeExprIntLit, NodeExprIdent, NodeExprStrLit, NodeExprCharLit,
     NodeExprFloatLit, NodeExprCall, NodeExprBinary, NodeExprBinaryAssign,
@@ -202,7 +207,7 @@ struct NodeExpr {
     NodeExprNullptr, NodeExprCR, NodeExprBoolValue, NodeExprProperty,
     NodeExprGetPtr, NodeExprDeref, NodeExprList, NodeExprListElement,
     NodeExprStruct, NodeExprNew, NodeExprIsDef, NodeExprIsNotDef,
-    NodeExprSizeOf, NodeExprCast, NodeExprFact>
+    NodeExprSizeOf, NodeExprCast, NodeExprFact, NodeExprAbs>
       var;
 
   NodeExpr() = default;

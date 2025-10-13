@@ -1,13 +1,30 @@
 struct Vec {
-  internal_array: &any;
-  capacity: int;
-  size: int;
+    data: &any;
+    size: int;
+    capacity: int;
+    elem_size: int;
 };
 
-extern fun vec_new() -> Vec;
-extern fun vec_push(vec: &Vec, n: any) -> none;
-extern fun vec_pop(vec: &Vec) -> int;
-extern fun vec_get(vec: Vec, index: int) -> int;
-extern fun vec_front(vec: Vec) -> int;
-extern fun vec_back(vec: Vec) -> int;
-extern fun vec_del(vec: &Vec) -> none;
+declmod vec;
+
+extern fun new(elem_size: int) -> Vec;
+extern fun free(vec: &Vec);
+extern fun init(vec: &Vec, elem_size: int);
+
+extern fun push(vec: &Vec, val: &any);
+extern fun pop(vec: &Vec) -> &any;
+extern fun edit(vec: &Vec, index: int, elem: &any);
+
+extern fun get(vec: &Vec) -> &any;
+extern fun size(vec: &Vec) -> int;
+
+extern fun erase(vec: &Vec, index: int);
+extern fun erase_all(vec: &Vec);
+
+extern fun increment(vec: &Vec, amount: int);
+extern fun decrease(vec: &Vec, amount: int);
+
+extern fun front(vec: &Vec) -> &any;
+extern fun back(vec: &Vec) -> &any;
+
+endmod;

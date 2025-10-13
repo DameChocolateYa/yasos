@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "math.h"
 
+__attribute__((visibility("default")))
 double sqrt(double x) {
     if (x < 0) return 1;
     if (x == 0 || x == 1) return x;
@@ -15,6 +16,7 @@ double sqrt(double x) {
     return guess;
 }
 
+__attribute__((visibility("default")))
 double round(double num, int decimals) {
     double factor = pow(10.0, decimals);
     double x = 0.5;
@@ -23,10 +25,12 @@ double round(double num, int decimals) {
     return (double)temp / factor;
 }
 
+__attribute__((visibility("default")))
 int db_to_int(float n) {
     return (int)n;
 }
 
+__attribute__((visibility("default")))
 double ceil(double num) {
     long long int_part = (long long)num;
 
@@ -38,6 +42,7 @@ double ceil(double num) {
     }
 }
 
+__attribute__((visibility("default")))
 double floor(double n) {
     long long int_part = (long long)n;
 
@@ -49,11 +54,13 @@ double floor(double n) {
     }
 }
 
+__attribute__((visibility("default")))
 int abs(int x) {
     if (x >= 0) return x;
     else return -x;
 }
 
+__attribute__((visibility("default")))
 double fabs(double x) {
     if (x >= 0.0) return x;
     else return -x;

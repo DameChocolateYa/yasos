@@ -1,5 +1,6 @@
 declmod std;
 
+extern fun fmt(fmt: str, undefan) -> str;
 extern fun print(first_arg: str, undefan) -> none;
 extern fun println(first_arg: str, undefan) -> none;
 extern fun printf(first_arg: str, undefan) -> none;
@@ -10,14 +11,15 @@ extern fun is_decimal(s: str) -> int;
 extern fun is_num(s: str) -> int;
 extern fun waitk() -> none;
 extern fun cls() -> none;
-extern fun sysexc(command: str) -> int;
+extern fun system(command: str) -> int;
 extern fun termc(color: int) -> none;
 extern fun randi(min: int, max: int) -> int;
 extern fun randf(min: double, max: double, decimals: int) -> double;
-extern fun nap(seconds: double) -> int;
+extern fun sleep(seconds: double) -> int;
 
 extern fun write(channel: int, msg: str, len: int) -> none;
-extern fun prerror(fmt: str, undefan) -> none;
+extern fun putchar(c: str);
+extern fun perror(fmt: str, undefan) -> none;
 
 extern fun panic(msg: str) -> none;
 extern fun cuspanic(msg: str, status: int) -> none;
@@ -33,7 +35,6 @@ extern fun asprintf(buffer, &str, format: str, undefan) -> &any;
 extern fun format(format: str, undefan) -> str;
 extern fun bufformat(buf_and_format: &str, undefan) -> &any;
 
-extern fun system(proc: str) -> int;
 extern fun exit(status: int) -> none;
 
 #- Constant are filled with no important values

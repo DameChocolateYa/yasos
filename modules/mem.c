@@ -72,7 +72,7 @@ static block_t *fusion(block_t *b) {
 
 /* API */
 __attribute__((visibility("default")))
-void *memalloc$MODmem(size_t size) {
+void *alloc$MODmem(size_t size) {
   if (size == 0)
     return NULL;
   size = ALIGN8(size);
@@ -108,7 +108,7 @@ void *memalloc$MODmem(size_t size) {
 }
 
 __attribute__((visibility("default")))
-void memfree$MODmem(void *ptr) {
+void free$MODmem(void *ptr) {
   if (!ptr)
     return;
 
@@ -151,11 +151,11 @@ void memfree$MODmem(void *ptr) {
 }
 
 __attribute__((visibility("default")))
-void *memrealloc$MODmem(void *ptr, size_t size) {
+void *realloc$MODmem(void *ptr, size_t size) {
   if (!ptr)
-    return memalloc$MODmem(size);
+    return alloc$MODmem(size);
   if (size == 0) {
-    memfree$MODmem(ptr);
+    free$MODmem(ptr);
     return NULL;
   }
 
@@ -188,19 +188,35 @@ void *memrealloc$MODmem(void *ptr, size_t size) {
   size_t old_size = b->size;
   pthread_mutex_unlock(&global_lock);
 
-  void *newp = memalloc$MODmem(size);
+  void *newp = alloc$MODmem(size);
   if (!newp)
     return NULL;
   memcpy(newp, ptr, old_size);
-  memfree$MODmem(ptr);
+  free$MODmem(ptr);
   return newp;
 }
 
 __attribute__((visibility("default")))
-void *memcalloc$MODmem(size_t nmemb, size_t size) {
+void *calloc$MODmem(size_t nmemb, size_t size) {
   size_t total = nmemb * size;
-  void *p = memalloc$MODmem(total);
+  void *p = alloc$MODmem(total);
   if (p)
     memset(p, 0, total);
   return p;
+}
+
+__attribute__((visibility("default")))
+void free_array$MODmem(void **array, int size) {
+  for (int i = 0; i < size; i++) {
+    free$MODmem(array[i]);
+  }
+  free$MODmem(array);
+}
+
+__attribute__((visibility("default")))
+void free_arrayN$MODmem(void **array) {
+  for (int i = 0; i != NULL; i++) {
+    free$MODmem(array[i]);
+  }
+  free$MODmem(array);
 }

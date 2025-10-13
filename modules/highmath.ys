@@ -25,7 +25,7 @@ fun pow(base: double, exponent: int) -> double {
 
 fun ln(x: double) -> double {
   if x <= .0 {
-    std::prerror("ERROR: ln(x) undefined for x <= 0\n");
+    std::perror("ERROR: ln(x) undefined for x <= 0\n");
     ret .0;
   }
 
@@ -117,7 +117,7 @@ fun tan(angle: double) -> double {
   var c: double = math::cos(angle);
 
   if c == 0. {
-    std::prerror("ERROR: undefined tan\n");
+    std::perror("ERROR: undefined tan\n");
     ret 0.0; #- TODO: change for NaN
   }
 
@@ -128,7 +128,7 @@ fun cosec(angle: double) -> double {
   var s: double = math::sin(angle);
 
   if s == 0. {
-  	std::prerror("ERROR: undefined sin\n");
+  	std::perror("ERROR: undefined sin\n");
   	ret 0.;
   }
 
@@ -139,7 +139,7 @@ fun sec(angle: double) -> double {
   var c: double = math::cos(angle);
 
   if c == 0. {
-  	std::prerror("ERROR: undefined cos\n");
+  	std::perror("ERROR: undefined cos\n");
   	ret 0.;
   }
 
@@ -150,7 +150,7 @@ fun cotan(angle: double) -> double {
   var t: double = math::tan(angle);
 
   if t == 0.0 {
-  	std::prerror("ERROR: undefined tan\n");
+  	std::perror("ERROR: undefined tan\n");
   	ret 0.0;
   }
 

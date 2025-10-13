@@ -231,21 +231,39 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
     peek(1).has_value() && peek(1).value().type == TokenType::bang &&
     peek(2).has_value() && peek(2).value().type == TokenType::bang &&
     !recursive_expr) {
-      int line = peek().value().line;
+    int line = peek().value().line;
+    recursive_expr = true;
+    auto expr = parse_expr();
+    recursive_expr = false;
+
+    if (!expr.has_value()) {
+      add_error("Malformed expression", line);
+      return std::nullopt;
+    }
+
+    consume(); consume();
+
+    return NodeExpr(NodeExprFact {.expr = std::make_shared<NodeExpr>(*expr), .line = line});
+  } else if (peek().has_value() && peek().value().type == TokenType::pipe &&
+      peek(1).has_value() && peek(1).value().type != TokenType::pipe && !recursive_expr) {
+      int line = consume().line;
+
       recursive_expr = true;
       auto expr = parse_expr();
       recursive_expr = false;
 
       if (!expr.has_value()) {
-        add_error("Malformed expression", line);
+        add_error("Malformed Expression in abs", line);
         return std::nullopt;
       }
 
-      consume(); consume();
+      if (!peek().has_value() || peek().value().type != TokenType::pipe) {
+        add_error("Expected '|' to close abs expression", line);
+        return std::nullopt;
+      } else consume();
 
-      return NodeExpr(NodeExprFact {.expr = std::make_shared<NodeExpr>(*expr), .line = line});
-    }
-  else if (peek().has_value() && is_unary_op(peek().value())) {
+      return NodeExpr(NodeExprAbs {.expr = std::make_shared<NodeExpr>(*expr), .line = line});
+    } else if (peek().has_value() && is_unary_op(peek().value())) {
     int line = peek().value().line;
     Token op = consume();
 
@@ -568,7 +586,8 @@ std::optional<NodeExpr> Parser::parse_expr(int min_precedence) {
     if (op_token.type == TokenType::close_paren || op_token.type == TokenType::comma ||
         op_token.type == TokenType::r_bracket || op_token.type == TokenType::r_key ||
         op_token.type == TokenType::l_key || op_token.type == TokenType::dp ||
-        op_token.type == TokenType::semi || is_assignment_op(op_token) || op_token.type == TokenType::bang) {
+        op_token.type == TokenType::semi || is_assignment_op(op_token) || 
+        op_token.type == TokenType::bang || op_token.type == TokenType::pipe) {
       break;
     }
 

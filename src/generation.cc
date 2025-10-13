@@ -818,6 +818,30 @@ llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
 
       return result;
     }
+
+    llvm::Value *operator()(const NodeExprAbs &expr_abs) const {
+      llvm::Value *val = gen->gen_expr(*expr_abs.expr);
+      if (val == nullptr) return nullptr;
+
+      llvm::Type *type = val->getType();
+      const std::string& func_name = type->isDoubleTy() ? "fabs" : "abs";
+
+      std::vector<llvm::Type *> param_types = {
+        type->isDoubleTy() ? llvm::Type::getDoubleTy(TheContext) : llvm::Type::getInt32Ty(TheContext),
+      };
+
+      llvm::FunctionType *func_type = llvm::FunctionType::get(
+        type->isDoubleTy() ? llvm::Type::getDoubleTy(TheContext) : llvm::Type::getInt32Ty(TheContext),
+        param_types, false
+      );
+
+      llvm::Function *abs_func = llvm::Function::Create(
+        func_type, llvm::Function::ExternalLinkage, func_name, gen->ModModule.get()
+      );
+      llvm::Value *result = gen->Builder.CreateCall(abs_func, {val}, func_name);
+
+      return result;
+    }
   };
 
   ExprVisitor visitor{.gen = this, .as_lvalue = as_lvalue, .get_pointer = get_pointer};
@@ -1844,7 +1868,7 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
             llvm::Type::getVoidTy(TheContext), param_types, true);
 
         func = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage,
-                                      "print", gen->ModModule.get());
+                                      fn, gen->ModModule.get());
       }
       llvm::Value *call = gen->Builder.CreateCall(func, values);
     }

@@ -179,11 +179,11 @@ std::vector<Token> Lexer::tokenize() {
         tokens.push_back({.type = TokenType::mkpub, .line = local_lines});
         buf.clear();
         continue;
-      } else if (buf == "get") {
+      } /*else if (buf == "get") {
         tokens.push_back({.type = TokenType::get, .line = local_lines});
         buf.clear();
         continue;
-      } else if (buf == "while") {
+      }*/ else if (buf == "while") {
         tokens.push_back({.type = TokenType::_while, .line = local_lines});
         buf.clear();
         continue;
@@ -287,11 +287,11 @@ std::vector<Token> Lexer::tokenize() {
         tokens.push_back({.type = TokenType::_nwstruct, .line = local_lines});
         buf.clear();
         continue;
-      } else if (buf == "new") {
+      } /*else if (buf == "new") {
         tokens.push_back({.type = TokenType::_new, .line = local_lines});
         buf.clear();
         continue;
-      } else if (buf == "goto") {
+      } */else if (buf == "goto") {
         tokens.push_back(
             {.type = TokenType::_goto, .value = "goto", .line = local_lines});
         buf.clear();

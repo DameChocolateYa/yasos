@@ -1,0 +1,32 @@
+[
+{
+  "directory": "/home/samuel/dev/yasos/yasos",
+  "command": "/usr/sbin/c++   -no-pie -g -O3 -std=gnu++23 -o CMakeFiles/yasos.dir/src/error.cc.o -c /home/samuel/dev/yasos/yasos/src/error.cc",
+  "file": "/home/samuel/dev/yasos/yasos/src/error.cc",
+  "output": "CMakeFiles/yasos.dir/src/error.cc.o"
+},
+{
+  "directory": "/home/samuel/dev/yasos/yasos",
+  "command": "/usr/sbin/c++   -no-pie -g -O3 -std=gnu++23 -o CMakeFiles/yasos.dir/src/lexer.cc.o -c /home/samuel/dev/yasos/yasos/src/lexer.cc",
+  "file": "/home/samuel/dev/yasos/yasos/src/lexer.cc",
+  "output": "CMakeFiles/yasos.dir/src/lexer.cc.o"
+},
+{
+  "directory": "/home/samuel/dev/yasos/yasos",
+  "command": "/usr/sbin/c++   -no-pie -g -O3 -std=gnu++23 -o CMakeFiles/yasos.dir/src/parser.cc.o -c /home/samuel/dev/yasos/yasos/src/parser.cc",
+  "file": "/home/samuel/dev/yasos/yasos/src/parser.cc",
+  "output": "CMakeFiles/yasos.dir/src/parser.cc.o"
+},
+{
+  "directory": "/home/samuel/dev/yasos/yasos",
+  "command": "/usr/sbin/c++   -no-pie -g -O3 -std=gnu++23 -o CMakeFiles/yasos.dir/src/generation.cc.o -c /home/samuel/dev/yasos/yasos/src/generation.cc",
+  "file": "/home/samuel/dev/yasos/yasos/src/generation.cc",
+  "output": "CMakeFiles/yasos.dir/src/generation.cc.o"
+},
+{
+  "directory": "/home/samuel/dev/yasos/yasos",
+  "command": "/usr/sbin/c++   -no-pie -g -O3 -std=gnu++23 -o CMakeFiles/yasos.dir/src/main.cc.o -c /home/samuel/dev/yasos/yasos/src/main.cc",
+  "file": "/home/samuel/dev/yasos/yasos/src/main.cc",
+  "output": "CMakeFiles/yasos.dir/src/main.cc.o"
+}
+]

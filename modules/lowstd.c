@@ -20,6 +20,8 @@
 #define true 1
 #define false 0
 
+#define nil NULL
+
 void sys_exit(int) __attribute__((visibility("hidden")));
 void sys_write(int, char*, int) __attribute__((visibility("hidden")));
 void sys_putchar(int, char) __attribute__((visibility("hidden")));
@@ -27,8 +29,32 @@ unsigned int sys_sleep(double) __attribute__((visibility("hidden")));
 
 //long syscall(long number, ...); // prototype to avoid libc warning
 
+// Wrappers
 __attribute__((visibility("default")))
-char *format_std(const char *format, ...) {
+void exit$MODstd(int status) {
+  sys_exit(status);
+}
+
+__attribute__((visibility("default")))
+
+void write$MODstd(int fd, char* buf, int len) {
+  sys_write(fd, buf, len);
+}
+
+__attribute__((visibility("default")))
+void putchar$MODstd(char c) {
+  sys_putchar(1, c);
+}
+
+__attribute__((visibility("default")))
+unsigned int sleep$MODstd(double sec) {
+  return sys_sleep(sec);
+}
+
+// STD functions
+
+__attribute__((visibility("default")))
+char *format$MODstd(const char *format, ...) {
   char *result;
   va_list args;
 
@@ -59,9 +85,9 @@ void bufformat$MODstd(const char **buf_and_format, ...) {
 #include <stdint.h>
 #include <string.h>
 
-void *memalloc$MODmem(int size);
-void *memrealloc$MODmem(void *ptr, int size);
-void memfree$MODmem(void *ptr);
+void *alloc$MODmem(int size);
+void *realloc$MODmem(void *ptr, int size);
+void free$MODmem(void *ptr);
 
 static int uint64_to_str(uint64_t n, int base, char *buf, int bufsize) {
   const char *digits = "0123456789abcdef";
@@ -139,10 +165,9 @@ static int double_to_str(double val, int precision, char *buf, int bufsize) {
   return len;
 }
 
-__attribute__((visibility("default")))
 char *strbuf$MODstd(const char *fmt, int *len_r, va_list args) {
   int capacity = 256;
-  char *out = (char *)memalloc$MODmem(capacity);
+  char *out = (char *)alloc$MODmem(capacity);
   if (!out)
     return NULL;
   int pos = 0;
@@ -154,7 +179,7 @@ char *strbuf$MODstd(const char *fmt, int *len_r, va_list args) {
     if (*p != '%') {
       if (pos >= capacity) {
         capacity *= 2;
-        out = (char *)memrealloc$MODmem(out, capacity);
+        out = (char *)realloc$MODmem(out, capacity);
       }
       out[pos++] = *p++;
       continue;
@@ -186,7 +211,7 @@ char *strbuf$MODstd(const char *fmt, int *len_r, va_list args) {
       for (int i = 0; s[i]; i++) {
         if (pos >= capacity) {
           capacity *= 2;
-          out = (char *)memrealloc$MODmem(out, capacity);
+          out = (char *)realloc$MODmem(out, capacity);
         }
         out[pos++] = s[i];
       }
@@ -198,7 +223,7 @@ char *strbuf$MODstd(const char *fmt, int *len_r, va_list args) {
       for (int i = 0; i < len; i++) {
         if (pos >= capacity) {
           capacity *= 2;
-          out = (char *)memrealloc$MODmem(out, capacity);
+          out = (char *)realloc$MODmem(out, capacity);
         }
         out[pos++] = tmp[i];
       }
@@ -210,7 +235,7 @@ char *strbuf$MODstd(const char *fmt, int *len_r, va_list args) {
       for (int i = 0; i < len; i++) {
         if (pos >= capacity) {
           capacity *= 2;
-          out = (char *)memrealloc$MODmem(out, capacity);
+          out = (char *)realloc$MODmem(out, capacity);
         }
         out[pos++] = tmp[i];
       }
@@ -222,7 +247,7 @@ char *strbuf$MODstd(const char *fmt, int *len_r, va_list args) {
       for (int i = 0; i < len; i++) {
         if (pos >= capacity) {
           capacity *= 2;
-          out = (char *)memrealloc$MODmem(out, capacity);
+          out = (char *)realloc$MODmem(out, capacity);
         }
         out[pos++] = tmp[i];
       }
@@ -234,7 +259,7 @@ char *strbuf$MODstd(const char *fmt, int *len_r, va_list args) {
       for (int i = 0; i < len; i++) {
         if (pos >= capacity) {
           capacity *= 2;
-          out = (char *)memrealloc$MODmem(out, capacity);
+          out = (char *)realloc$MODmem(out, capacity);
         }
         out[pos++] = tmp[i];
       }
@@ -244,7 +269,7 @@ char *strbuf$MODstd(const char *fmt, int *len_r, va_list args) {
       char c = (char)va_arg(args, int);
       if (pos >= capacity) {
         capacity *= 2;
-        out = (char *)memrealloc$MODmem(out, capacity);
+        out = (char *)realloc$MODmem(out, capacity);
       }
       out[pos++] = c;
       break;
@@ -252,7 +277,7 @@ char *strbuf$MODstd(const char *fmt, int *len_r, va_list args) {
     case '%': {
       if (pos >= capacity) {
         capacity *= 2;
-        out = (char *)memrealloc$MODmem(out, capacity);
+        out = (char *)realloc$MODmem(out, capacity);
       }
       out[pos++] = '%';
       break;
@@ -260,12 +285,12 @@ char *strbuf$MODstd(const char *fmt, int *len_r, va_list args) {
     default: {
       if (pos >= capacity) {
         capacity *= 2;
-        out = (char *)memrealloc$MODmem(out, capacity);
+        out = (char *)realloc$MODmem(out, capacity);
       }
       out[pos++] = '%';
       if (pos >= capacity) {
         capacity *= 2;
-        out = (char *)memrealloc$MODmem(out, capacity);
+        out = (char *)realloc$MODmem(out, capacity);
       }
       out[pos++] = *p;
       break;
@@ -277,11 +302,22 @@ char *strbuf$MODstd(const char *fmt, int *len_r, va_list args) {
 
   if (pos >= capacity) {
     capacity += 1;
-    out = (char *)memrealloc$MODmem(out, capacity);
+    out = (char *)realloc$MODmem(out, capacity);
   }
   out[pos] = '\0';
   *len_r = pos;
   return out;
+}
+
+__attribute__((visibility("default")))
+char* fmt$MODstd(const char* fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  int len;
+  char *s = strbuf$MODstd(fmt, &len, args);
+  va_end(args);
+
+  return s;
 }
 
 __attribute__((visibility("default")))
@@ -294,7 +330,7 @@ void print$MODstd(const char *fmt, ...) {
 
   sys_write(1, s, len);
 
-  memfree$MODmem(s);
+  free$MODmem(s);
 }
 
 __attribute__((visibility("default")))
@@ -307,8 +343,9 @@ void println$MODstd(const char *fmt, ...) {
 
   sys_write(1, s, len);
 
-  memfree$MODmem(s);
-  sys_putchar(1, '\n');
+  free$MODmem(s);
+  //sys_putchar(1, '\n');
+  sys_write(1, "\n", 1);
 }
 
 __attribute__((visibility("default")))
@@ -317,7 +354,7 @@ void put_char$MODstd(const char c) {
 }
 
 __attribute__((visibility("default")))
-void prerror$MODstd(const char *fmt, ...) {
+void perror$MODstd(const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   int len;
@@ -326,7 +363,7 @@ void prerror$MODstd(const char *fmt, ...) {
 
   sys_write(2, s, len);
 
-  memfree$MODmem(s);
+  free$MODmem(s);
 }
 
 __attribute__((visibility("default")))
@@ -339,7 +376,7 @@ void panic$MODstd(const char *fmt, ...) {
 
   sys_write(2, s, len);
 
-  memfree$MODmem(s);
+  free$MODmem(s);
   
   sys_exit(1);
 }
@@ -354,7 +391,7 @@ void cuspanic$MODstd(const char *fmt, int status, ...) {
 
   sys_write(2, s, len);
 
-  memfree$MODmem(s);
+  free$MODmem(s);
   
   sys_exit(status);
 }
@@ -371,7 +408,7 @@ char *scani$MODstd() {
     buffer[len - 1] = '\0';
   }
 
-  char *result = (char *)memalloc$MODmem(len);
+  char *result = (char *)alloc$MODmem(len);
   if (result != NULL) {
     strcpy(result, buffer);
   }
@@ -388,7 +425,7 @@ char *ask$MODstd(char *fmt, ...) {
   va_end(args);
 
   sys_write(2, s, msg_len);
-  memfree$MODmem(s);
+  free$MODmem(s);
 
   char buffer[240];
 
@@ -401,7 +438,7 @@ char *ask$MODstd(char *fmt, ...) {
     buffer[len - 1] = '\0';
   }
 
-  char *result = (char *)memalloc$MODmem(len);
+  char *result = (char *)alloc$MODmem(len);
   if (result != NULL) {
     strcpy(result, buffer);
   }
@@ -482,39 +519,6 @@ void cls$MODstd() {
 }
 
 __attribute__((visibility("default")))
-int sysexc$MODstd(const char *command) {
-  /*if (command == NULL)
-    return 1;
-  
-  const char path[] = "/bin/sh";
-  const char arg0[] = "sh";
-  const char arg1[] = "-c";
-
-  const char *argv[] = {arg0, arg1, command, NULL};
-  const char term[] = "TERM=xterm-256color";
-  const char *envp[] = {term, NULL};
-
-  long pid = syscall(SYS_fork);
-  if (pid == 0) {
-    syscall(SYS_execve, path, argv, envp);
-    syscall(SYS_exit, 1);
-  } else if (pid > 0) {
-    int status;
-    syscall(SYS_wait4, pid, 0, 0, 0);
-
-    if ((status & 0x7f) == 0) {
-      int exit_code = (status >> 8) & 0xff;
-      return exit_code;
-    } else {
-      return 1;
-    }
-  } else {
-    return 1;
-  }
-  return 1;*/
-}
-
-__attribute__((visibility("default")))
 void termc$MODstd(const int color) {
   if (color >= 0 && color <= 7) {
     // Set bright text with foreground color
@@ -549,9 +553,4 @@ double randf$MODstd(double min, double max, int decimals) {
 
   double factor = pow(10.0, decimals);
   return round(scaled * factor, decimals) / factor;
-}
-
-__attribute__((visibility("default")))
-unsigned int nap$MODstd(double secs) { // Wrapper for sys_sleep
-  return sys_sleep(secs);
 }
