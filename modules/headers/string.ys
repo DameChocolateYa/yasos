@@ -1,5 +1,7 @@
 declmod string;
 
+extern fun badd_nil(s: str);
+
 extern fun len(s: str) -> int;
 extern fun cat(s1: str, s2: str) -> str;
 extern fun bufcat(buf: &str, s2: str) -> none;

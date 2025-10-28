@@ -16,10 +16,17 @@ void *realloc$MODmem(void *ptr, int size);
 void free$MODmem(void *ptr);
 
 __attribute__((visibility("default")))
-
 int len$MODstring(const char *s1) {
   int len = (int)strlen(s1);
   return len;
+}
+
+__attribute__((visibility("default")))
+void badd_nil$MODstring(char **s1) {
+  if (!s1 || !*s1) return;
+
+  int len = len$MODstring(*s1);
+  (*s1)[len] = '\0';
 }
 
 __attribute__((visibility("default")))

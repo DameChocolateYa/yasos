@@ -23,7 +23,7 @@ fun open(path: str, flags: int) -> File {
   var f: File;
   f.fd = sys_open(path, flags, 420);
   if f.fd < 0 {
-    std::perror("ERROR: could not open file (%s)\n", path);
+    "ERROR: could not open file\n";
     ret f;
   }
   f.buf_size = 4096;
