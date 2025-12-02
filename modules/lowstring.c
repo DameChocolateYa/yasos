@@ -318,7 +318,7 @@ bool is_empty$MODstring(const char *s) {
   return empty;
 }
 
-__attribute__((visibility("default")))
+/*__attribute__((visibility("default")))
 bool is_whitespace$MODstring(const char *s) {
   bool is_whitespace = true;
   for (int i = 0; i < len$MODstring; i++) {
@@ -329,7 +329,7 @@ bool is_whitespace$MODstring(const char *s) {
   }
 
   return is_whitespace;
-}
+}*/
 
 __attribute__((visibility("default")))
 char *trim$MODstring(const char *s) {

@@ -51,3 +51,15 @@ char *getenv$MODos(const char *var) {
 
   return NULL;
 }
+
+__attribute__((visibility("default")))
+void clear$MODos() {
+	#if __linux__
+	execute$MODos("clear");
+	#elif __WIN__
+	execute$MODos("cls");
+	#else
+	perror$MODstd("Error: unsupported OS for clear function\n");
+	return 1;
+	#endif
+}
