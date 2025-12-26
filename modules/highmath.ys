@@ -1,0 +1,167 @@
+use math::{PI};
+import std;
+
+declmod math;
+fun pow(base: double, exponent: int) -> double {
+  var result: double = 1.;
+  
+  if (exponent == 0) {
+    ret .0;
+  }
+
+  if exponent > 0 {
+    for var i: int = 0; i < exponent; inc i {
+      result *= base;
+    }
+  } else {
+    for var i: int = 0; i < -exponent; inc i {
+      result *= base;
+    }
+    result = 1. / result;
+  }
+
+  ret result;
+} pub;
+
+fun ln(x: double) -> double {
+  if x <= .0 {
+    std::perror("ERROR: ln(x) undefined for x <= 0\n");
+    ret .0;
+  }
+
+  var LN2: double = 0.6931471805599453;
+
+  var n: int = 0;
+  var a: double = x;
+
+  while a > 1.5 {
+    a /= 2.;
+    inc n;
+  }
+  while a < .5 {
+    a *= 2.;
+    dec n;
+  }
+
+  var y: double = (a - 1.) / (a + 1.);
+  var y2: double = y * y;
+  var result: double = .0;
+  var term: double = y;
+
+  for var k: int = 1; k <= 50; inc k {
+    result += term / (2. * k - 1.);
+    term *= y2;
+  }
+
+  ret 2. * result + n * LN2;
+} pub;
+
+fun log(x: double, base: double) -> double {
+  ret math::ln(x) / math::ln(base);
+} pub;
+
+fun log10(x: double) -> double {
+  ret math::log(x, 10);
+} pub;
+
+fun fact(x: int) -> int {
+  var result: int = 1;
+  for var i: int = x; i >= 1; dec i {
+    result *= i;
+  }
+
+  ret result;
+} pub;
+
+fun factd(x: int) -> double {
+  var result: double = 1.0;
+  for var i: int = x; i >= 1; dec i {
+    result *= i;
+  }
+  ret result;
+} pub;
+
+fun sin(angle: double) -> double {
+  var result: double = 0.;
+  var term: double = angle;
+
+  var n: double = 0.;
+  while n < 15 {
+    result += term;
+	var denom: double = (2.*n + 2.) * (2.*n + 3.);
+	term *= (-1. * angle * angle) / denom;
+    n += 1.;
+  }
+  
+  ret result;
+} pub;
+
+fun cos(angle: double) -> double {
+  var result: double = 0.0;
+  var term: double = 1.0;
+
+  var n: double = 0.0;
+  while n < 15 {
+  	result += term;
+  	var denom: double = (2.*n + 1.) * (2.*n + 2.);
+  	var frac: double = (-1.0 * angle * angle) / denom;
+  	term *= frac;
+  	n += 1.;
+  }
+
+  ret result;
+} pub;
+
+fun tan(angle: double) -> double {
+  var s: double = math::sin(angle);
+  var c: double = math::cos(angle);
+
+  if c == 0. {
+    std::perror("ERROR: undefined tan\n");
+    ret 0.0; #- TODO: change for NaN
+  }
+
+  ret s / c;
+} pub;
+
+fun cosec(angle: double) -> double {
+  var s: double = math::sin(angle);
+
+  if s == 0. {
+  	std::perror("ERROR: undefined sin\n");
+  	ret 0.;
+  }
+
+  ret 1. / s;
+} pub;
+
+fun sec(angle: double) -> double {
+  var c: double = math::cos(angle);
+
+  if c == 0. {
+  	std::perror("ERROR: undefined cos\n");
+  	ret 0.;
+  }
+
+  ret 1. / c;
+} pub;
+
+fun cotan(angle: double) -> double {
+  var t: double = math::tan(angle);
+
+  if t == 0.0 {
+  	std::perror("ERROR: undefined tan\n");
+  	ret 0.0;
+  }
+
+  ret 1.0 / t;
+} pub;
+
+fun deg2rad(deg: double) -> double {
+  ret deg * PI / 180.;
+} pub;
+
+fun rad2deg(rad: double) -> double {
+  ret 180. * rad / PI;
+} pub;
+endmod;

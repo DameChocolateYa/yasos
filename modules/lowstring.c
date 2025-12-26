@@ -1,280 +1,352 @@
 #include <stdio.h>
-#define strcat beep_strcat
 #include <string.h>
-#undef strcat
-#include <stdlib.h>
-#include <math.h>
 #include <ctype.h>
+#include <math.h>
+#include <stdlib.h>
 
-int len(const char* s1) {
-    int len = (int)strlen(s1);
-    return len;
+#include "std.h"
+#include "memory.h"
+
+#define true 1
+#define false 0
+#define bool int
+
+void *alloc$MODmem(int size);
+void *realloc$MODmem(void *ptr, int size);
+void free$MODmem(void *ptr);
+
+__attribute__((visibility("default")))
+int len$MODstring(const char *s1) {
+  int len = (int)strlen(s1);
+  return len;
 }
 
-char* strcat(const char* s1, const char* s2) {
-    if (!s1 || !s2) return NULL;
+__attribute__((visibility("default")))
+void badd_nil$MODstring(char **s1) {
+  if (!s1 || !*s1) return;
 
-    size_t len1 = strlen(s1);
-    size_t len2 = strlen(s2);
-
-    char* result = (char*)malloc(len1 + len2 + 1);
-    if (!result) return NULL;
-
-    memcpy(result, s1, len1);
-    memcpy(result + len1, s2, len2);
-    result[len1 + len2] = '\0';
-
-    return result;
+  int len = len$MODstring(*s1);
+  (*s1)[len] = '\0';
 }
 
-void bufcat(char** s1, const char* s2) {
-  if (!s1 || !s2) return;
+__attribute__((visibility("default")))
+char *cat$MODstring(const char *s1, const char *s2) {
+  if (!s1 || !s2)
+    return NULL;
 
-  size_t len1 = strlen(*s1);
-  size_t len2 = strlen(s2);
+  size_t len1 = len$MODstring(s1);
+  size_t len2 = len$MODstring(s2);
 
-  s1 = (char**)realloc(s1, len1 + len2 + 1);
-  if (!s1) {
+  char *result = (char *)alloc$MODmem(len1 + len2 + 1);
+  result[len1 + len2] = '\0';
+  if (!result)
+    return NULL;
+
+  memcpy(result, s1, len1);
+  memcpy(result + len1, s2, len2);
+  result[len1 + len2] = '\0';
+
+  return result;
+}
+
+__attribute__((visibility("default")))
+void  bufcat$MODstring(char **s1, const char *s2) {
+  if (!s1 || !s2)
     return;
+
+  size_t len1 = len$MODstring(*s1);
+  size_t len2 = len$MODstring(s2);
+
+  char *old = *s1;
+  char *newbuf = (char *)alloc$MODmem(len1 + len2 + 1);
+  if (!newbuf) return;
+
+  memcpy(newbuf, old, len1);
+  memcpy(newbuf + len1, s2, len2);
+  newbuf[len1 + len2] = '\0';
+
+  *s1 = newbuf;
+}
+
+__attribute__((visibility("default")))
+char *cutidx$MODstring(const char *s1, int begin, int end) {
+  int len = len$MODstring(s1);
+
+  if (begin < 0)
+    begin = 0;
+  if (end > len)
+    end = len;
+  if (begin >= end)
+    return strdup(s1);
+
+  int new_len = len - (end - begin);
+  char *result = (char *)alloc$MODmem(new_len);
+  if (!result)
+    return NULL;
+
+  strncpy(result, s1, begin);
+
+  strcpy(result + begin, s1 + end);
+
+  return result;
+}
+
+__attribute__((visibility("default")))
+void bufcutidx$MODstring(const char **s1, int begin, int end) {
+  if (!s1)
+    return;
+  *s1 = cutidx$MODstring(*s1, begin, end);
+}
+
+__attribute__((visibility("default")))
+char *cut$MODstring(const char *str, const char *sub) {
+  const char *pos = strstr(str, sub);
+  if (pos == NULL) {
+    return strdup(str);
   }
 
-  *s1 = strcat(*s1, s2);
+  size_t len_before = pos - str;
+  size_t len_sub = len$MODstring(sub);
+  size_t len_after = len$MODstring(pos + len_sub);
+
+  char *result = (char *)alloc$MODmem(len_before + len_after + 1);
+  if (!result)
+    return NULL;
+
+  strncpy(result, str, len_before);
+  strcpy(result + len_before, pos + len_sub);
+  return result;
 }
 
-char* strcut_index(const char* s1, int begin, int end) { 
-    int len = strlen(s1);
+__attribute__((visibility("default")))
+void bufcut$MODstring(char **str_ptr, const char *sub) {
+  char *str = *str_ptr;
+  char *pos = strstr(str, sub);
+  if (!pos)
+    return;
 
-    if (begin < 0) begin = 0;
-    if (end > len) end = len;
-    if (begin >= end) return strdup(s1);
+  size_t len_before = pos - str;
+  size_t len_sub = len$MODstring(sub);
+  size_t len_after = len$MODstring(pos + len_sub);
 
-    int new_len = len - (end - begin);
-    char* result = (char*)malloc(new_len);
-    if (!result) return NULL;
+  char *nuevo = (char *)alloc$MODmem(len_before + len_after + 1);
+  if (!nuevo)
+    return;
 
-    strncpy(result, s1, begin);
+  strncpy(nuevo, str, len_before);
+  strcpy(nuevo + len_before, pos + len_sub);
 
-    strcpy(result + begin, s1 + end);
-
-    return result;
+  free$MODmem(str);
+  *str_ptr = nuevo;
 }
 
-void bufcut_index(const char** s1, int begin, int end) {
-    if (!s1) return;
-    *s1 = strcut_index(*s1, begin, end);
+__attribute__((visibility("default")))
+char *sub$MODstring(const char *s1, int begin, int end) {
+  int len = len$MODstring(s1);
+
+  if (begin < 0)
+    begin = 0;
+  if (end > len)
+    end = len;
+  if (begin >= end)
+    return strdup("");
+
+  int sub_len = end - begin;
+  char *result = (char *)alloc$MODmem(sub_len + 1);
+  result[sub_len] = '\0';
+  if (!result)
+    return NULL;
+
+  strncpy(result, s1 + begin, sub_len);
+
+  return result;
 }
 
-char* strcut(const char* str, const char* sub) {
-    const char* pos = strstr(str, sub);
-    if (pos == NULL) {
-        return strdup(str);
+void bufsub$MODstring(const char **s1, int begin, int end) {
+  if (!s1)
+    return;
+  *s1 = sub$MODstring(*s1, begin, end);
+}
+
+__attribute__((visibility("default")))
+int to_int$MODstring(const char *s1) { return atoi(s1); }
+
+__attribute__((visibility("default")))
+float to_double$MODstring(const char *s1) { return atof(s1); }
+
+__attribute__((visibility("default")))
+char *to_str$MODinteger(const int n) {
+  char buf[32];
+  int len = 0;
+  int x = n;
+
+  if (x == 0) {
+    buf[len++] = '0';
+  } else {
+    int negative = 0;
+    if (x < 0) {
+      negative = 1;
+      x = -x;
     }
 
-    size_t len_before = pos - str;
-    size_t len_sub = strlen(sub);
-    size_t len_after = strlen(pos + len_sub);
-
-    char* result = (char*)malloc(len_before + len_after + 1);
-    if (!result) return NULL;
-
-    strncpy(result, str, len_before);
-    strcpy(result + len_before, pos + len_sub);
-    return result;
-}
-
-void bufcut(char **str_ptr, const char *sub) {
-    char *str = *str_ptr;
-    char *pos = strstr(str, sub);
-    if (!pos) return;
-
-    size_t len_before = pos - str;
-    size_t len_sub = strlen(sub);
-    size_t len_after = strlen(pos + len_sub);
-
-    char *nuevo = (char*)malloc(len_before + len_after + 1);
-    if (!nuevo) return;
-
-    strncpy(nuevo, str, len_before);
-    strcpy(nuevo + len_before, pos + len_sub);
-
-    free(str);
-    *str_ptr = nuevo;
-}
-
-char* strsub(const char* s1, int begin, int end) {
-    int len = strlen(s1);
-
-    if (begin < 0) begin = 0;
-    if (end > len) end = len;
-    if (begin >= end) return strdup(s1);
-
-    int sub_len = end - begin;
-    char* result = (char*)malloc(sub_len);
-    if (!result) return NULL;
-
-    strncpy(result, s1 + begin, sub_len);
-
-    return result;
-}
-
-void bufsub(const char** s1, int begin, int end) {
-  if (!s1) return;
-  *s1 = strsub(*s1, begin, end);
-}
-
-int stoint(const char* s1) {
-    return atoi(s1);
-}
-
-float stdb(const char* s1) {
-    return atof(s1);
-}
-
-char* itostr(const int n) {
-    char buf[32];
-    int len = 0;
-    int x = n;
-
-    if (x == 0) {
-        buf[len++] = '0';
-    }
-    else {
-        int negative = 0;
-        if (x < 0) {
-            negative = 1;
-            x = -x;
-        }
-
-        while (x > 0) {
-            buf[len++] = '0' + (x % 10);
-            x /= 10;
-        }
-
-        if (negative) {
-            buf[len++] = '-';
-        }
+    while (x > 0) {
+      buf[len++] = '0' + (x % 10);
+      x /= 10;
     }
 
-    for (int i = 0; i < len / 2; ++i) {
-        char tmp = buf[i];
-        buf[i] = buf[len - 1 - i];
-        buf[len - 1 - i] = tmp;
+    if (negative) {
+      buf[len++] = '-';
+    }
+  }
+
+  for (int i = 0; i < len / 2; ++i) {
+    char tmp = buf[i];
+    buf[i] = buf[len - 1 - i];
+    buf[len - 1 - i] = tmp;
+  }
+
+  char *res = (char *)alloc$MODmem(len + 1);
+  if (!res)
+    return NULL;
+
+  for (int i = 0; i < len; ++i) {
+    res[i] = buf[i];
+  }
+  res[len] = '\0';
+
+  return res;
+}
+
+__attribute__((visibility("default")))
+char *to_str$MODdecimal(double n, int decimals) {
+  char buf[64];
+  int len = 0;
+
+  if (n < 0) {
+    buf[len++] = '-';
+    n = -n;
+  }
+
+  int int_part = (int)n;
+
+  float frac_part = n - int_part;
+
+  char int_buf[32];
+  int int_len = 0;
+  if (int_part == 0) {
+    int_buf[int_len++] = '0';
+  } else {
+    while (int_part > 0) {
+      int_buf[int_len++] = '0' + (int_part % 10);
+      int_part /= 10;
     }
 
-    char* res = (char*)malloc(len);
-    if (!res) return NULL;
-
-    for (int i = 0; i < len; ++i) {
-        res[i] = buf[i];
+    for (int i = 0; i < int_len / 2; i++) {
+      char tmp = int_buf[i];
+      int_buf[i] = int_buf[int_len - 1 - i];
+      int_buf[int_len - 1 - i] = tmp;
     }
+  }
 
+  for (int i = 0; i < int_len; i++) {
+    buf[len++] = int_buf[i];
+  }
+
+  buf[len++] = '.';
+
+  for (int i = 0; i < decimals; i++) {
+    frac_part *= 10;
+    int digit = (int)frac_part;
+    buf[len++] = '0' + digit;
+    frac_part -= digit;
+  }
+
+  char *res = (char *)alloc$MODmem(len);
+  if (!res)
+    return NULL;
+
+  for (int i = 0; i < len; i++) {
+    res[i] = buf[i];
+  }
+
+  return res;
+}
+
+__attribute__((visibility("default")))
+int cmp$MODstring(const char *s1, const char *s2) {
+  while (*s1 && *s2) {
+    if (*s1 != *s2)
+      return 0;
+    s1++;
+    s2++;
+  }
+  return *s1 == *s2;
+}
+
+__attribute__((visibility("default")))
+int charcmp$MODcharacter(const char c1, const char c2) { return c1 == c2; }
+
+__attribute__((visibility("default")))
+char *dig_to_abc$MODstring(const int n) {
+  if (n >= 0 && n < 26) {
+    char *res = (char *)alloc$MODmem(2); // 1 para la letra, 1 para '\0'
+    if (res == NULL)
+      return NULL; // Verificación de malloc
+    res[0] = 'A' + n;
+    res[1] = '\0';
     return res;
-}
-
-char* db_to_str(double n, int decimals) {
-    char buf[64];
-    int len = 0;
-
-    if (n < 0) {
-        buf[len++] = '-';
-        n = -n;
-    }
-
-    int int_part = (int)n;
-
-    float frac_part = n - int_part;
-
-    char int_buf[32];
-    int int_len = 0;
-    if (int_part == 0) {
-        int_buf[int_len++] = '0';
-    } else {
-        while (int_part > 0) {
-            int_buf[int_len++] = '0' + (int_part % 10);
-            int_part /= 10;
-        }
-
-        for (int i = 0; i < int_len / 2; i++) {
-            char tmp = int_buf[i];
-            int_buf[i] = int_buf[int_len - 1 - i];
-            int_buf[int_len - 1 - i] = tmp;
-        }
-    }
-
-    for (int i = 0; i < int_len; i++) {
-        buf[len++] = int_buf[i];
-    }
-
-    buf[len++] = '.';
-
-    for (int i = 0; i < decimals; i++) {
-        frac_part *= 10;
-        int digit = (int)frac_part;
-        buf[len++] = '0' + digit;
-        frac_part -= digit;
-    }
-
-    char* res = (char*)malloc(len);
-    if (!res) return NULL;
-
-    for (int i = 0; i < len; i++) {
-        res[i] = buf[i];
-    }
-
+  } else {
+    char *res = (char *)alloc$MODmem(2);
+    if (res == NULL)
+      return NULL;
+    res[0] = '?';
+    res[1] = '\0';
     return res;
+  }
 }
 
-int strcmp(const char* s1, const char* s2) {
-    while (*s1 && *s2) {
-        if (*s1 != *s2) return 0;
-        s1++;
-        s2++;
-    }
-    return *s1 == *s2;  // Ambos deben llegar al final ('\0') al mismo tiempo
-}
-
-int charcmp(const char c1, const char c2) {
-  return c1 == c2;
-}
-
-char* dig_to_abc(const int n) {
-    if (n >= 0 && n < 26) {
-        char* res = (char*)malloc(2);  // 1 para la letra, 1 para '\0'
-        if (res == NULL) return NULL; // Verificación de malloc
-        res[0] = 'A' + n;
-        res[1] = '\0';
-        return res;
-    } else {
-        char* res = (char*)malloc(2);
-        if (res == NULL) return NULL;
-        res[0] = '?';
-        res[1] = '\0';
-        return res;
-    }
-}
-
-bool strempty(const char* s) {
+__attribute__((visibility("default")))
+bool is_empty$MODstring(const char *s) {
   bool empty = true;
-  for (int i = 0; i < strlen(s); ++i) {
-    if (s[i] != '\0') empty = false;
+  for (int i = 0; i < len$MODstring(s); i++) {
+    if (s[i] != '\0') {
+      empty = false;
+      break;
+    }
   }
 
   return empty;
 }
 
-char* trim(const char* s) {
-  if (s == NULL) return NULL;
+/*__attribute__((visibility("default")))
+bool is_whitespace$MODstring(const char *s) {
+  bool is_whitespace = true;
+  for (int i = 0; i < len$MODstring; i++) {
+    if (s[i] != ' ') {
+      is_whitespace = false;
+      break;
+    }
+  }
 
-  const char* begin = s;
-  const char* end;
+  return is_whitespace;
+}*/
+
+__attribute__((visibility("default")))
+char *trim$MODstring(const char *s) {
+  if (s == NULL)
+    return NULL;
+
+  const char *begin = s;
+  const char *end;
 
   while (*begin && isspace((unsigned char)*begin)) {
     ++begin;
   }
 
   if (*begin == '\0') {
-    char* empty = (char*)malloc(1);
-    if (empty) empty[0] = '\0';
+    char *empty = (char *)alloc$MODmem(1);
+    if (empty)
+      empty[0] = '\0';
     return empty;
   }
 
@@ -285,37 +357,44 @@ char* trim(const char* s) {
 
   size_t len = end - begin + 1;
 
-  char* new = (char*)malloc(len);
-  if (!new) return NULL;
+  char *new = (char *)alloc$MODmem(len + 1);
+  if (!new)
+    return NULL;
   strncpy(new, begin, len);
+  new[len] = '\0';
 
   return new;
 }
 
-void buftrim(const char** buf) {
-  if (!buf) return;
-  *buf = trim(*buf);
+__attribute__((visibility("default")))
+void buftrim$MODstring(const char **buf) {
+  if (!buf)
+    return;
+  *buf = trim$MODstring(*buf);
 }
 
-char* strreplace(const char* s, const char* old_sub, const char* new_sub) {
-  if (!s || !old_sub || !new_sub) return NULL;
+__attribute__((visibility("default")))
+char *repl$MODstring(const char *s, const char *old_sub, const char *new_sub) {
+  if (!s || !old_sub || !new_sub)
+    return NULL;
 
-  size_t old_len = strlen(old_sub);
-  size_t new_len = strlen(new_sub);
+  size_t old_len = len$MODstring(old_sub);
+  size_t new_len = len$MODstring(new_sub);
   size_t count = 0;
 
-  const char* tmp = s;
+  const char *tmp = s;
   while ((tmp = strstr(tmp, old_sub))) {
     ++count;
     tmp += old_len;
   }
 
-  size_t result_len = strlen(s) + count * (new_len - old_len);
+  size_t result_len = len$MODstring(s) + count * (new_len - old_len);
 
-  char* result = (char*)malloc(result_len);
-  if (!result) return NULL;
+  char *result = (char *)alloc$MODmem(result_len);
+  if (!result)
+    return NULL;
 
-  char* dest = result;
+  char *dest = result;
   while (*s) {
     if (strstr(s, old_sub) == s) {
       memcpy(dest, new_sub, new_len);
@@ -328,23 +407,90 @@ char* strreplace(const char* s, const char* old_sub, const char* new_sub) {
   return result;
 }
 
-void bufreplace(const char** buf, const char* old_sub, const char* new_sub) {
-  if (!buf) return;
-  *buf = strreplace(*buf, old_sub, new_sub);
+__attribute__((visibility("default")))
+void bufrepl$MODstring(const char **buf, const char *old_sub, const char *new_sub) {
+  if (!buf)
+    return;
+  *buf = repl$MODstring(*buf, old_sub, new_sub);
 }
 
-int strcontains(const char* str, const char* substring) {
-  if (strstr(str, substring) != NULL) return 1;
-  else return 0;
+__attribute__((visibility("default")))
+int contains$MODstring(const char *str, const char *substring) {
+  if (strstr(str, substring) != NULL)
+    return 1;
+  else
+    return 0;
 }
 
-int strcontains_case(const char* str, const char* substring) {
-  if (strcasestr(str, substring) != NULL) return 1;
-  else return 0;
+__attribute__((visibility("default")))
+int constains_case$MODstring(const char *str, const char *substring) {
+  if (strcasestr(str, substring) != NULL)
+    return 1;
+  else
+    return 0;
 }
 
-int strfind(const char* str, const char* substring) {
-  char* pos = (char*)strstr(str, substring);
-  if (pos == NULL) return -1;
-  return(int)(pos - str);
+__attribute__((visibility("default")))
+int find$MODstring(const char *str, const char *substring) {
+  char *pos = (char *)strstr(str, substring);
+  if (pos == NULL)
+    return -1;
+  return (int)(pos - str);
+}
+
+__attribute__((visibility("default")))
+char **get_splited$MODstring(const char *str, const char *delimiter, int *bufsize) {
+  if (delimiter == NULL) delimiter = "\n";
+
+  int capacity = 2;
+  int size = 0;
+  if (bufsize) *bufsize = 0;
+
+  char **buf = (char**)alloc$MODmem(sizeof(char*) * capacity);
+  if (buf == NULL) {
+    perror$MODstd("ERROR: could not allocate memory for string::get_splited function\n");
+    return NULL;
+  }
+
+  const char *cursor = str;
+  int delimiter_pos;
+
+  while ((delimiter_pos = find$MODstring(cursor, delimiter)) != -1) {
+    if (size + 1 >= capacity) {
+      capacity *= 2;
+      buf = (char**)realloc$MODmem(buf, sizeof(char*) * capacity);
+      if (buf == NULL) {
+        perror$MODstd("ERROR: realloc failed in string::get_splited\n");
+        return NULL;
+      }
+    }
+
+    char *s = sub$MODstring(cursor, 0, delimiter_pos);
+    buf[size++] = s;
+
+    cursor += delimiter_pos + strlen(delimiter);
+  }
+
+  // agregar la última parte (después del último delimitador)
+  if (*cursor != '\0') {
+    if (size + 1 >= capacity) {
+      capacity *= 2;
+      buf = (char**)realloc$MODmem(buf, sizeof(char*) * capacity);
+      if (buf == NULL) {
+        perror$MODstd("ERROR: realloc failed in string::get_splited\n");
+        return NULL;
+      }
+    }
+
+    char *s = sub$MODstring(cursor, 0, len$MODstring(cursor));
+    buf[size++] = s;
+  }
+
+  if (size + 1 >= capacity) {
+    buf = (char**)realloc$MODmem(buf, sizeof(char*) * (capacity + 1));
+  }
+  buf[size] = NULL;
+
+  if (bufsize) *bufsize = size;
+  return buf;
 }

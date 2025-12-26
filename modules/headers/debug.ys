@@ -1,0 +1,3 @@
+declmod debug;
+extern fun helloworld;
+endmod;

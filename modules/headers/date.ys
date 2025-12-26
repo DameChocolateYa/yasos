@@ -1,0 +1,29 @@
+import std;
+import string;
+
+struct Time {
+  hour: int;
+  minute: int;
+  second: int;
+}
+
+struct Date {
+  year: int;
+  month: int;
+  day: int;
+  time: Time;
+}
+
+declmod date;
+
+declmod time;
+
+extern fun new(hour: int, minute: int, second: int) -> Time;
+extern fun to_int(hour: int, minute: int, second: int) -> int;
+extern fun to_24int(hour: int, minute: int, second: int) -> int;
+extern fun from_int(x: int) -> Time;
+
+endmod;
+
+extern fun new(day: int, month: int, year: int, hour: int, minute: int, second: int) -> Date;
+endmod;

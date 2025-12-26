@@ -4,14 +4,17 @@ struct File {
   buf_size: int;
   pos: int;
   flags: int;
+  is_open: int;
 };
 
-extern fun file_open(path: str, flags: int) -> File;
-extern fun file_close(f: &File);
-extern fun file_isopen(f: File) -> int;
-extern fun file_write(f: &File, data: str) -> int;
-extern fun file_read(f: &File) -> str;
-extern fun file_seek(f: &File, pos: int, whence: int) -> none;
+declmod file;
+extern fun open(path: str, flags: int) -> File;
+extern fun close(f: &File);
+extern fun isopen(f: File) -> int;
+extern fun write(f: &File, data: str) -> int;
+extern fun read(f: &File) -> str;
+extern fun seek(f: &File, pos: int, whence: int) -> none;
+endmod;
 
 $if __LINUX__
   cnst F_RDONLY: int = 0;

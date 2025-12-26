@@ -3,7 +3,7 @@ syntax region yasosString start=+"+ skip=+\\.+ end=+"+ keepend
 syntax region yasosString start=+'+ skip=+\\.+ end=+'+ keepend
 syntax match yasosNumber /\v(0x[0-9a-fA-F]+|\d+(\.\d+)?([eE][+-]?\d+)?)/
 syntax match yasosFunction /\w\+\ze(/
-syntax keyword yasosType int str double none nullptr true false list
+syntax keyword yasosType int str double none nil true false list
 syntax region yasosCommentLineFromSt start=+#-*.+ end=+$+ keepend
 syntax match yasosCommentLineBefSt /^.*-#/
 syntax match yasosCommentLine /^.*-#-.*$/

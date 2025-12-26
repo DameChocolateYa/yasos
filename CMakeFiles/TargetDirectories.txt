@@ -1,0 +1,10 @@
+/home/samuel/dev/yasos/yasos/CMakeFiles/intrinsics_gen.dir
+/home/samuel/dev/yasos/yasos/CMakeFiles/vt_gen.dir
+/home/samuel/dev/yasos/yasos/CMakeFiles/omp_gen.dir
+/home/samuel/dev/yasos/yasos/CMakeFiles/acc_gen.dir
+/home/samuel/dev/yasos/yasos/CMakeFiles/ARMTargetParserTableGen.dir
+/home/samuel/dev/yasos/yasos/CMakeFiles/AArch64TargetParserTableGen.dir
+/home/samuel/dev/yasos/yasos/CMakeFiles/RISCVTargetParserTableGen.dir
+/home/samuel/dev/yasos/yasos/CMakeFiles/yasos.dir
+/home/samuel/dev/yasos/yasos/CMakeFiles/edit_cache.dir
+/home/samuel/dev/yasos/yasos/CMakeFiles/rebuild_cache.dir

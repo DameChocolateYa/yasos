@@ -1,0 +1,1 @@
+/usr/sbin/c++ -no-pie -g -O3 -Wl,--dependency-file=CMakeFiles/yasos.dir/link.d CMakeFiles/yasos.dir/src/error.cc.o CMakeFiles/yasos.dir/src/lexer.cc.o CMakeFiles/yasos.dir/src/parser.cc.o CMakeFiles/yasos.dir/src/generation.cc.o CMakeFiles/yasos.dir/src/main.cc.o -o yasos  /usr/lib/libLLVM.so.20.1

@@ -1,3 +1,5 @@
+declmod math;
+
 extern fun sqrt(x: double) -> double;
 extern fun pow(base: double, exponent: int) -> double;
 extern fun round(num: double, decimals: int) -> double;
@@ -7,6 +9,25 @@ extern fun floor(n: double) -> double;
 extern fun abs(x: int) -> int;
 extern fun fabs(x: double) -> double;
 extern fun fact(x: int) -> int;
+extern fun factd(x: double) -> double;
+
+extern fun ln(x: double) -> double;
 extern fun log(x: double, base: double) -> double;
+extern fun log10(x: double) -> double;
+
+extern fun sin(angle: double) -> double;
+extern fun cos(angle: double) -> double;
+extern fun tan(angle: double) -> double;
+
+extern fun cosec(angle: double) -> double;
+extern fun sec(angle: double) -> double;
+extern fun cotan(angle: double) -> double;
+
+extern fun arcsin(x: double) -> double;
+
+extern fun deg2rad(deg: double) -> double;
+extern fun rad2deg(rad: double) -> double;
 
 cnst PI: double = 3.141592;
+
+endmod;

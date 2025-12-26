@@ -1,0 +1,86 @@
+import std;
+import string;
+
+struct Time {
+  hour: int;
+  minute: int;
+  second: int;
+};
+
+struct Date {
+  year: int;
+  month: int;
+  day: int;
+  time: Time;
+};
+
+declmod date;
+
+declmod time;
+
+fun new(hour: int, minute: int, second: int) -> Time {
+  var t: Time;
+  t.hour = hour;
+  t.minute = minute;
+  t.second = second;
+
+  ret t;
+} pub;
+
+fun to_int(hour: int, minute: int, second: int) -> int {
+  var time: int = 0;
+  time += hour * 3600 + minute * 60 + second;
+
+  ret time;
+} pub;
+
+fun to_24int(hour: int, minute: int, second: int) -> int {
+  var time: int = date::time::to_int(hour, minute, second);
+  var max: int = 24 * 3600;
+  if time >= max {ret max;}
+  
+  ret time;
+} pub;
+
+fun from_int(x: int) -> Time {
+  var t: Time;
+
+  var hour: int = 0;
+  var minute: int = 0;
+  var second: int = 0;
+
+  for var i: int = 0; i < x; inc i {
+    second += 1;
+    if second >= 60 {
+      minute += 1;
+      second = 0;
+    }
+
+    if minute >= 60 {
+      hour += 1;
+      minute = 0;
+    }
+  }
+
+  t.hour = hour;
+  t.minute = minute;
+  t.second = second;
+
+  ret t;
+} pub;
+
+endmod;
+
+fun new(day: int, month: int, year: int, hour: int, minute: int, second: int) -> Date {
+  var d: Date;
+  d.day = day;
+  d.month = month;
+  d.year = year;
+
+  var t: Time = date::time::new(hour, minute, second);
+  d.time = t;
+
+  ret d;
+} pub;
+
+endmod;
