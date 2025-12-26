@@ -34,3 +34,7 @@ cp libys.so /usr/lib/yslib
 > This may require root privileges
 
 This will install modules and headers
+
+## License
+
+This project is licensed under the BSD 3-Clause License - see the [LICENSE](LICENSE) file for details.
