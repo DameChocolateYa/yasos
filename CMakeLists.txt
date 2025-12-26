@@ -1,3 +1,10 @@
+#
+ # yasos - a compiler for yasos language
+ # Copyright (c) 2025 DameChocolateYa
+ # Licensed under the BSD 3-Clause License.
+ # See LICENSE file in the project root for full license text.
+#
+
 cmake_minimum_required(VERSION 3.10)
 
 project(yasos)
@@ -9,7 +16,7 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-# Obliga a CMake a usar esa ruta
+# Force CMake to use this path
 set(LLVM_DIR "${LLVM_CMAKE_DIR}" CACHE PATH "Path to LLVMConfig.cmake")
 find_package(LLVM REQUIRED CONFIG)
 
