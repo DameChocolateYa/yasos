@@ -6,7 +6,7 @@ compilers and how our machines understand our codes.
 > This project is barely advanced and it is not recommended to use in a mid-advanced project, it is usable in examples or even easy learning about low level programming languages
 
 # Documentation
-By the moment, the project has not an official documentation, but I am working in that, so the documentation could last a few weeks to month to appear. When the docs are available there will be a link right here. Thank you for your patience
+To see the docs, visit: https://damechocolateya.github.io/yasos/
 
 ## How to compile the project?
 To compile the project you must first download the source code:
