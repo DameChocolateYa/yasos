@@ -6,15 +6,14 @@ By the moment there are only two methods to install yasos compiler in your GNU/L
 
 Yasos only has been tested in amd64 GNU/Linux, other OS or architectures could not work. Besides, neither there are not official precompiled binary nor package, so you will have to compile the project by yourself.
 
-## Debian
+## Arch linux
 
-You can download the yasos deb package in the releases page of the repository. Then you only have to open the package manager to install or execute in the terminal `apt install ./yasos_YYMMDD-d_arch.deb` > Note, this may will require root privileges
-
+To install, type `yay -S yasos-git`
 > By the moment, there are not an official way to downloas with apt
 
 ## Others
 
-By now, there are not precompiled packages for other GNU/Linux distributions, but you can compile by yourself.
+By now, there are not precompiled packages for GNU/Linux distributions, but you can compile by yourself.
 
 1- Clone the repository with ´git clone https://github.com/DameChocolateYa/yasos.git && cd yasos´
 
