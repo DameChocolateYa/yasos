@@ -5,8 +5,8 @@
  * See LICENSE file in the project root for full license text.
 *#
 
-import std;
-import string;
+use "headers/std.ys";
+use "headers/string.ys";
 
 declmod debug;
 fun helloworld {

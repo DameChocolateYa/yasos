@@ -5,8 +5,9 @@
  * See LICENSE file in the project root for full license text.
 *#
 
-use math::{PI};
-import std;
+use "headers/std.ys";
+
+#- Can not use PI due to the problem importing constants
 
 declmod math;
 fun pow(base: double, exponent: int) -> double {
@@ -165,10 +166,10 @@ fun cotan(angle: double) -> double {
 } pub;
 
 fun deg2rad(deg: double) -> double {
-  ret deg * PI / 180.;
+  ret deg * 3.141592 / 180.;
 } pub;
 
 fun rad2deg(rad: double) -> double {
-  ret 180. * rad / PI;
+  ret 180. * rad / 3.141592;
 } pub;
 endmod;

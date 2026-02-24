@@ -5,10 +5,10 @@
  * See LICENSE file in the project root for full license text.
 *#
 
-import std;
-import string;
-import byte;
-import mem;
+use "headers/std.ys";
+use "headers/string.ys";
+use "headers/byte.ys";
+use "headers/mem.ys";
 
 struct File {
   fd: int; #- Descriptor

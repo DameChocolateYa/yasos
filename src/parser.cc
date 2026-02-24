@@ -1289,53 +1289,6 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
     result = NodeStmt{.var = stmt_import};
   }
-
-  else if (peek().has_value() && peek().value().type == TokenType::use) {
-    int line = peek().value().line;
-    consume();
-    NodeStmtUse stmt_import;
-
-    stmt_import.mod_name = consume();
-    stmt_import.line = line;
-
-    if (!peek().has_value() || peek().value().type != TokenType::dp ||
-        !peek(1).has_value() || peek(1).value().type != TokenType::dp) {
-      add_error("Expected element(s) to import", line);
-    }
-
-    consume();
-    consume();
-    if (!peek().has_value()) {
-      add_error("Expected element(s) to import after '::'", line);
-    }
-
-    std::vector<std::string> elements;
-    if (peek().value().type == TokenType::l_key) {
-      consume();
-      while (peek().has_value() && peek().value().type != TokenType::r_key) {
-        if (!peek().has_value() || peek().value().type != TokenType::ident) {
-          add_error("Expected element in import list", line);
-          break;
-        }
-        elements.push_back(consume().value.value());
-
-        if (peek().has_value() && peek().value().type == TokenType::comma) {
-          consume();
-          continue;
-        }
-      }
-      if (!peek().has_value() || peek().value().type != TokenType::r_key) {
-        add_error("Expected '}' to close import list", line);
-      }
-      consume();
-    } else if (peek().value().type == TokenType::ident) {
-      elements = {consume().value.value()};
-    }
-
-    stmt_import.to_import = elements;
-
-    result = NodeStmt{.var = stmt_import};
-  }
   else if (peek().has_value() && peek().value().type == TokenType::import) {
     int line = peek().value().line;
     consume();

@@ -5,7 +5,7 @@
  * See LICENSE file in the project root for full license text.
 *#
 
-import string;
+use "headers/string.ys";
 
 fun bytostr(s: str, size: int) -> str {
   var result: str = "";

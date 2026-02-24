@@ -1677,7 +1677,7 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
     void operator()(const NodeStmtHeader &stmt_header) const { gen->is_header = true; }
     void operator()(const NodeStmtUhead &stmt_import) const {
       const std::string &name = stmt_import.mod_name.value.value();
-      const std::string &path = name + ".ys";
+      const std::string &path = name;
       std::ifstream input_file(path);
       if (!input_file.is_open()) {
         std::cerr << "Error: Could not open " << name << "\n";
@@ -1769,7 +1769,6 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
         gen->m_struct_arg_templates.insert(struct_arg_template);
       }
     }
-
     void operator()(const NodeStmtLeave &stmt_leave) const {
       gen->Builder.CreateRetVoid();
     }
