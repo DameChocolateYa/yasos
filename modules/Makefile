@@ -29,19 +29,15 @@ all: $(TARGET)
 $(TARGET): $(OBJ)
 	$(CC) $(LDFLAGS) -o $@ $^
 
-# Compilación de C
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Compilación de ensamblador escrito a mano
 %.o: %.s
 	$(AS) -fPIC -c $< -o $@
 
-# Generación de .s a partir de .ys
 %.s: %.ys
 	$(YS) -S $<
 
-# Los .o de YASOS dependen de los .s generados
 %.o: %.ys
 	$(YS) -S $<
 	$(AS) -fPIC -c $*.s -o $@
