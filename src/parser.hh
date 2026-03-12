@@ -343,6 +343,7 @@ struct NodeStmtDefFunc {
   bool is_extern = false;
   std::vector<std::string> absolute_type_name_args;
   bool is_vargs;
+  NodeStmtVar ret_var; // Optional...
   int line;
 };
 

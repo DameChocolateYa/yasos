@@ -5,11 +5,19 @@
  * See LICENSE file in the project root for full license text.
 *#
 
+#- LIBC functions
+extern fun memcpy(dest: any, src: str, len: int);
+extern fun printf(fmt: str, undefan);
+
 declmod string;
 extern fun sub(a: str, begin: int, end: int) -> str;
 extern fun len(a: str) -> int;
 extern fun cat(a: str, b: str) -> str;
 extern fun cmp(a: str, b: str) -> int;
+endmod;
+
+declmod mem;
+extern fun alloc(size: int) -> any;
 endmod;
 
 declmod string;
@@ -104,4 +112,17 @@ fun is_whitespace(s: str) -> int {
 
   ret is_whitespace;
 } pub;
+
+fun get_cat(s1: str, s2: str) -> str {
+  var len1: int = string::len(s1);
+  var len2: int = string::len(s2);
+
+  var result: str = mem::alloc(len1 + len2 + 1);
+  memcpy(result, s1, len1);
+  memcpy(result + len1, s2, len2);
+  result[len1 + len2] = '\0';
+
+  ret result;
+} pub;
+
 endmod;

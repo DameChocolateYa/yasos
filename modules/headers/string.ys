@@ -46,6 +46,8 @@ extern fun find(string: str, substr: str) -> int;
 
 extern fun get_splited(string: str, delimiter: str, bufsize: &int) -> &str;
 
+extern fun get_cat(s1: str, s2: str) -> str;
+
 cnst STR_EMPTY: str = "";
 cnst STR_WHITE: str = " ";
 cnst STR_NULLT: str = "\0";

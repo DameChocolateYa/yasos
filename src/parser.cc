@@ -792,6 +792,28 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     if (!peek().has_value() || peek().value().type != TokenType::ident) {
       add_error("Expected name in the function declaration\n", line);
     }
+
+    NodeStmtVar ret_var = {.line = -1}; // To initialize with no existent return method
+    if (peek().has_value() && peek().value().type == TokenType::ident &&
+        peek(1).has_value() && peek(1).value().type == TokenType::dp) {
+      ret_var.line = line;
+      ret_var.ident = consume();
+
+      if (!peek().has_value() || peek().value().type != TokenType::dp &&
+          !peek(1).has_value()) {
+            add_error("Expected type after return name declaration\n");
+          }
+      
+      consume();
+      ret_var.type = parse_type();
+      consume();
+
+      if (!peek().has_value() || peek().value().type != TokenType::eq) {
+        add_error("Expected assigment operator in function declaration\n", line);
+      }
+      consume();
+    }
+
     Token name = consume();
     std::vector<CustomFuncArgs> args;
     std::vector<std::string> absolute_type_name_args;
@@ -862,6 +884,10 @@ std::optional<NodeStmt> Parser::parse_stmt() {
       consume();
       consume();
 
+      if (ret_var.line != -1) { // line = -1 -> no return variable existence
+        add_error("Can not set return type when variable return has been created\n");
+      }
+
       if (!peek().has_value()) {
         add_error("Expected a type for return specification", line);
       }
@@ -912,6 +938,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
           .is_extern = is_extern,
           .absolute_type_name_args = absolute_type_name_args,
           .is_vargs = vargs,
+          .ret_var = ret_var,
           .line = line}};
   } else if (peek().has_value() && peek().value().type == TokenType::ident &&
              peek(1).has_value() &&

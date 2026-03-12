@@ -354,6 +354,16 @@ llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
       case TokenType::plus:
         if (v1->isDoubleTy() || v2->isDoubleTy())
           result = gen->Builder.CreateFAdd(lhs_val, rhs_val, "faddtmp");
+        else if (v1->isPointerTy() && v2->isIntegerTy() || v2->isPointerTy() && v1->isIntegerTy()) {
+          llvm::Type *i8ty = llvm::Type::getInt8Ty(TheContext);
+
+          result = gen->Builder.CreateInBoundsGEP(
+            i8ty,
+            lhs_val,
+            rhs_val,
+            "ptr.plus.len"
+          );
+        }
         else if (is_string_literal(lhs_val) && is_string_literal(rhs_val)) {
 
           std::vector<llvm::Type *> param_types = {
@@ -1506,7 +1516,9 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       }
 
       size_t var_n = gen->m_vars.size();
+
       llvm::Type *ret_type = map_type_to_llvm(stmt_def_func.return_type, gen, stmt_def_func.return_type.is_ref, true).type;
+      llvm::Type *ret_type_c = map_type_to_llvm(stmt_def_func.ret_var.type, gen, stmt_def_func.ret_var.type.is_ref, true).type;
       if (name == "main")
         ret_type = llvm::Type::getInt32Ty(TheContext);
 
@@ -1515,10 +1527,10 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
         param_types.push_back(
             map_type_to_llvm(c_arg.arg_type, gen, c_arg.arg_type.is_ref).type);
       }
-      gen->declared_funcs.insert({name, {ret_type, param_types}});
+      gen->declared_funcs.insert({name, {stmt_def_func.ret_var.line == -1 ? ret_type : ret_type_c, param_types}});
 
       llvm::FunctionType *func_type =
-          llvm::FunctionType::get(ret_type, param_types, stmt_def_func.is_vargs);
+          llvm::FunctionType::get(stmt_def_func.ret_var.line == -1 ? ret_type : ret_type_c, param_types, stmt_def_func.is_vargs);
 
       llvm::GlobalValue::LinkageTypes linkage = stmt_def_func.is_extern
         ? llvm::Function::ExternalLinkage
@@ -1556,6 +1568,19 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       gen->Builder.SetInsertPoint(entry);
       gen->current_mode = Mode::Function;
 
+      if (stmt_def_func.ret_var.line != 1) {
+        TypeMapping type_mapping =
+          map_type_to_llvm(stmt_def_func.ret_var.type, gen, stmt_def_func.ret_var.type.is_ref);
+        llvm::Type *base_type = type_mapping.base_type;
+        llvm::Type *llvm_type = type_mapping.type;
+
+        llvm::Value *var_ptr = gen->Builder.CreateAlloca(llvm_type, nullptr, name);
+
+        Var var = gen->insert_var(stmt_def_func.ret_var.ident.value.value(), nullptr, llvm_type,
+                                base_type, var_ptr, true,
+                                gen->current_mode == Mode::Global);
+      }
+
       auto argIt = func->arg_begin();
       for (const auto &c_arg : stmt_def_func.args) {
         argIt->setName(c_arg.name);
@@ -1578,18 +1603,28 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
         gen->gen_stmt(stmt);
       }
 
-      if (ret_type->isVoidTy()) {
+      if (ret_type->isVoidTy() && stmt_def_func.ret_var.line == -1) {
         gen->Builder.CreateRetVoid();
       } else if (name == "main") {
         gen->Builder.CreateRet(llvm::ConstantInt::get(
           llvm::Type::getInt32Ty(TheContext),
           0
         ));
+      } else if (stmt_def_func.ret_var.line != -1) {
+          llvm::Value *ret_val = nullptr;
+          if (gen->m_vars.contains(stmt_def_func.ret_var.ident.value.value())) {
+            llvm::Value *var = gen->m_vars.at(stmt_def_func.ret_var.ident.value.value()).var_ptr;
+            if (true)
+              ret_val = var;
+            ret_val = gen->Builder.CreateLoad(gen->m_vars.at(stmt_def_func.ret_var.ident.value.value()).type, var, stmt_def_func.ret_var.ident.value.value());
+          }
+        gen->Builder.CreateRet(ret_val);
       }
 
       gen->Builder.ClearInsertionPoint();
       gen->current_mode = Mode::Global;
 
+      // OBSOLETE
       while (gen->m_vars.size() > var_n) {
         int i = gen->m_vars_order.size() - 1;
         const auto &var_name = gen->m_vars_order[i];

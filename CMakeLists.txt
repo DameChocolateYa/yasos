@@ -22,7 +22,7 @@ find_package(LLVM REQUIRED CONFIG)
 
 set(CMAKE_CXX_STANDARD 23)
 
-set(CMAKE_CXX_FLAGS "-no-pie -g -O3")
+set(CMAKE_CXX_FLAGS "-no-pie -g -O2")
 
 add_executable(yasos src/error.cc src/lexer.cc src/parser.cc src/generation.cc src/main.cc)
 target_include_directories(yasos PRIVATE ${LLVM_INCLUDE_DIRS})

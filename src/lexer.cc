@@ -495,6 +495,10 @@ std::vector<Token> Lexer::tokenize() {
       tokens.push_back({.type = TokenType::bang, .value = "!", .line = local_lines});
       ++tokens_in_current_line;
       continue;
+    } else if (peek().value() == '<' && peek(1).has_value() && peek(1).value() == '-') {
+      consume(); consume();
+      tokens.push_back({.type = TokenType::eq, .value = "=", .line = local_lines});
+      ++tokens_in_current_line;
     } else if (peek().value() == '+' && peek(1).has_value() && peek(1).value() == '=') {
       consume();
       consume();
