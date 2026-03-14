@@ -9,34 +9,11 @@ compilers and how our machines understand our codes.
 To see the docs, visit: https://damechocolateya.github.io/yasos/
 
 ## How to compile the project?
-To compile the project you must first download the source code:
-`git clone https://github.com/DameChocolateYa/yasos.git`
 
-Then enter in the directory:
-`cd yasos`
+You can use the installation script, just excute it with the `--install` flag
+You can also use it to uninstall.
 
-Create make compilation files with cmake:
-`cmake -S . -B build/`
-
-Compile:
-`make --build build/`
-
-By the moment, yasos does not include a installation script, so you must copy all the files manually:
 > This may require root privileges
-`cp build/yasos /usr/bin`
-
-**__This only will install the compiler, to make the whole installation:__**
-```
-cd modules/headers
-mkdir -p /usr/include/ysinclude
-cp *.ys /usr/include/ysinclude
-cd ../
-mkdir -p /usr/lib/yslib
-cp libys.so /usr/lib/yslib
-```
-> This may require root privileges
-
-This will install modules and headers
 
 ## License
 
