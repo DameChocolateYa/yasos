@@ -10,8 +10,8 @@ declmod string;
 extern fun badd_nil(s: str);
 
 extern fun len(s: str) -> int;
-extern fun cat(s1: str, s2: str) -> str;
-extern fun bufcat(buf: &str, s2: str) -> none;
+extern fun get_cat(s1: str, s2: str) -> str;
+extern fun cat(s1: str, s2: str) -> none;
 
 extern fun cutidx(s1: str, begin: int, end: int) -> str;
 extern fun bufcutidx(buf: &str, begin: int, end: int) -> none;
@@ -46,7 +46,7 @@ extern fun find(string: str, substr: str) -> int;
 
 extern fun get_splited(string: str, delimiter: str, bufsize: &int) -> &str;
 
-extern fun get_cat(s1: str, s2: str) -> str;
+extern fun cpy(dest: &str, src: str) -> none;
 
 cnst STR_EMPTY: str = "";
 cnst STR_WHITE: str = " ";

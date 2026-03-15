@@ -39,45 +39,6 @@ void badd_nil$MODstring(char **s1) {
 }
 
 __attribute__((visibility("default")))
-char *cat$MODstring(const char *s1, const char *s2) {
-  if (!s1 || !s2)
-    return NULL;
-
-  size_t len1 = len$MODstring(s1);
-  size_t len2 = len$MODstring(s2);
-
-  char *result = (char *)alloc$MODmem(len1 + len2 + 1);
-  result[len1 + len2] = '\0';
-  if (!result)
-    return NULL;
-
-  memcpy(result, s1, len1);
-  memcpy(result + len1, s2, len2);
-  result[len1 + len2] = '\0';
-
-  return result;
-}
-
-__attribute__((visibility("default")))
-void  bufcat$MODstring(char **s1, const char *s2) {
-  if (!s1 || !s2)
-    return;
-
-  size_t len1 = len$MODstring(*s1);
-  size_t len2 = len$MODstring(s2);
-
-  char *old = *s1;
-  char *newbuf = (char *)alloc$MODmem(len1 + len2 + 1);
-  if (!newbuf) return;
-
-  memcpy(newbuf, old, len1);
-  memcpy(newbuf + len1, s2, len2);
-  newbuf[len1 + len2] = '\0';
-
-  *s1 = newbuf;
-}
-
-__attribute__((visibility("default")))
 char *cutidx$MODstring(const char *s1, int begin, int end) {
   int len = len$MODstring(s1);
 
@@ -502,4 +463,10 @@ char **get_splited$MODstring(const char *str, const char *delimiter, int *bufsiz
 
   if (bufsize) *bufsize = size;
   return buf;
+}
+
+__attribute__((visibility("default")))
+void cpy$MODstring(char *dest, const char *src) {
+  while ((*dest++ = *src++))
+        ;
 }

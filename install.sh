@@ -1,4 +1,12 @@
+#*
+# * yasos - a compiler for yasos language
+# * Copyright (c) 2025 DameChocolateYa
+# * Licensed under the BSD 3-Clause License.
+# * See LICENSE file in the project root for full license text.
+#*
+
 #!/bin/bash
+
 help() {
 	printf "\nYASOS install script help menu\n
 --install: installs yasos binary, library and the headers in your system\n
