@@ -626,7 +626,7 @@ llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
           llvm::ConstantDataArray::getString(TheContext, value, true);
 
       llvm::GlobalVariable *g_var_str = new llvm::GlobalVariable(
-          *gen->ModModule, str_constant->getType(), true,
+          *gen->ModModule, str_constant->getType(), false,
           llvm::GlobalValue::PrivateLinkage, str_constant, ".str");
       g_var_str->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
       g_var_str->setAlignment(llvm::Align(1));

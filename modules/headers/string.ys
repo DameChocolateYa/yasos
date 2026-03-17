@@ -10,6 +10,10 @@ declmod string;
 extern fun badd_nil(s: str);
 
 extern fun len(s: str) -> int;
+
+extern fun static_cat(dest: str, src: str) -> none;
+extern fun union(dest: str, src: str) -> none;
+extern fun new_union(dest: str, s1: str, s2: str) -> none;
 extern fun get_cat(s1: str, s2: str) -> str;
 extern fun cat(s1: str, s2: str) -> none;
 

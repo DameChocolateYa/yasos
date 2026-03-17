@@ -31,6 +31,34 @@ int len$MODstring(const char *s1) {
 }
 
 __attribute__((visibility("default")))
+void union$MODstring(char *dest, const char *src) {
+  while (*dest) dest++;
+  while (*src) {
+    *dest = *src;
+    dest++;
+    src++;
+  }
+
+  *dest = '\0';
+}
+
+__attribute__((visibility("default")))
+void new_union$MODstring(char *dest, const char *s1, const char *s2) {
+  while (*s1) {
+    *dest = *s1;
+    dest++;
+    s1++;
+  }
+  while (*s2) {
+    *dest = *s2;
+    dest++;
+    s2++;
+  }
+
+  *dest = '\0';
+}
+
+__attribute__((visibility("default")))
 void badd_nil$MODstring(char **s1) {
   if (!s1 || !*s1) return;
 
@@ -62,7 +90,7 @@ char *cutidx$MODstring(const char *s1, int begin, int end) {
 }
 
 __attribute__((visibility("default")))
-void bufcutidx$MODstring(const char **s1, int begin, int end) {
+void bufcutidx$MODstring(char **s1, int begin, int end) {
   if (!s1)
     return;
   *s1 = cutidx$MODstring(*s1, begin, end);
