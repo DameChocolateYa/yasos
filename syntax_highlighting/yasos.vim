@@ -1,3 +1,10 @@
+#
+ # yasos - a compiler for yasos language
+ # Copyright (c) 2025-2026 DameChocolateYa
+ # Licensed under the BSD 3-Clause License.
+ # See LICENSE file in the project root for full license text.
+#
+
 syntax keyword yasosKeyword fun pub mkpub extern var cnst ret leave import use uhead llibrary libpath add adding sub subing mul muling div diving inc dec nwstruct if elif else while loop for stop continue eq neq bang gt gte lt lte undefa undefan and or ref deref new __asm def undef endif error warn isdef isndef sizeof struct goto
 syntax region yasosString start=+"+ skip=+\\.+ end=+"+ keepend
 syntax region yasosString start=+'+ skip=+\\.+ end=+'+ keepend

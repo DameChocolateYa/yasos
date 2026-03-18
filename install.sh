@@ -1,6 +1,6 @@
 #*
 # * yasos - a compiler for yasos language
-# * Copyright (c) 2025 DameChocolateYa
+# * Copyright (c) 2025-2026 DameChocolateYa
 # * Licensed under the BSD 3-Clause License.
 # * See LICENSE file in the project root for full license text.
 #*
@@ -12,11 +12,20 @@ help() {
 --install: installs yasos binary, library and the headers in your system\n
 --remove: remove the yasos compiler, libreary and headers in your system\n
 --clean: remove the compilation results in the cloned repository\n
+--compile: will only compile the binary and the standard library without install it in your system\n
 --help: displays this menu\n
 
 To learn YASOS check the github's docs in YASOS repository\n
 
 Have FUN (and good luck...)\n"
+}
+
+compile() {
+	cmake -S . -B build/
+	cmake --build build/
+	cd modules
+	make
+	cd ..
 }
 
 install() {
@@ -71,6 +80,8 @@ for arg in "$@"; do
 		install
 	elif [[ "$arg" == "--clean" ]]; then
 		clean
+	elif [[ "$arg" == "--compile" ]]; then
+		compile
 	elif [[ "$arg" == "--remove" ]]; then
 		remove
 	else
