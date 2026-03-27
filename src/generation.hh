@@ -98,6 +98,7 @@ public:
     bool is_mutable;
     bool is_globl;
     std::string struct_template = "";
+    bool is_arg = false;
 
     bool operator<(const Var &other) const {
       if (name != other.name)
@@ -189,7 +190,7 @@ public:
   inline Var insert_var(const std::string &name, Var *parent, llvm::Type *type,
                         llvm::Type *base_type, llvm::Value *var_ptr,
                         bool is_mutable = true, bool is_globl = false,
-                        std::string struct_template = "") {
+                        std::string struct_template = "", bool is_arg = false) {
 
     m_vars.insert({name, Var{.parent = parent,
                              .type = type,
@@ -198,7 +199,8 @@ public:
                              .var_ptr = var_ptr,
                              .is_mutable = is_mutable,
                              .is_globl = is_globl,
-                             .struct_template = struct_template}});
+                             .struct_template = struct_template,
+                            .is_arg = is_arg}});
     m_vars_order.push_back(name);
     return m_vars.at(name);
   }
@@ -228,6 +230,9 @@ std::string escape_string(const std::string &s) {
         ++i;
       } else if (next == 't') {
         result += '\t';
+        ++i;
+      } else if (next == '0') {
+        result += '\0';
         ++i;
       } else if (next == '\\') {
         result += '\\';

@@ -108,6 +108,7 @@ TypeMapping map_type_to_llvm(const Type &t, Generator *gen, bool is_ref = false,
     if (t.pointee != nullptr) {
       auto pointee_mapping = map_type_to_llvm(*t.pointee, gen);
       type.type = llvm::PointerType::getUnqual(pointee_mapping.type);
+
       type.base_type = pointee_mapping.type;
     } else {
       type.type = type.base_type;
@@ -123,7 +124,7 @@ TypeMapping map_type_to_llvm(const Type &t, Generator *gen, bool is_ref = false,
       type.type = type.base_type;
 
     break;
-  case Kind::Str:
+  /*case Kind::Str:
     type.base_type = llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(TheContext));
     if (t.pointee != nullptr) {
       auto pointee_mapping = map_type_to_llvm(*t.pointee, gen);
@@ -131,6 +132,19 @@ TypeMapping map_type_to_llvm(const Type &t, Generator *gen, bool is_ref = false,
       type.base_type = pointee_mapping.type;
     } else
       type.type = type.base_type;
+    break;*/
+  case Kind::Str:
+    // Strings son char*, pero usamos la misma recursión si hay punteros a strings
+    type.base_type = llvm::Type::getInt8Ty(TheContext);
+    if (t.pointee != nullptr) {
+        TypeMapping pointee_mapping;
+        auto llvm_pointee = map_type_to_llvm(*t.pointee, gen, pointee_mapping.type);
+
+        type.type = llvm::PointerType::getUnqual(llvm_pointee.type);
+        type.base_type = llvm_pointee.type;
+    } else {
+        type.type = llvm::PointerType::getUnqual(type.base_type); // i8*
+    }
     break;
   case Kind::Char:
     type.base_type = llvm::Type::getInt8Ty(TheContext);
@@ -204,8 +218,8 @@ TypeMapping map_type_to_llvm(const Type &t, Generator *gen, bool is_ref = false,
 static llvm::Type *get_base_type_from_opaque(llvm::Type *t) {
   // if (!t->isPointerTy()) return t;
 
-  if (t->isIntegerTy())
-    return llvm::Type::getInt32Ty(TheContext);
+  /*if (t->isIntegerTy())
+    return llvm::Type::getInt32Ty(TheContext);*/
 
   return t;
 }
@@ -292,7 +306,8 @@ static void set_value(Generator *gen, llvm::Value *target, llvm::Value *value) {
 static std::optional<llvm::Value *> call_func(const std::string &fn,
                                               std::vector<NodeExprPtr> arg_values,
                                               Generator *gen, int line,
-                                              bool direct_call = false) {
+                                              bool direct_call = false,
+                                            bool inexistent_error = true) {
   std::vector<llvm::Value *> values;
 
   for (const auto &arg_val : arg_values) {
@@ -302,7 +317,7 @@ static std::optional<llvm::Value *> call_func(const std::string &fn,
   llvm::Function *func = gen->ModModule->getFunction(fn);
 
   if (!gen->declared_funcs.contains(fn) || func == nullptr) {
-    add_error("Inexistent function (" + fn + ")", line);
+    if (inexistent_error) add_error("Inexistent function (" + fn + ")", line);
     return std::nullopt;
   }
 
@@ -314,6 +329,18 @@ static std::optional<llvm::Value *> call_func(const std::string &fn,
   }
 
   return std::nullopt;
+}
+
+static void clean_after_scope(Generator *gen, int line) {
+  // Call destroy functions of structs (if they have it)
+  for (const auto& var : gen->m_vars) {
+    if (var.second.base_type->isStructTy() && !var.second.is_arg) {
+      const std::string name = var.second.name;
+      const std::string mangled_struct = "destroy" + std::string("$MOD") + var.second.base_type->getStructName().str();
+      call_func(mangled_struct, std::vector<NodeExprPtr>{std::make_shared<NodeExpr>(NodeExprGetPtr{.ident = Token{.type = TokenType::ident, .value = name, .line = line}, .line = line})},
+      gen, line, false, false);
+    }
+  }
 }
 
 llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
@@ -390,6 +417,16 @@ llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
       case TokenType::minus:
         if (v1->isDoubleTy() || v2->isDoubleTy())
           result = gen->Builder.CreateFSub(lhs_val, rhs_val, "fsub");
+        else if (v1->isPointerTy() && v2->isIntegerTy() || v2->isPointerTy() && v1->isIntegerTy()) {
+          llvm::Type *i8ty = llvm::Type::getInt8Ty(TheContext);
+
+          result = gen->Builder.CreateInBoundsGEP(
+            i8ty,
+            lhs_val,
+            rhs_val,
+            "ptr.sub.len"
+          );
+        }
         else
           result = gen->Builder.CreateSub(lhs_val, rhs_val, "sub");
         break;
@@ -682,6 +719,28 @@ llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
       llvm::Value *base = gen->gen_expr(*expr_property.base, false, false);
       llvm::Value *base2 = gen->gen_expr(*expr_property.base, false, true);
 
+      if (expr_property.is_func) {
+        const std::string& func_name = expr_property.property.value.value();
+        std::string struct_template;
+
+        for (const auto& var : gen->m_vars) {
+          if (var.second.base_type->isStructTy()) {
+            const std::string name = var.second.name;
+            struct_template = var.second.base_type->getStructName().str();
+          }
+        }
+
+        const std::string& func_name_mangled = func_name + std::string("$MOD") + struct_template;
+        NodeExprPtr base_expr = expr_property.base;
+        NodeExpr var_expr = NodeExpr(NodeExprGetPtr{.ident = expr_property.base_tok, .line = expr_property.line});
+
+        std::vector<NodeExprPtr> args;
+        args.push_back(std::make_shared<NodeExpr>(var_expr));
+        for (const auto& arg : expr_property.args) args.push_back(arg);
+
+        return *call_func(func_name_mangled, args, gen, expr_property.line);
+      }
+
       if (!base->getType()->isStructTy()) {
         add_error("Expected struct as base", expr_property.line);
         return nullptr;
@@ -759,6 +818,21 @@ llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
 
       llvm::Type *base_type = get_type(*expr_list_element.list_expr, gen, true);
       base_type = get_base_type_from_opaque(base_type);
+
+      if (!list_val) {
+        llvm::errs() << "Error: list_expr evaluated to null\n";
+        return nullptr;
+      }
+
+      if (!base_type) {
+        llvm::errs() << "Error: base_type is null\n";
+        return nullptr;
+      }
+
+      if (!index) {
+        llvm::errs() << "Error: index expression evaluated to null\n";
+        return nullptr;
+      }
 
       llvm::Value *element_ptr =
         gen->Builder.CreateInBoundsGEP(base_type, list_val, index, "element_ptr");
@@ -1578,7 +1652,7 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
 
         Var var = gen->insert_var(stmt_def_func.ret_var.ident.value.value(), nullptr, llvm_type,
                                 base_type, var_ptr, true,
-                                gen->current_mode == Mode::Global);
+                                gen->current_mode == Mode::Global, "", true);
       }
 
       auto argIt = func->arg_begin();
@@ -1602,6 +1676,28 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       for (const auto &stmt : stmt_def_func.code_branch) {
         gen->gen_stmt(stmt);
       }
+      
+      bool destroy = false;
+      size_t start = 0;
+      while (true) {
+        size_t end = name.find('$', start);
+
+        std::string segment;
+        if (end == std::string::npos) {
+          segment = name.substr(start);
+        } else {
+          segment = name.substr(start, end - start);
+        }
+
+        if (segment == "destroy") {
+          destroy = true;
+        }
+
+        if (end == std::string::npos) break;
+        start = end + 1;
+      }
+
+      if (destroy) clean_after_scope(gen, stmt_def_func.line);
 
       if (ret_type->isVoidTy() && stmt_def_func.ret_var.line == -1) {
         gen->Builder.CreateRetVoid();
@@ -1624,7 +1720,7 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       gen->Builder.ClearInsertionPoint();
       gen->current_mode = Mode::Global;
 
-      // OBSOLETE
+      // OBSOLETE (or no ?????)
       while (gen->m_vars.size() > var_n) {
         int i = gen->m_vars_order.size() - 1;
         const auto &var_name = gen->m_vars_order[i];
@@ -1657,7 +1753,9 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       call_func(fn, arg_values, gen, stmt_call.line, false);
     }
 
-    void operator()(const NodeStmtProperty &stmt_property) const {}
+    void operator()(const NodeStmtProperty &stmt_property) const {
+      llvm::Value *val = gen->gen_expr(stmt_property.expr);
+    }
 
     void operator()(const NodeStmtDeclmod &stmt_declmod) const {
       const std::string &ident = stmt_declmod.module_name.value.value();
@@ -1766,28 +1864,6 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
         new_f->copyAttributesFrom(&f);
       }
 
-      /*llvm::ValueToValueMapTy VMap;
-      for (auto &g : generator.ModModule->globals()) {
-        llvm::GlobalVariable *new_g = new llvm::GlobalVariable(
-            *gen->ModModule, g.getValueType(), g.isConstant(), g.getLinkage(),
-            nullptr, g.getName());
-
-        VMap[&g] = new_g;
-
-        if (g.hasInitializer()) {
-          llvm::Constant *new_init = llvm::MapValue(g.getInitializer(), VMap);
-          new_g->setInitializer(new_init);
-        }
-
-        new_g->setAlignment(g.getAlign());
-        new_g->setThreadLocalMode(g.getThreadLocalMode());
-        new_g->setExternallyInitialized(g.isExternallyInitialized());
-      }
-
-      for (const auto &glob_var : generator.m_vars) {
-        gen->m_vars.insert(glob_var);
-      }*/
-
       for (const auto &declared_func : generator.declared_funcs) {
         gen->declared_funcs.insert(declared_func);
       }
@@ -1836,6 +1912,16 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       the_struct->setBody(parsed_fields);
       gen->m_struct_templates.insert({name, the_struct});
       gen->m_struct_arg_templates.insert({name, args});
+    }
+
+    void operator()(const NodeStmtImpl &stmt_impl) const {
+      m_mod.push_back(stmt_impl.struct_name.value.value());
+
+      for (const auto& stmt : stmt_impl.funcs) {
+        gen->gen_stmt(NodeStmt{.var = stmt});
+      }
+
+      m_mod.pop_back();
     }
 
     void operator()(const NodeStmtDefine &stmt_def) const {
@@ -1973,6 +2059,8 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       for (const auto &stmt : stmt_scope.code_branch) {
         gen->gen_stmt(stmt);
       }
+
+      clean_after_scope(gen, stmt_scope.line);
 
       while (gen->m_vars.size() > var_n) {
         int i = gen->m_vars_order.size() - 1;

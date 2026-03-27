@@ -134,6 +134,7 @@ struct NodeExprBoolValue {
 
 struct NodeExprProperty {
   std::shared_ptr<NodeExpr> base;
+  Token base_tok;
   Token property;
 
   int is_func = false;
@@ -374,7 +375,6 @@ struct NodeStmtContinue {
 
 struct NodeStmtProperty {
   Token ident;
-  Token property;
   NodeExpr expr;
   int line;
 };
@@ -424,6 +424,12 @@ struct NodeStmtListElement {
 struct NodeStmtStruct {
   Token name;
   std::vector<std::pair<std::string, Type>> fields;
+  int line;
+};
+
+struct NodeStmtImpl {
+  Token struct_name;
+  std::vector<NodeStmtDefFunc> funcs; // this will be a little weird to program
   int line;
 };
 
@@ -490,7 +496,7 @@ struct NodeStmt {
     NodeStmtProperty, NodeStmtDeclmod, NodeStmtEndmod, NodeStmtUmod,
     NodeStmtUbeepmod, NodeStmtLlibrary, NodeStmtLibpath, NodeStmtSetPtr,
     NodeStmtGlobl, NodeStmtHeader, NodeStmtUhead, NodeStmtLeave,
-    NodeStmtListElement, NodeStmtStruct, NodeStmtDefine, NodeStmtUndef,
+    NodeStmtListElement, NodeStmtStruct, NodeStmtImpl, NodeStmtDefine, NodeStmtUndef,
     NodeStmtPreprocessorCond, NodeStmtPreError, NodeStmtPreWarning,
     NodeStmtPrint, NodeStmtLabel, NodeStmtGoto, NodeStmtScope>
       var;
@@ -527,7 +533,7 @@ public:
   inline explicit Parser(std::vector<Token> tokens) : m_tokens(std::move(tokens)) {}
   Type parse_type();
   std::string parse_mangled_chain();
-  std::optional<NodeExpr> parse_property_chain(std::optional<NodeExpr> base_expr = std::nullopt);
+  std::optional<NodeExpr> parse_property_chain(std::optional<NodeExpr> base_expr = std::nullopt, Token base = Token{.value = "(NULL)"});
   std::optional<NodeExpr> parse_primary_expr();
   std::optional<NodeExpr> parse_expr(int min_precedence = 0);
   std::optional<NodeStmt> parse_stmt();

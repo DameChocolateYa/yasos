@@ -22,7 +22,41 @@ extern fun alloc(size: int) -> &any;
 extern fun free(p: &any);
 endmod;
 
+declmod character;
+extern fun cmp(c1: char, c2: char) -> int;
+endmod;
+
 declmod string;
+
+fun union(s1: str, s2: str) -> none {
+  while *s1 != '\0' {
+    inc s1;
+  }
+
+  while *s2 != '\0' {
+    *s1 = *s2;
+    inc s1;
+    inc s2;
+  }
+
+  *s1 = '\0';
+} pub;
+
+fun new_union(dest: str, s1: str, s2: str) -> none {
+  while *s1 != '\0' {
+    *dest = *s1;
+    inc dest;
+    inc s1;
+  }
+
+  while *s2 != '\0' {
+    *dest = *s2;
+    inc dest;
+    inc s2;
+  }
+
+  *dest = '\0';
+} pub;
 
 fun get_cat(s1: str, s2: str) -> str {
   var len1: int = string::len(s1);
@@ -50,6 +84,63 @@ fun cat(s1: &str, s2: str) {
   new[len1 + len2] = '\0';
   strcpy(s1, new);
   mem::free(new);
+} pub;
+
+fun find(string: str, substring: str) -> int {
+  var n: int = string::len(string);
+  var m: int = string::len(substring);
+
+  if m > n { ret -1; }
+
+  for var i: int = 0; i <= n - m; inc i {  #- Only go where substring can fit
+    var matched: int = true;
+    for var j: int = 0; j < m; inc j {
+      if !character::cmp(string[i + j], substring[j]) {
+        matched = false;
+        stop;
+      }
+    }
+    if matched { ret i; }
+  }
+
+  ret -1;
+} pub;
+
+fun cut(buf: str, begin: int, end: int) -> none {
+  var lenght: int = string::len(buf);
+  if begin > lenght or end - 1 > lenght {leave;}
+
+  for var i: int = begin; i < end; inc i {
+    buf[i] = '';
+  }
+
+  buf[lenght] = '\0';
+} pub;
+
+fun cut_substring(string: str, substr: str) -> none {
+  var loc: int = string::find(string, substr);
+  if loc == -1 {leave;}
+
+  for var i: int = loc; i < loc + string::len(substr); inc i {
+    string[i] = '';
+  }
+} pub;
+
+fun sub(string: str, begin: int, end: int) -> str {
+  var lenght: int = string::len(string);
+  if begin > lenght or end > lenght {ret "(null)";}
+
+  var res: str = "aaaaaaaaaaaaaaaaaaaaaaaaaa";
+  res = "";
+
+  for var i: int = begin - 1; i < end; inc i {
+    *res = string[i];
+    inc res;
+  }
+
+  res[string::len(res)] = '\0';
+
+  ret res;
 } pub;
 
 fun to_upper(string: str) -> str {

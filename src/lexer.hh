@@ -110,6 +110,7 @@ enum class TokenType {
   _extern,
   _list,
   _struct,
+  _impl,
   _nwstruct,
   _new,
   _goto,

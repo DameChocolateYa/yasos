@@ -8,32 +8,15 @@
 #- IMPORTANT: NOT RECOMMENDED TO USE, BAD IMPLEMENT (ESPECIALLY WITH STRINGS)
 
 struct Vec {
-    data: &any;
-    size: int;
-    capacity: int;
-    elem_size: int;
+  data: &any;
+  size: int;
+  capacity: int;
+  elem_size: int;
 };
 
-declmod vec;
-
-extern fun new(elem_size: int) -> Vec;
-extern fun free(vec: &Vec);
-extern fun init(vec: &Vec, elem_size: int);
-
-extern fun push(vec: &Vec, val: &any);
-extern fun pop(vec: &Vec) -> &any;
-extern fun edit(vec: &Vec, index: int, elem: &any);
-
-extern fun get(vec: &Vec) -> &any;
-extern fun size(vec: &Vec) -> int;
-
-extern fun erase(vec: &Vec, index: int);
-extern fun erase_all(vec: &Vec);
-
-extern fun increment(vec: &Vec, amount: int);
-extern fun decrease(vec: &Vec, amount: int);
-
-extern fun front(vec: &Vec) -> &any;
-extern fun back(vec: &Vec) -> &any;
-
-endmod;
+impl Vec {
+  extern fun new(elem_size: int) -> Vec;
+  extern fun push(self: &Vec, new_data: &any) -> int;
+  extern fun get(self: &Vec, index: int) -> &any;
+  extern fun delete(this: &Vec) -> int;
+};

@@ -169,7 +169,9 @@ std::string Parser::parse_mangled_chain() {
   return consume().value.value() + function_mangled_name;
 }
 
-std::optional<NodeExpr> Parser::parse_property_chain(std::optional<NodeExpr> base_expr) {
+static Token last_token;
+
+std::optional<NodeExpr> Parser::parse_property_chain(std::optional<NodeExpr> base_expr, Token base) {
   // std::optional<NodeExpr> expr = base_expr;
   std::optional<NodeExpr> expr = base_expr;
 
@@ -215,6 +217,7 @@ std::optional<NodeExpr> Parser::parse_property_chain(std::optional<NodeExpr> bas
     }
 
     expr = NodeExpr(NodeExprProperty{.base = std::make_shared<NodeExpr>(*expr),
+                                     .base_tok = base,
                                      .property = property,
                                      .is_func = is_func,
                                      .args = args,
@@ -389,12 +392,13 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
     int line = peek().value().line;
     recursive_expr = true;
     auto e = parse_primary_expr();
+    Token base = last_token;
     recursive_expr = false;
     if (!e.has_value()) {
       add_error("Malformed expression", line);
     }
 
-    std::optional<NodeExpr> expr = parse_property_chain(e);
+    std::optional<NodeExpr> expr = parse_property_chain(e, base);
     if (!expr.has_value()) {
       add_error("Malformed expression", line);
     }
@@ -539,6 +543,7 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
   } else if (peek().has_value() && peek().value().type == TokenType::int_lit) {
     return NodeExpr(NodeExprIntLit{consume()});
   } else if (peek().has_value() && peek().value().type == TokenType::ident) {
+    last_token = peek().value();
     return NodeExpr(NodeExprIdent{consume()});
   } else if (peek().has_value() && peek().value().type == TokenType::str_lit) {
     return NodeExpr(NodeExprStrLit{consume()});
@@ -626,10 +631,41 @@ std::optional<NodeStmt> result = std::nullopt;
 std::optional<NodeStmt> Parser::parse_stmt() {
   int line = -1;
   if (peek().has_value() && peek().value().type == TokenType::ident &&
-  peek(1).has_value() && peek(1).value().type == TokenType::dp &&
-  peek(2).has_value() && peek(2).value().type == TokenType::dp) {
+    peek(1).has_value() && peek(1).value().type == TokenType::dp &&
+    peek(2).has_value() && peek(2).value().type == TokenType::dp) {
     Token new_tok = {.type = TokenType::ident, .value = parse_mangled_chain(), .line = peek().value().line};
     m_tokens.insert(m_tokens.begin() + m_index, new_tok);
+  } else if (peek().has_value() && peek().value().type == TokenType::ident &&
+    peek(1).has_value() && peek(1).value().type == TokenType::dot &&
+    peek(2).has_value() && peek(2).value().type == TokenType::ident &&
+    peek(3).has_value() && peek(3).value().type == TokenType::open_paren) {
+      int line = peek().value().line;
+    recursive_expr = true;
+    auto e = parse_primary_expr();
+    Token base = last_token;
+    recursive_expr = false;
+    if (!e.has_value()) {
+      add_error("Malformed expression", line);
+    }
+
+    std::optional<NodeExpr> expr = parse_property_chain(e, base);
+    if (!expr.has_value()) {
+      add_error("Malformed expression", line);
+    }
+
+    NodeExprProperty expr_prop = std::get<NodeExprProperty>(expr->var);
+    
+    //result = NodeStmt{.var = NodeStmtCall{.name = expr_prop., .args = std::get<NodeExprProperty>(expr->var).args, .line = line}};
+    result = NodeStmt{.var = NodeStmtProperty{.ident = base, .expr = *expr, .line = line}};
+
+    if (need_semi && !in_for) {
+      if (!peek().has_value() || peek().value().type != TokenType::semi)
+        add_error("Expected ';' at the end of the instruction", line);
+      else
+        consume();
+    }
+    need_semi = true;
+    return result;
   }
   if (peek().has_value())
     line = peek().value().line;
@@ -756,6 +792,10 @@ std::optional<NodeStmt> Parser::parse_stmt() {
       type = consume();
       stmt_var.type = get_type_from_tok(type);
       stmt_var.type.is_ref = is_ref;*/
+    }
+
+    if (peek().has_value() && peek().value().type == TokenType::l_bracket) {
+      // Parse args (?)
     }
 
     if (!peek().has_value()) {
@@ -1649,6 +1689,43 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
     result = NodeStmt{
         .var = NodeStmtStruct{.name = struct_name, .fields = fields, .line = line}};
+  } else if(peek().has_value() && peek().value().type == TokenType::_impl) {
+    int line  = consume().line;
+    if (!peek().has_value() || peek().value().type != TokenType::ident) {
+      add_error("Expected the name of the struct");
+    }
+
+    Token ident = consume();
+    if (!peek().has_value() || peek().value().type != TokenType::l_key) {
+      if (!peek().has_value() || peek().value().type != TokenType::l_key) {
+        add_error("Expected '{' in struct implementation", line);
+      }
+    }
+    consume();
+
+    std::vector<NodeStmtDefFunc> funcs;
+    while (peek().has_value() && peek().value().type != TokenType::r_key) {
+      std::optional<NodeStmt> op_stmt = parse_stmt();
+      if (!op_stmt.has_value()) {
+        add_error("Invalid statment in struct implementation", line);
+      }
+      
+      NodeStmt stmt = *op_stmt;
+      if (!std::holds_alternative<NodeStmtDefFunc>(stmt.var)) {
+        add_error("Expected Function declarament in struct implementation", line);
+      }
+      NodeStmtDefFunc stmt_def_func = std::get<NodeStmtDefFunc>(stmt.var);
+
+      funcs.push_back(stmt_def_func);
+    }
+
+    if (!peek().has_value() || peek().value().type != TokenType::r_key) {
+      add_error("Expected '}'", line);
+    }
+    consume();
+
+    need_semi = true;
+    result = NodeStmt{.var = NodeStmtImpl{.struct_name = ident, .funcs = funcs, .line = line}};
   } else if (peek().has_value() && peek().value().type == TokenType::_def) {
     consume();
     need_semi = true;

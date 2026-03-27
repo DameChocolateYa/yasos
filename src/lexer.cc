@@ -290,6 +290,10 @@ std::vector<Token> Lexer::tokenize() {
         tokens.push_back({.type = TokenType::_struct, .line = local_lines});
         buf.clear();
         continue;
+      } else if (buf == "impl") {
+        tokens.push_back({.type = TokenType::_impl, .line = local_lines});
+        buf.clear();
+        continue;
       } else if (buf == "nwstruct") {
         tokens.push_back({.type = TokenType::_nwstruct, .line = local_lines});
         buf.clear();

@@ -30,7 +30,7 @@ int len$MODstring(const char *s1) {
   return len;
 }
 
-__attribute__((visibility("default")))
+/*__attribute__((visibility("default")))
 void union$MODstring(char *dest, const char *src) {
   while (*dest) dest++;
   while (*src) {
@@ -40,9 +40,9 @@ void union$MODstring(char *dest, const char *src) {
   }
 
   *dest = '\0';
-}
+}*/
 
-__attribute__((visibility("default")))
+/*__attribute__((visibility("default")))
 void new_union$MODstring(char *dest, const char *s1, const char *s2) {
   while (*s1) {
     *dest = *s1;
@@ -56,7 +56,7 @@ void new_union$MODstring(char *dest, const char *s1, const char *s2) {
   }
 
   *dest = '\0';
-}
+}*/
 
 __attribute__((visibility("default")))
 void badd_nil$MODstring(char **s1) {
@@ -64,6 +64,21 @@ void badd_nil$MODstring(char **s1) {
 
   int len = len$MODstring(*s1);
   (*s1)[len] = '\0';
+}
+
+__attribute__((visibility("default")))
+bool is_badd_nil$MODstring(const char c) {
+  //if (!c) return false;
+  if (c == '\0') {
+    return true;
+  }
+
+  return false;
+}
+
+__attribute__((visibility("default")))
+void add_badd_nil$MODstring(char *s1) {
+  (s1)[len$MODstring(s1)] = '\0';
 }
 
 __attribute__((visibility("default")))
@@ -96,7 +111,7 @@ void bufcutidx$MODstring(char **s1, int begin, int end) {
   *s1 = cutidx$MODstring(*s1, begin, end);
 }
 
-__attribute__((visibility("default")))
+/*__attribute__((visibility("default")))
 char *cut$MODstring(const char *str, const char *sub) {
   const char *pos = strstr(str, sub);
   if (pos == NULL) {
@@ -114,7 +129,7 @@ char *cut$MODstring(const char *str, const char *sub) {
   strncpy(result, str, len_before);
   strcpy(result + len_before, pos + len_sub);
   return result;
-}
+}*/
 
 __attribute__((visibility("default")))
 void bufcut$MODstring(char **str_ptr, const char *sub) {
@@ -138,27 +153,7 @@ void bufcut$MODstring(char **str_ptr, const char *sub) {
   *str_ptr = nuevo;
 }
 
-__attribute__((visibility("default")))
-char *sub$MODstring(const char *s1, int begin, int end) {
-  int len = len$MODstring(s1);
-
-  if (begin < 0)
-    begin = 0;
-  if (end > len)
-    end = len;
-  if (begin >= end)
-    return strdup("");
-
-  int sub_len = end - begin;
-  char *result = (char *)alloc$MODmem(sub_len + 1);
-  result[sub_len] = '\0';
-  if (!result)
-    return NULL;
-
-  strncpy(result, s1 + begin, sub_len);
-
-  return result;
-}
+extern char *sub$MODstring(const char *string, int begin, int end);
 
 void bufsub$MODstring(const char **s1, int begin, int end) {
   if (!s1)
@@ -282,7 +277,7 @@ int cmp$MODstring(const char *s1, const char *s2) {
 }
 
 __attribute__((visibility("default")))
-int charcmp$MODcharacter(const char c1, const char c2) { return c1 == c2; }
+int cmp$MODcharacter(const char c1, const char c2) { return c1 == c2; }
 
 __attribute__((visibility("default")))
 char *dig_to_abc$MODstring(const int n) {
@@ -428,13 +423,7 @@ int constains_case$MODstring(const char *str, const char *substring) {
     return 0;
 }
 
-__attribute__((visibility("default")))
-int find$MODstring(const char *str, const char *substring) {
-  char *pos = (char *)strstr(str, substring);
-  if (pos == NULL)
-    return -1;
-  return (int)(pos - str);
-}
+extern int find$MODstring(const char *str, const char *substring);
 
 __attribute__((visibility("default")))
 char **get_splited$MODstring(const char *str, const char *delimiter, int *bufsize) {

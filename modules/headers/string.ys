@@ -5,9 +5,38 @@
  * See LICENSE file in the project root for full license text.
 *#
 
+struct String {
+	src: &str;
+	size: int;
+};
+
+impl String {
+	extern fun new(s: str) -> String;
+	extern fun src(self: &String) -> str;
+	extern fun set(self: &String, src: str);
+
+	extern fun cat(self: &String, s2: String);
+  extern fun cat_str(self: &String, s2: str);
+
+  extern fun cut(self: &String, begin: int, end: int);
+  extern fun cut_substring(self: &String, substr: String);
+  extern fun cut_substr(self: &String, substr: str);
+
+  extern fun sub(self: &String, begin: int, end: int) -> String;
+
+  extern fun find(self: &String, substring: String) -> int;
+  extern fun find_str(self: &String, substring: str) -> int;
+
+  extern fun clean(self: &String);
+	extern fun delete(self: &String);
+	extern fun destroy(self: &String);
+};
+
 declmod string;
 
-extern fun badd_nil(s: str);
+extern fun badd_nil(s: str) -> none;
+extern fun is_badd_nil(s: str) -> int;
+extern fun add_badd_nil(s: str) -> none;
 
 extern fun len(s: str) -> int;
 
@@ -17,10 +46,13 @@ extern fun new_union(dest: str, s1: str, s2: str) -> none;
 extern fun get_cat(s1: str, s2: str) -> str;
 extern fun cat(s1: str, s2: str) -> none;
 
+extern fun find(string: str, substring: str) -> int;
+
 extern fun cutidx(s1: str, begin: int, end: int) -> str;
 extern fun bufcutidx(buf: &str, begin: int, end: int) -> none;
 
-extern fun cut(string: str, substr: str) -> str;
+extern fun cut(buf: str, begin: int, end: int) -> none;
+extern fun cut_substring(string: str, substring: str) -> none;
 extern fun bufcut(buf: &str, substr: str) -> none;
 
 extern fun sub(s1: str, begin: int, end: int) -> str;
