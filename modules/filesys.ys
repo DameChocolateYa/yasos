@@ -4,7 +4,7 @@
  * Licensed under the BSD 3-Clause License.
  * See LICENSE file in the project root for full license text.
 *#
-
+#*
 use "headers/std.ys";
 use "headers/string.ys";
 use "headers/byte.ys";
@@ -124,3 +124,4 @@ fun seek(f: &File, pos: int, whence: int) -> none {
 } pub;
 
 endmod;
+*#

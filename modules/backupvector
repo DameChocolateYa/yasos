@@ -1,0 +1,45 @@
+#include <stdio.h>
+
+struct String {
+	char *data;
+	int size;
+};
+
+extern void perror$MODstd(char *fmt, ...);
+extern struct String clone$MODString(struct String *self);
+
+__attribute__((visibility("default")))
+struct Vec {
+    void *data;
+    int size;
+    int capacity;
+    int elem_size;
+};
+
+__attribute__((visibility("default")))
+void *get$MODVec(struct Vec *vec, int index) {
+    if (index < 0 || index >= vec->size) {
+        perror$MODstd("ERROR: index out of range (%d > %d)\n", index, vec->size);
+        return NULL;
+    }
+
+    return (char *)vec->data + index * vec->elem_size;
+}
+
+__attribute__((visibility("default")))
+int get_int$MODVec(struct Vec *vec, int index) {
+    int *ptr = (int* )get$MODVec(vec, index);
+    return ptr ? *ptr : 0;
+}
+
+__attribute__((visibility("default")))
+struct String get_string$MODVec(struct Vec *vec, int index) {
+	struct String *ptr = (struct String* )get$MODVec(vec, index);
+
+	if (ptr) {
+		//return clone$MODString(ptr);
+		return *ptr;
+	}
+	
+	return (struct String){ .data = NULL, .size = 0 };
+}

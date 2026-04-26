@@ -12,4 +12,6 @@ extern fun free(pointer: &any) -> none;
 extern fun calloc(amount: int, size: int) -> &any;
 extern fun free_array(array: &any, size: int);
 extern fun free_arrayN(array: &any);
+
+extern fun as_int(x: &any) -> int;
 endmod;

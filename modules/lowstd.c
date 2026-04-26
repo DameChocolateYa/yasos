@@ -18,6 +18,10 @@
 #include <time.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <errno.h>
+#include <float.h> 
+#include "vector.h"
+#include "cutype.h"
 
 #define SYS_fork 57
 #define SYS_execve 59
@@ -560,4 +564,55 @@ double randf$MODstd(double min, double max, int decimals) {
 
   double factor = pow(10.0, decimals);
   return round(scaled * factor, decimals) / factor;
+}
+
+__attribute__((visibility("default")))
+bool is_valid_integer$MODstd(const char* str) {
+  char* end;
+  errno = 0;
+  long val = strtol(str, &end, 10);
+  return end != str && *end == '\0';
+}
+
+__attribute__((visibility("default")))
+int is_valid_float$MODstd(const char* str) {
+  char* end;
+  errno = 0;
+  float val = strtof(str, &end);
+  return end != str && *end == '\0' && !errno && val >= -FLT_MAX && val <= FLT_MAX;
+}
+
+__attribute__((visibility("default")))
+int is_valid_double$MODstd(const char* str) {
+  char* end;
+  errno = 0;
+  double val = strtod(str, &end);
+  return end != str && *end == '\0' && !errno && val >= -DBL_MAX && val <= DBL_MAX;
+}
+
+__attribute__((visibility("default")))
+Vec args$MODstd(int argc, char **argv) {
+  Vec args = new$MODVec(sizeof(String));
+
+  for (int i = 0; i < argc; i++) {
+    String arg = from$MODString(argv[i]);
+    push_string$MODVec(&args, arg);
+  }
+
+  return args;
+}
+
+__attribute__((visibility("default")))
+void free_args$MODstd(Vec *args) {
+  if (args->data == NULL || !args->is_membusy || args->elem_size != sizeof(String)) {
+    fprintf(stderr, "std::free_args: Could not free main arguments\n");
+    return;
+  }
+
+  for (int i = 0; i < args->size; i++) {
+    String s = get_string$MODVec(args, i);
+    destroy$MODString(&s);
+  }
+
+  destroy$MODVec(args);
 }

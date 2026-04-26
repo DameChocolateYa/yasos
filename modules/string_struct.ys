@@ -10,6 +10,8 @@ extern fun cpy(dest: str, src: str, len: int);
 extern fun len(s: str) -> int;
 extern fun cut(buf: str, begin: int, end: int) -> str;
 extern fun find(string: str, substring: str) -> int;
+extern fun is_empty(string: str) -> int;
+extern fun trim(string: str);
 endmod;
 
 declmod character;
@@ -18,211 +20,78 @@ extern fun to_str(c: char) -> str;
 endmod;
 
 declmod mem;
-  extern fun alloc(len: int) -> &any;
-  extern fun realloc(p: &any, len: int) -> &any;
-  extern fun free(p: &any) -> none;
+extern fun alloc(len: int) -> &any;
+extern fun realloc(p: &any, len: int) -> &any;
+extern fun free(p: &any) -> none;
+endmod;
+
+declmod std;
+extern fun perror(fmt: str, undefan);
+extern fun ask(msg: str, undefan) -> str;
 endmod;
 
 extern fun printf(fmt: str, undefan);
 extern fun memcpy(dest: str, src: str, len: int);
 extern fun memmove(begin: str, end: str, len: int);
+extern fun strcpy(dest: str, src: str);
+extern fun malloc(size: int) -> &any;
 
 struct String {
-	src: &char;
+	data: &char;
 	size: int;
+  mem_busy: int;
+};
+
+struct Vec {
+	data: &any;
+	size: int;
+	capacity: int;
+	elem_size: int;
 };
 
 impl String {
-	fun new(s: str) -> String {
-		var string: String;
-		string.src = mem::alloc(string::len(s));
-		string.size = string::len(s);
-		string::cpy(string.src, s);
+  fun new() -> String {
+    var string: String;
 
-		ret string;
-	} pub;
+    string.data = mem::alloc(1);
+    string.size = 0;
 
-	fun src(self: &String) -> str {
-		var s: String = *self;
-		ret s.src;
-	} pub;
-
-	fun set(self: &String, src: str) {
-		var s: String = *self;
-
-		s.size = string::len(src);
-		s.src = mem::realloc(s.src, s.size);
-
-		string::cpy(s.src, src);
-		
-		*self = s;
-	} pub;
-
-	fun cat(self: &String, s2: String) {
-		var s1: String = *self;
-		var len1: int = s1.size;
-		var len2: int = s2.size;
-
-		s1.size = len1 + len2;
-		s1.src = mem::realloc(s1.src, s1.size);
-
-		memcpy(s1.src + len1, s2.src, len2);
-
-		*self = s1;
-	} pub;
-
-  fun cat_str(self: &String, s2: str) {
-    var s1: String = *self;
-    var len1: int = s1.size;
-    var len2: int = string::len(s2);
-
-    var src: &char = s1.src;
-
-    s1.size = len1 + len2;
-    src = mem::realloc(s1.src, s1.size + 1);
-
-    memcpy(src + len1, s2, len2);
-    src[s1.size] = '\0';
-
-    s1.src = src;
-    *self = s1;
-  } pub;
-
-  fun cut(self: &String, begin: int, end: int) {
-    var s: String = *self;
-
-    var src: &char = s.src;
-
-    memmove(src + begin, src + end, s.size - (end));
-
-    s.size -= end - begin;
-    src[s.size] = '\0';
-
-    s.src = src;
-
-    *self = s;
-  } pub;
-
-  fun cut_substring(self: &String, substr: String) {
-    var this_s: String = *self;
-    var src: &char = this_s.src;
-    var loc: int = string::find(src, substr.src);
-    if loc == -1 {leave;}
-
-    memmove(src + loc, src + loc + string::len(substr.src), this_s.size - (loc + string::len(substr.src)));
-
-    this_s.size -= string::len(substr.src);
-    this_s.src = src;
-    src[this_s.size] = '\0';
-
-    *self = this_s;
-  } pub;
-
-  fun cut_substr(self: &String, substr: str) {
-    var this_s: String = *self;
-    var src: &char = this_s.src;
-    var loc: int = string::find(src, substr);
-    if loc == -1 {leave;}
-
-    memmove(src + loc, src + loc + string::len(substr), this_s.size - (loc + string::len(substr)));
-
-    this_s.size -= string::len(substr);
-    src[this_s.size] = '\0';
-    this_s.src = src;
-
-    *self = this_s;
-  } pub;
-
-  fun sub(self: &String, begin: int, end: int) -> String {
-    var s1: String = *self;
-    var lenght: int = s1.size;
-    #-if begin > lenght or end > lenght {ret String::new("(null)");}
-
-    var res: String = String::new("a");
-    var src: &char = s1.src;
-    var src_str: &char = res.src;
-    var j: int = 0;
-
-    for var i: int = begin; i <= end; inc i {
-      var c: char = src[i];
-      var s: str = "A";
-      *s = c;
-      
-      memcpy(src_str + j, s, 1);
-      inc j;
+    if string.data == nil {
+      std::perror("Could not create String\n");
+      ret string;
     }
 
-    src_str[string::len(src_str)] = '\0';
-    res.src = src_str;
-    res.size = string::len(src_str);
+    string.mem_busy = true;
 
-    ret res;
+    ret string;
   } pub;
 
-  fun find(self: &String, substring: String) -> int {
-    var this_s: String = *self;
-    var s1: str = this_s.src;
-    var substring_s: str = substring.src;
+  fun from(src: str) -> String {
+    var string: String = String::new();
 
-    var n: int = string::len(s1);
-    var m: int = string::len(substring_s);
+    string.data = mem::realloc(string.data, string::len(src) + 1);
 
-    if m > n {ret -1;}
+    if string.data == nil {ret string;}
 
-    for var i: int = 0; i <= n - m; inc i {
-      var matched: int = true;
-      for var j: int = 0; j < m; inc j {
-        if !character::cmp(s1[i + j], substring_s[j]) {
-          matched = false;
-          stop;
-        }
-      }
-      if matched { ret i; }
+    string::cpy(string.data, src);
+    string.size = string::len(src);
+
+    ret string;
+  } pub;
+
+  fun clone(self: &String) -> String {
+    var string: String = *self;
+
+    if string.data == nil or !string.mem_busy {
+      std::perror("Could not clone string\n");
+      ret string;
     }
 
-    ret -1;
-  } pub;
-
-  fun find_str(self: &String, substring: str) -> int {
-    var this_s: String = *self;
-    var s1: str = this_s.src;
-
-    var n: int = string::len(s1);
-    var m: int = string::len(substring);
-
-    if m > n { ret -1; }
-
-    for var i: int = 0; i <= n - m; inc i {
-      var matched: int = true;
-      for var j: int = 0; j < m; inc j {
-        if !character::cmp(s1[i + j], substring[j]) {
-          matched = false;
-          stop;
-        }
-      }
-
-      if matched { ret i; }
-    }
-
-    ret -1;
-  } pub;
-
-  fun clean(self: &String) {
-    var s: String = *self;
-    string::cpy(s, "");
-    s.size = 0;
-
-    *self = s;
+    ret String::from(string.data);
   }
 
-	fun delete(self: &String) {
-		var s: String = *self;
-		mem::free(s.src);
-		s.size = 0;
-		*self = s;
-	} pub;
-
-	fun destroy(self: &String) {
-		var t: int = String::delete(self);
-	} pub;
+  fun cmp(self: &String, s2: String) -> int {
+    var s1: String = *self;
+    ret s1.data == s2.data and s1.mem_busy == s2.mem_busy and s1.size == s2.size;
+  } pub;
 };

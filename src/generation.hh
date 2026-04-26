@@ -122,6 +122,7 @@ public:
   size_t m_stack_size = 0;
   size_t m_stack_size_rel = 0; // Used only for rsp (NOT RBP)
   std::map<std::string, Var> m_vars;
+  std::map<std::string, NodeExpr> m_raw_var_exprs;
   std::map<std::string, std::pair<int, int>> m_lists;
   std::unordered_map<std::string, GlobVar> m_glob_vars;
   std::vector<std::string> m_vars_order;
@@ -214,7 +215,7 @@ public:
   std::vector<std::string> libpaths;
 
   llvm::Value *gen_expr(const NodeExpr &expr, bool as_lvalue = false,
-                        bool get_pointer = false);
+                        bool get_pointer = false, bool no_val = false);
   void gen_stmt(const NodeStmt &stmt);
   void gen_prog();
 };

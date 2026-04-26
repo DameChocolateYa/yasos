@@ -8,21 +8,24 @@
 struct File {
   fd: int; #- Descriptor
   buffer: &str;
-  buf_size: int;
+  bufsize: int;
   pos: int;
   flags: int;
   is_open: int;
 };
 
-declmod file;
-extern fun open(path: str, flags: int) -> File;
-extern fun close(f: &File);
-extern fun isopen(f: File) -> int;
-extern fun write(f: &File, data: str) -> int;
-extern fun read(f: &File) -> str;
-extern fun seek(f: &File, pos: int, whence: int) -> none;
-endmod;
+impl File {
+  extern fun open(path: str, raw_flags: str) -> &File;
+  extern fun close(f: &File);
+  extern fun is_open(f: File) -> int;
+  extern fun write(f: &File, data: str) -> int;
+  extern fun read(f: &File) -> str;
+  extern fun seek(f: &File, pos: int, whence: int) -> none;
 
+  extern fun ssize() -> int;
+};
+
+#- Fucking useless
 $if __LINUX__
   cnst F_RDONLY: int = 0;
   cnst F_WRONLY: int = 1;

@@ -226,3 +226,9 @@ void free_arrayN$MODmem(void **array) {
   }
   free$MODmem(array);
 }
+
+__attribute__((visibility("default")))
+int as_int$MODmem(void *x) {
+  int *ptr = (int *)x;
+  return ptr ? *ptr : 0;
+}

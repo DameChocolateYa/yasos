@@ -15,14 +15,17 @@
 
 #include "std.h"
 #include "memory.h"
+#include "cutype.h"
+#include "mem.h"
+#include "string.h"
 
 #define true 1
 #define false 0
 #define bool int
 
 void *alloc$MODmem(int size);
-void *realloc$MODmem(void *ptr, int size);
-void free$MODmem(void *ptr);
+void *realloc$MODmem$MODmem(void *ptr, int size);
+void free$MODmem$MODmem(void *ptr);
 
 __attribute__((visibility("default")))
 int len$MODstring(const char *s1) {
@@ -175,7 +178,8 @@ char *to_str$MODinteger(const int n) {
 
   if (x == 0) {
     buf[len++] = '0';
-  } else {
+  }
+  else {
     int negative = 0;
     if (x < 0) {
       negative = 1;
@@ -228,7 +232,8 @@ char *to_str$MODdecimal(double n, int decimals) {
   int int_len = 0;
   if (int_part == 0) {
     int_buf[int_len++] = '0';
-  } else {
+  }
+  else {
     while (int_part > 0) {
       int_buf[int_len++] = '0' + (int_part % 10);
       int_part /= 10;
@@ -284,11 +289,12 @@ char *dig_to_abc$MODstring(const int n) {
   if (n >= 0 && n < 26) {
     char *res = (char *)alloc$MODmem(2); // 1 para la letra, 1 para '\0'
     if (res == NULL)
-      return NULL; // Verificación de malloc
+      return NULL; // Verificación de alloc$MODmem
     res[0] = 'A' + n;
     res[1] = '\0';
     return res;
-  } else {
+  }
+  else {
     char *res = (char *)alloc$MODmem(2);
     if (res == NULL)
       return NULL;
@@ -353,7 +359,7 @@ char *trim$MODstring(const char *s) {
   char *new = (char *)alloc$MODmem(len + 1);
   if (!new)
     return NULL;
-  strncpy(new, begin, len);
+  memcpy(new, begin, len);
   new[len] = '\0';
 
   return new;
@@ -392,7 +398,8 @@ char *repl$MODstring(const char *s, const char *old_sub, const char *new_sub) {
     if (strstr(s, old_sub) == s) {
       memcpy(dest, new_sub, new_len);
       s += old_len;
-    } else {
+    }
+    else {
       *dest++ = *s++;
     }
   }
@@ -433,7 +440,7 @@ char **get_splited$MODstring(const char *str, const char *delimiter, int *bufsiz
   int size = 0;
   if (bufsize) *bufsize = 0;
 
-  char **buf = (char**)alloc$MODmem(sizeof(char*) * capacity);
+  char **buf = (char **)alloc$MODmem(sizeof(char *) * capacity);
   if (buf == NULL) {
     perror$MODstd("ERROR: could not allocate memory for string::get_splited function\n");
     return NULL;
@@ -445,9 +452,9 @@ char **get_splited$MODstring(const char *str, const char *delimiter, int *bufsiz
   while ((delimiter_pos = find$MODstring(cursor, delimiter)) != -1) {
     if (size + 1 >= capacity) {
       capacity *= 2;
-      buf = (char**)realloc$MODmem(buf, sizeof(char*) * capacity);
+      buf = (char **)realloc$MODmem(buf, sizeof(char *) * capacity);
       if (buf == NULL) {
-        perror$MODstd("ERROR: realloc failed in string::get_splited\n");
+        perror$MODstd("ERROR: realloc$MODmem failed in string::get_splited\n");
         return NULL;
       }
     }
@@ -462,9 +469,9 @@ char **get_splited$MODstring(const char *str, const char *delimiter, int *bufsiz
   if (*cursor != '\0') {
     if (size + 1 >= capacity) {
       capacity *= 2;
-      buf = (char**)realloc$MODmem(buf, sizeof(char*) * capacity);
+      buf = (char **)realloc$MODmem(buf, sizeof(char *) * capacity);
       if (buf == NULL) {
-        perror$MODstd("ERROR: realloc failed in string::get_splited\n");
+        perror$MODstd("ERROR: realloc$MODmem failed in string::get_splited\n");
         return NULL;
       }
     }
@@ -474,7 +481,7 @@ char **get_splited$MODstring(const char *str, const char *delimiter, int *bufsiz
   }
 
   if (size + 1 >= capacity) {
-    buf = (char**)realloc$MODmem(buf, sizeof(char*) * (capacity + 1));
+    buf = (char **)realloc$MODmem(buf, sizeof(char *) * (capacity + 1));
   }
   buf[size] = NULL;
 
@@ -485,5 +492,371 @@ char **get_splited$MODstring(const char *str, const char *delimiter, int *bufsiz
 __attribute__((visibility("default")))
 void cpy$MODstring(char *dest, const char *src) {
   while ((*dest++ = *src++))
-        ;
+    ;
+}
+
+// Functions of String struct implementation
+
+#include "critical.h"
+#include <stdarg.h>
+
+__attribute__((visibility("default")))
+void nnew$MODString(String *string) {
+  string->data = alloc$MODmem(1);
+  string->size = 0;
+
+  if (!string->data) {
+    fprintf(stderr, "Could not create String\n");
+    return;
+  }
+
+  string->mem_busy = true;
+}
+
+__attribute__((visibility("default")))
+void set$MODString(String *string, const char *src) {
+  if (!string->data || !string->mem_busy || !src) return;
+
+  strcpy(string->data, "");
+  string->data = realloc$MODmem(string->data, strlen(src));
+
+  if (!string->data) {
+    fprintf(stderr, "Could not realloc$MODmemate memory for String\n");
+    return;
+  }
+
+  strcpy(string->data, src);
+}
+
+__attribute__((visibility("default")))
+String clone$MODString(String *string) {
+  if (!string->data || !string->mem_busy) {
+    fprintf(stderr, "Could not clone string\n");
+    return (String) { NULL, 0, false };
+  }
+
+  return from$MODString(string->data);
+}
+
+__attribute__((visibility("default")))
+void clear$MODString(String *string) {
+  if (!string->data || !string->mem_busy) return;
+
+  strcpy(string->data, "");
+  string->size = 0;
+}
+
+__attribute__((visibility("default")))
+size_t find$MODString(String *s1, const char *s2) {
+  size_t n = s1->size;
+  size_t m = strlen(s2);
+
+  if (m > n) return -1;
+
+  for (size_t i = 0; i <= n - m; i++) {
+    size_t j = 0;
+    for (; j < m; j++) {
+      if (s1->data[i + j] != s2[j]) break;
+    }
+    if (j == m) return i;
+  }
+
+  return -1;
+}
+
+__attribute__((visibility("default")))
+void cat$MODString(String *string, const char *s2) {
+  if (!string->data || !string->mem_busy || !s2) return;
+
+  size_t new_size = string->size + strlen(s2);
+  new_size = new_size == 0 ? 1 : new_size;
+
+  string->data = realloc$MODmem(string->data, new_size);
+  if (!string->data) {
+    fprintf(stderr, "Could not realloc$MODmemate memory for string concatenation\n");
+    return;
+  }
+
+  strcpy(string->data + string->size, s2);
+  string->size += strlen(s2);
+}
+
+__attribute__((visibility("default")))
+void merge$MODString(String *s1, String s2) {
+  if (!s1->data || !s1->mem_busy || !s2.data || !s2.mem_busy) return;
+
+  s1->data = realloc$MODmem(s1->data, s1->size + s2.size);
+  if (!s1->data) {
+    fprintf(stderr, "Could not realloc$MODmemate memory for string concatenation\n");
+    return;
+  }
+
+  strcpy(s1->data + s1->size, s2.data);
+  s1->size += s2.size;
+  s1->data[s1->size] = '\0';
+}
+
+__attribute__((visibility("default")))
+void cut_pos$MODString(String *string, int begin, int end) {
+  if (!string->data || !string->mem_busy) return;
+
+  int new_size = string->size - (end - begin);
+
+  memmove(string->data + begin,
+    string->data + end,
+    string->size - end + 1);
+
+  string->data = realloc$MODmem(string->data, new_size + 1);
+  if (!string->data) {
+    fprintf(stderr, "cut_string_pos: Could not realloc$MODmemate memory for string\n");
+    return;
+  }
+
+  string->size = new_size;
+  string->data[string->size] = '\0';
+}
+
+__attribute__((visibility("default")))
+void cut_str$MODString(String *string, const char *substr) {
+  int loc = find$MODString(string, substr);
+  if (loc < 0) return;
+
+  size_t len = strlen(substr);
+
+  memmove(string->data + loc,
+    string->data + loc + len,
+    string->size - (loc + len));
+
+  string->size -= len;
+  string->data = realloc$MODmem(string->data, string->size + 1);
+  string->data[string->size] = '\0';
+}
+
+__attribute__((visibility("default")))
+char *substr_raw$MODString(String *string, int begin, int end) {
+  if (begin > end) {
+    int t = begin; begin = end; end = t;
+  }
+
+  if (begin < 0 || end > string->size) return NULL;
+
+  int len = end - begin + 1;
+  char *s = alloc$MODmem(len + 1);
+
+  for (int i = 0; i < len; i++)
+    s[i] = string->data[begin + i];
+
+  s[len] = '\0';
+  return s;
+}
+
+__attribute__((visibility("default")))
+String substr$MODString(String *string, int begin, int end) {
+  if (begin > end) {
+    int t = begin; begin = end; end = t;
+  }
+
+  if (begin < 0 || end > string->size)
+    return (String) { NULL, 0, false};
+
+  int len = end - begin + 1;
+  char *s = alloc$MODmem(len + 1);
+
+  for (int i = 0; i < len; i++)
+    s[i] = string->data[begin + i];
+
+  s[len] = '\0';
+
+  String new_string = from$MODString(s);
+  free$MODmem(s);
+  return new_string;
+}
+
+void destroy$MODString(String *string);
+__attribute__((visibility("default")))
+void repl$MODString(String *string, const char *old, const char *new) {
+  int loc = find$MODString(string, old);
+  if (loc == -1) return;
+
+  String after = substr$MODString(string, loc + strlen(old), string->size);
+  cut_pos$MODString(string, loc, string->size);
+  cat$MODString(string, new);
+  merge$MODString(string, after);
+
+  destroy$MODString(&after);
+}
+
+__attribute__((visibility("default")))
+void fmt$MODString(String *string, ...) {
+  va_list args;
+  va_start(args, string);
+
+  int len;
+  char *s = strbuf$MODstd(string->data, &len, args);
+
+  va_end(args);
+
+  free$MODmem(string->data);
+  string->size = len;
+  string->data = alloc$MODmem(len + 1);
+  strcpy(string->data, s);
+  string->data[string->size] = '\0';
+}
+
+__attribute__((visibility("default")))
+void newfmt$MODString(String *string, const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+
+  int len;
+  char *s = strbuf$MODstd(fmt, &len, args);
+
+  va_end(args);
+
+  free$MODmem(string->data);
+  string->size = len;
+  string->data = alloc$MODmem(len + 1);
+  strcpy(string->data, s);
+  string->data[string->size] = '\0';
+}
+
+__attribute__((visibility("default")))
+void ask$MODString(String *string, const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+
+  int len;
+  char *s = strbuf$MODstd(fmt, &len, args);
+
+  va_end(args);
+
+  printf("%s", s);
+  free$MODmem(s);
+
+  char *ret = alloc$MODmem(120);
+  if (fgets(ret, 120, stdin) != NULL) {
+    ret[strcspn(ret, "\n")] = '\0';
+  }
+
+  ret = realloc$MODmem(ret, strlen(ret) + 1);
+
+  free$MODmem(string->data);
+  string->size = strlen(ret);
+  string->data = ret;
+  string->data[string->size] = '\0';
+}
+
+__attribute__((visibility("default")))
+void destroy$MODString(String *string) {
+  if (string->mem_busy) {
+    free$MODmem(string->data);
+    string->size = 0;
+    string->mem_busy = false;
+  }
+}
+
+__attribute__((visibility("default")))
+void destroym$MODString(int n, ...) { // THIS FUNCION SHOULD NOT BE CALLED FROM OBJECT
+  va_list args;
+  va_start(args, n);
+
+  for (int i = 0; i < n; i++) {
+    String *string = va_arg(args, String *);
+    destroy$MODString(string);
+  }
+
+  va_end(args);
+}
+
+__attribute__((visibility("default")))
+char *to_str$MODString(String *string) {
+  if (!string->data || !string->mem_busy)
+    return "(null)";
+
+  return string->data;
+}
+
+__attribute__((visibility("default")))
+bool is_empty$MODString(String *string) {
+  return !string->data || !string->mem_busy || string->size <= 0;
+}
+
+__attribute__((visibility("default")))
+int to_int$MODString(String *string) {
+  if (!is_valid_integer$MODstd(string->data)) return -1;
+  return atoi(string->data);
+}
+
+__attribute__((visibility("default")))
+float to_float$MODString(String *string) {
+  if (!is_valid_float$MODstd(string->data)) return -1;
+  return (float)atof(string->data);
+}
+
+__attribute__((visibility("default")))
+double to_double$MODString(String *string) {
+  if (!is_valid_double$MODstd(string->data)) return -1;
+  return atof(string->data);
+}
+
+__attribute__((visibility("default")))
+void upper$MODString(String *string) {
+  if (is_empty$MODString(string)) return;
+
+  for (size_t i = 0; string->data[i]; i++) {
+    if (string->data[i] >= 'a' && string->data[i] <= 'z')
+      string->data[i] -= 32;
+  }
+}
+
+__attribute__((visibility("default")))
+void lower$MODString(String *string) {
+  if (is_empty$MODString(string)) return;
+
+  for (size_t i = 0; string->data[i]; i++) {
+    if (string->data[i] >= 'A' && string->data[i] <= 'Z')
+      string->data[i] += 32;
+  }
+}
+
+__attribute__((visibility("default")))
+char ch$MODString(String *string, int index) {
+  if (index < 0 || index >= string->size)
+    return '?';
+
+  return string->data[index];
+}
+
+__attribute__((visibility("default")))
+int is_whitespace$MODString(String *string) {
+  if (is_empty$MODString(string)) return false; // Does not apply for empty Strings
+
+  for (int i = 0; i < string->size; i++) {
+    if (string->data[i] != ' ') return false;
+  }
+
+  return true;
+}
+
+__attribute__((visibility("default")))
+int cmp_str$MODString(String *self, const char *src) {
+  if (self->size != len$MODstring(src)) return false;
+
+  for (int i = 0; i < self->size; i++) {
+    if (self->data[i] != src[i]) return false;
+  }
+
+  return true;
+}
+
+/*__attribute__((visibility("default")))
+int cmp$MODString(String *self, String *s2) { // This should not work in most of the cases, it needs to have the same memory direction
+  printf("%d, %d\n", self->mem_busy, s2->mem_busy);
+  if (self->data == s2->data && self->mem_busy == s2->mem_busy && self->size == s2->size) return true;
+  return false;
+}*/
+
+__attribute__((visibility("default")))
+size_t ssize$MODString() {
+  return sizeof(String);
 }

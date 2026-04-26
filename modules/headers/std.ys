@@ -5,6 +5,14 @@
  * See LICENSE file in the project root for full license text.
 *#
 
+struct Vec {
+  data: &any;
+  size: int;
+  capacity: int;
+  elem_size: int;
+  is_membusy: int;
+};
+
 declmod std;
 
 extern fun fmt(fmt: str, undefan) -> str;
@@ -30,6 +38,9 @@ extern fun perror(fmt: str, undefan) -> none;
 
 extern fun panic(msg: str) -> none;
 extern fun cuspanic(msg: str, status: int) -> none;
+
+extern fun args(argc: int, argv: &str) -> Vec;
+extern fun free_args(args: &Vec);
 
 #- LIBC FUNCTIONS
 extern fun malloc(size: int) -> &any;

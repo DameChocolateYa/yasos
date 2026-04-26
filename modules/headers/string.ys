@@ -6,30 +6,43 @@
 *#
 
 struct String {
-	src: &str;
+	data: &char;
 	size: int;
+  mem_busy: int;
 };
 
 impl String {
-	extern fun new(s: str) -> String;
-	extern fun src(self: &String) -> str;
-	extern fun set(self: &String, src: str);
-
-	extern fun cat(self: &String, s2: String);
-  extern fun cat_str(self: &String, s2: str);
-
-  extern fun cut(self: &String, begin: int, end: int);
-  extern fun cut_substring(self: &String, substr: String);
-  extern fun cut_substr(self: &String, substr: str);
-
-  extern fun sub(self: &String, begin: int, end: int) -> String;
-
-  extern fun find(self: &String, substring: String) -> int;
-  extern fun find_str(self: &String, substring: str) -> int;
-
-  extern fun clean(self: &String);
-	extern fun delete(self: &String);
-	extern fun destroy(self: &String);
+  extern fun new() -> String;
+  extern fun nnew(string: &String);
+  extern fun from(src: str) -> String;
+  extern fun set(self: &String, src: str);
+  extern fun clone(og: &String) -> String;
+  extern fun clear(self: &String);
+  extern fun find(s1: &String, s2: str) -> int;
+  extern fun cat(self: &String, s2: str);
+  extern fun merge(s1: &String, s2: String);
+  extern fun cut_pos(self: &String);
+  extern fun cut_str(self: &String, substr: str);
+  extern fun substr_raw(self: &String, begin: int, end: int) -> str;
+  extern fun substr(self: &String, begin: int, end: int) -> String;
+  extern fun repl(self: &String, old: str, new: str);
+  extern fun fmt(self: &String, undefan);
+  extern fun newfmt(self: &String, fmt: str, undefan);
+  extern fun ask(self: &String, fmt: str, undefan);
+  extern fun destroy(self: &String);
+  extern fun destroym(n: int, undefan);
+  extern fun to_str(self: &String) -> str;
+  extern fun is_empty(self: &String) -> int;
+  extern fun to_int(self: &String) -> int;
+  extern fun to_float(self: &String) -> double; #- Just the like double
+  extern fun to_double(self: &String) -> double;
+  extern fun lower(self: &String);
+  extern fun upper(self: &String);
+  extern fun ch(self: &String) -> char;
+  extern fun is_whitespace(self: &String) -> int;
+  extern fun cmp_str(self: &String, src: str) -> int;
+  extern fun cmp(self: &String, s2: String) -> int;
+  extern fun ssize(self: &String) -> int;
 };
 
 declmod string;

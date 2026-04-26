@@ -104,6 +104,11 @@ sys_sleep:
 
   .section .rodata
   .align 8
+.globl sys_fsync
+sys_fsync:
+  mov $74, %rax
+  syscall
+  ret
 scale:
   .double 1000000000.0   # 1e9
 
