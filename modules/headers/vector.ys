@@ -26,7 +26,7 @@ struct Vec {
 };
 
 impl Vec {
-  extern fun new(elem_size: int) -> Vec;
+  extern fun new(elem_size: int) -> &Vec;
   extern fun push(self: &Vec, elem: &any);
   extern fun pop(self: &Vec);
   extern fun erase_at(self: &Vec, index: int);
@@ -36,7 +36,7 @@ impl Vec {
   extern fun push_int(self: &Vec, val: int);
   extern fun push_string(self: &Vec, val: String);
   extern fun push_double(self: &Vec, val: double);
-  extern fun push_vec(self: &Vec, val: Vec);
+  extern fun push_vec(self: &Vec, val: &Vec);
 
   extern fun pushm(self: &Vec, n: int, undefan);
   extern fun pushm_int(self: &Vec, n: int, undefan);
@@ -53,7 +53,7 @@ impl Vec {
   extern fun set_int(self: &Vec, index: int, val: int);
   extern fun set_string(self: &Vec, index: int, val: String);
   extern fun set_double(self: &Vec, index: int, val: double);
-  extern fun set_vec(self: &Vec, index: int, val: Vec);
+  extern fun set_vec(self: &Vec, index: int, val: &Vec);
 
   extern fun setm_int(self: &Vec, n: int, undefan);
   extern fun setm_string(self: &Vec, n: int, undefan);
@@ -66,13 +66,14 @@ impl Vec {
   extern fun disable(self: &Vec);
   extern fun enable(self: &Vec);
 
-  extern fun cpy(dest: &Vec, src: Vec);
-  extern fun cpy_and_push(dest: &Vec, src: Vec, index: int);
+  extern fun cpy(dest: &Vec, src: &Vec);
+  extern fun cpy_and_push(dest: &Vec, src: &Vec, index: int);
   extern fun cpy_and_pushm(dest: &Vec, src: &Vec, n: int, undefan);
-  extern fun cpy_in(dest: &Vec, to: int, src: Vec, from: int);
-  extern fun cpy_xelem_in(dest: &Vec, src: Vec, n_par: int, undefan);
+  extern fun cpy_in(dest: &Vec, to: int, src: &Vec, from: int);
+  extern fun cpy_xelem_in(dest: &Vec, src: &Vec, n_par: int, undefan);
 
-  extern fun clone(self: &Vec);
+  extern fun clone(self: &Vec) -> &Vec;
+  extern fun size(self: &Vec) -> int;
 
   extern fun ssize() -> int;
 };

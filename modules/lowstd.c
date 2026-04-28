@@ -591,12 +591,12 @@ int is_valid_double$MODstd(const char* str) {
 }
 
 __attribute__((visibility("default")))
-Vec args$MODstd(int argc, char **argv) {
-  Vec args = new$MODVec(sizeof(String));
+Vec *args$MODstd(int argc, char **argv) {
+  Vec *args = new$MODVec(sizeof(String));
 
   for (int i = 0; i < argc; i++) {
     String arg = from$MODString(argv[i]);
-    push_string$MODVec(&args, arg);
+    push_string$MODVec(args, arg);
   }
 
   return args;

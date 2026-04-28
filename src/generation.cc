@@ -2058,6 +2058,7 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       std::string name = stmt_struct.name.value.value();
 
       llvm::StructType *the_struct = llvm::StructType::create(TheContext, name);
+      gen->m_struct_templates.insert({ name, the_struct });
       std::vector<llvm::Type *> parsed_fields;
       std::map<std::string, Type> raw_types;
       std::map<std::string, std::pair<int, llvm::Type *>> args;
@@ -2078,7 +2079,7 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       }
 
       the_struct->setBody(parsed_fields);
-      gen->m_struct_templates.insert({ name, the_struct });
+      gen->m_struct_templates.at(name) = the_struct;
       gen->m_struct_arg_templates.insert({ name, args });
     }
 

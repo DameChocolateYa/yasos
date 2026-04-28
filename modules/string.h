@@ -5,7 +5,7 @@
  * See LICENSE file in the project root for full license text.
 */
 
-#ifndef STRING_h
+#ifndef STRING_H
 #define STRING_H
 
 typedef struct {

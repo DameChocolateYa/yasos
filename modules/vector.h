@@ -1,3 +1,10 @@
+/*
+ * yasos - a compiler for yasos language
+ * Copyright (c) 2025-2026 DameChocolateYa
+ * Licensed under the BSD 3-Clause License.
+ * See LICENSE file in the project root for full license text.
+*/
+
 #ifndef VECTOR_H
 #define VECTOR_H
 
@@ -11,9 +18,9 @@ typedef struct {
   int is_membusy;
 } Vec;
 
-Vec new$MODVec(int elem_size);
+Vec *new$MODVec(int elem_size);
 void push_string$MODVec(Vec *vec, String val);
-String get_string$MODVec(Vec *vec, size_t index);
+String get_string$MODVec(Vec *vec, int index);
 void destroy$MODVec(Vec *vec);
 
 #endif

@@ -1,3 +1,10 @@
+/*
+ * yasos - a compiler for yasos language
+ * Copyright (c) 2025-2026 DameChocolateYa
+ * Licensed under the BSD 3-Clause License.
+ * See LICENSE file in the project root for full license text.
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -8,18 +15,23 @@
 #include <stdarg.h>
 #include "vector.h"
 
-/*__attribute__((visibility("default")))
-Vec new$MODVec(CType type) {
-  size_t elem_size = get_cutype_size(type);
-
-  void *data = alloc$MODmem(2 * elem_size); // capacity = 2 elements at init
-  if (!data) {
-    fprintf(stderr, "Could not allocate memory for Vec\n");
-    return (Vec) { NULL, 0, 0, 0, false };
+__attribute__((visibility("default")))
+Vec *new$MODVec(int elem_size) {
+  Vec *self = alloc$MODmem(sizeof(Vec));
+  
+  self->data = alloc$MODmem(elem_size * 2);
+  if (!self->data) {
+    fprintf(stderr, "Vec::new: could not allocate memory for data\n");
+    return self;
   }
 
-  return (Vec) { data, 0, 2, elem_size, true };
-}  NOT USED DUE TO THE LACK OF ENUMS IN YASOS  */
+  self->size = 0;
+  self->capacity = 2;
+  self->is_membusy = true;
+  self->elem_size = elem_size;
+
+  return self;
+}
 
 __attribute__((visibility("default")))
 void push$MODVec(Vec *vec, void *elem) {
@@ -51,7 +63,7 @@ void pop$MODVec(Vec *vec) {
 }
 
 __attribute__((visibility("default")))
-void erase_at$MODVec(Vec *vec, size_t index) {
+void erase_at$MODVec(Vec *vec, int index) {
   if (!vec->data || !vec->is_membusy) {
     return;
   }
@@ -79,7 +91,7 @@ void erase_all$MODVec(Vec *vec) {
 }
 
 __attribute__((visibility("default")))
-void set$MODVec(Vec *vec, size_t index, void *val) {
+void set$MODVec(Vec *vec, int index, void *val) {
   if (!vec->data || !vec->is_membusy)
     return;
 
@@ -172,7 +184,7 @@ void pushm_vec$MODVec(Vec *vec, int n, ...) {
 }
 
 __attribute__((visibility("default")))
-void* get$MODVec(Vec *vector, size_t index) {
+void* get$MODVec(Vec *vector, int index) {
   if (!vector->data || !vector->is_membusy) {
     return NULL;
   }
@@ -186,46 +198,46 @@ void* get$MODVec(Vec *vector, size_t index) {
 }
 
 __attribute__((visibility("default")))
-int get_int$MODVec(Vec *vector, size_t index) {
+int get_int$MODVec(Vec *vector, int index) {
   int* ptr = (int*)get$MODVec(vector, index);
   return ptr ? *ptr : 0;
 }
 
 __attribute__((visibility("default")))
-String get_string$MODVec(Vec *vector, size_t index) {
+String get_string$MODVec(Vec *vector, int index) {
   String* ptr = (String*)get$MODVec(vector, index);
-  return ptr ? *ptr : (String) { NULL, 0 };
+  return ptr ? *ptr : (String) { NULL, 0, false };
 }
 
 __attribute__((visibility("default")))
-double get_double$MODVec(Vec *vector, size_t index) {
+double get_double$MODVec(Vec *vector, int index) {
   double* ptr = (double*)get$MODVec(vector, index);
   return ptr ? *ptr : .0;
 }
 
 __attribute__((visibility("default")))
-Vec get_vec$MODVec(Vec *vector, size_t index) {
+Vec get_vec$MODVec(Vec *vector, int index) {
   Vec* ptr = (Vec*)get$MODVec(vector, index);
   return ptr ? *ptr : (Vec) { NULL, 0, 0, 0, false };
 }
 
 __attribute__((visibility("default")))
-void set_int$MODVec(Vec* vector, size_t index, int val) {
+void set_int$MODVec(Vec* vector, int index, int val) {
   set$MODVec(vector, index, &val);
 }
 
 __attribute__((visibility("default")))
-void set_string$MODVec(Vec* vector, size_t index, String val) {
+void set_string$MODVec(Vec* vector, int index, String val) {
   set$MODVec(vector, index, &val);
 }
 
 __attribute__((visibility("default")))
-void set_double$MODVec(Vec* vector, size_t index, double val) {
+void set_double$MODVec(Vec* vector, int index, double val) {
   set$MODVec(vector, index, &val);
 }
 
 __attribute__((visibility("default")))
-void set_vec$MODVec(Vec* vector, size_t index, Vec val) {
+void set_vec$MODVec(Vec* vector, int index, Vec *val) {
   set$MODVec(vector, index, &val);
 }
 
@@ -308,7 +320,7 @@ void setm_vec$MODVec(Vec* vector, int n, ...) {
 
   for (int i = 0; i < n; i++) {
     int index = va_arg(args, int);
-    Vec val = va_arg(args, Vec);
+    Vec *val = va_arg(args, Vec*);
 
     if (index < 0 || index >= vector->size) {
       fprintf(stderr, "set$MODVecvecm: index out of range - omiting current element\n");
@@ -331,6 +343,8 @@ void destroy$MODVec(Vec* vector) {
   vector->size = 0;
   vector->elem_size = 0;
   vector->is_membusy = false;
+
+  free$MODmem(vector);
 }
 
 __attribute__((visibility("default")))
@@ -339,8 +353,8 @@ void destroym$MODVec(int n, ...) {
   va_start(args, n);
 
   for (int i = 0; i < n; i++) {
-    Vec vector = va_arg(args, Vec);
-    destroy$MODVec(&vector);
+    Vec *vector = va_arg(args, Vec*);
+    destroy$MODVec(vector);
   }
 
   va_end(args);
@@ -361,48 +375,48 @@ void enable$MODVec(Vec* vec) {
 }
 
 __attribute__((visibility("default")))
-void cpy$MODVec(Vec* dest, Vec src) {
-  if (src.data || !src.is_membusy || src.size <= 0 || src.elem_size <= 0 || src.capacity == 0)
+void cpy$MODVec(Vec* dest, Vec *src) {
+  if (src->data || !src->is_membusy || src->size <= 0 || src->elem_size <= 0 || src->capacity == 0)
     return;
 
-  dest->data = alloc$MODmem(src.size + 1);
+  dest->data = alloc$MODmem(src->size + 1);
   if (!dest->data) {
     fprintf(stderr, "Vec_cpy: error allocating memory\n");
     return;
   }
-  strcpy(dest->data, src.data);
+  strcpy(dest->data, src->data);
 
-  dest->size = src.size;
-  dest->capacity = src.capacity;
+  dest->size = src->size;
+  dest->capacity = src->capacity;
   dest->elem_size = dest->elem_size;
   dest->is_membusy = true;
 }
 
 __attribute__((visibility("default")))
-void cpy_and_push$MODVec(Vec* dest, Vec src, size_t index) {
-  if (dest->elem_size != src.elem_size) {
+void cpy_and_push$MODVec(Vec* dest, Vec *src, int index) {
+  if (dest->elem_size != src->elem_size) {
     fprintf(stderr, "Vec_cpy_and_push: vectors elem size are not equal\n");
   }
 
-  if (!src.data || !dest->data || !src.is_membusy || !dest->is_membusy)
+  if (!src->data || !dest->data || !src->is_membusy || !dest->is_membusy)
     return;
 
-  if (index < 0 || index >= src.size) {
+  if (index < 0 || index >= src->size) {
     fprintf(stderr, "Vec_cpy_and_push: index out of range\n");
     return;
   }
 
-  void* elem = get$MODVec(&src, index);
+  void* elem = get$MODVec(src, index);
   push$MODVec(dest, elem);
 }
 
 __attribute__((visibility("default")))
-void cpy_and_pushm$MODVec(Vec* dest, Vec src, int n, ...) {
-  if (dest->elem_size != src.elem_size) {
+void cpy_and_pushm$MODVec(Vec* dest, Vec *src, int n, ...) {
+  if (dest->elem_size != src->elem_size) {
     fprintf(stderr, "Vec_cpy_and_pushm: vectors elem size are not equal\n");;
   }
 
-  if (!src.data || !dest->data || !src.is_membusy || !dest->is_membusy)
+  if (!src->data || !dest->data || !src->is_membusy || !dest->is_membusy)
     return;
 
   va_list args;
@@ -411,12 +425,12 @@ void cpy_and_pushm$MODVec(Vec* dest, Vec src, int n, ...) {
   for (int i = 0; i < n; i++) {
     int index = va_arg(args, int);
 
-    if (index < 0 || index >= src.size) {
+    if (index < 0 || index >= src->size) {
       fprintf(stderr, "Vec_cpy_and_pushm: index out of range - omiting current element\n");
       continue;
     }
 
-    void* elem = get$MODVec(&src, index);
+    void* elem = get$MODVec(src, index);
     push$MODVec(dest, elem);
   }
 
@@ -424,20 +438,20 @@ void cpy_and_pushm$MODVec(Vec* dest, Vec src, int n, ...) {
 }
 
 __attribute__((visibility("default")))
-void cpy_in$MODVec(Vec* dest, size_t to, Vec src, size_t from) {
-  if (dest->elem_size != src.elem_size) {
+void cpy_in$MODVec(Vec* dest, int to, Vec *src, int from) {
+  if (dest->elem_size != src->elem_size) {
     fprintf(stderr, "Vec_cpy_in: vectors elem size are not equal\n");;
   }
 
-  if (!src.data || !dest->data || !src.is_membusy || !dest->is_membusy)
+  if (!src->data || !dest->data || !src->is_membusy || !dest->is_membusy)
     return;
 
-  if (from < 0 || from >= src.size || to < 0) {
+  if (from < 0 || from >= src->size || to < 0) {
     fprintf(stderr, "Vec_cpy_in: index out of range\n");
     return;
   }
 
-  void* elem = get$MODVec(&src, from);
+  void* elem = get$MODVec(src, from);
 
   if (to >= dest->size) {
     push$MODVec(dest, elem);
@@ -448,12 +462,12 @@ void cpy_in$MODVec(Vec* dest, size_t to, Vec src, size_t from) {
 }
 
 __attribute__((visibility("default")))
-void cpy_xelem_in$MODVec(Vec* dest, Vec src, int n_par, ...) {
-  if (dest->elem_size != src.elem_size) {
+void cpy_xelem_in$MODVec(Vec* dest, Vec *src, int n_par, ...) {
+  if (dest->elem_size != src->elem_size) {
     fprintf(stderr, "Vec_cpy_in: vectors elem size are not equal\n");;
   }
 
-  if (!src.data || !dest->data || !src.is_membusy || !dest->is_membusy)
+  if (!src->data || !dest->data || !src->is_membusy || !dest->is_membusy)
     return;
 
   va_list args;
@@ -463,12 +477,12 @@ void cpy_xelem_in$MODVec(Vec* dest, Vec src, int n_par, ...) {
     int from = va_arg(args, int);
     int to = va_arg(args, int);
 
-    if (from < 0 || from >= src.size || to < 0) {
+    if (from < 0 || from >= src->size || to < 0) {
       fprintf(stderr, "Vec_cpy_in: index out of range\n");
       return;
     }
 
-    void* elem = get$MODVec(&src, from);
+    void* elem = get$MODVec(src, from);
 
     if (to >= dest->size) {
       push$MODVec(dest, elem);
@@ -480,6 +494,30 @@ void cpy_xelem_in$MODVec(Vec* dest, Vec src, int n_par, ...) {
 }
 
 __attribute__((visibility("default")))
-size_t ssize$MODVec() {
+Vec *clone$MODVec(Vec *og) {
+  Vec *cloned = alloc$MODmem(sizeof(Vec));
+  cloned->data = alloc$MODmem(og->elem_size * og->capacity);
+
+  if (!cloned->data) {
+    fprintf(stderr, "Vec::clone: Could not clone Vector (error allocating memory)\n");
+    return cloned;
+  }
+
+  memcpy(cloned->data, og->data, og->capacity * og->elem_size);
+  cloned->capacity = og->capacity;
+  cloned->size = og->size;
+  cloned->elem_size = og->elem_size;
+  cloned->is_membusy = true;
+
+  return cloned;
+}
+
+__attribute__((visibility("default")))
+int size$MODVec(Vec *self) {
+  return self->size;
+}
+
+__attribute__((visibility("default")))
+int ssize$MODVec() {
   return sizeof(Vec);
 }
