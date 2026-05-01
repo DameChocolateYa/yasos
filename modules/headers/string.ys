@@ -69,7 +69,7 @@ fun cut(buf: str, begin: int, end: int) : "extern";
 fun cut_substring(string: str, substring: str) : "extern";
 fun bufcut(buf: &str, substr: str) : "extern";
 
-fun sub(s1: str, begin: int, end: int) : "extern";
+fun sub(s1: str, begin: int, end: int) -> str : "extern";
 fun bufsub(buf: &str, begin: int, end: int) : "extern";
 
 fun to_int(s: str) : "extern";
