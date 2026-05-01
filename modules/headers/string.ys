@@ -12,90 +12,91 @@ struct String {
 };
 
 impl String {
-  extern fun new() -> String;
-  extern fun nnew(string: &String);
-  extern fun from(src: str) -> String;
-  extern fun set(self: &String, src: str);
-  extern fun clone(og: &String) -> String;
-  extern fun clear(self: &String);
-  extern fun find(s1: &String, s2: str) -> int;
-  extern fun cat(self: &String, s2: str);
-  extern fun merge(s1: &String, s2: String);
-  extern fun cut_pos(self: &String);
-  extern fun cut_str(self: &String, substr: str);
-  extern fun substr_raw(self: &String, begin: int, end: int) -> str;
-  extern fun substr(self: &String, begin: int, end: int) -> String;
-  extern fun repl(self: &String, old: str, new: str);
-  extern fun fmt(self: &String, undefan);
-  extern fun newfmt(self: &String, fmt: str, undefan);
-  extern fun ask(self: &String, fmt: str, undefan);
-  extern fun destroy(self: &String);
-  extern fun destroym(n: int, undefan);
-  extern fun to_str(self: &String) -> str;
-  extern fun is_empty(self: &String) -> int;
-  extern fun to_int(self: &String) -> int;
-  extern fun to_float(self: &String) -> double; #- Just the like double
-  extern fun to_double(self: &String) -> double;
-  extern fun lower(self: &String);
-  extern fun upper(self: &String);
-  extern fun ch(self: &String) -> char;
-  extern fun is_whitespace(self: &String) -> int;
-  extern fun cmp_str(self: &String, src: str) -> int;
-  extern fun cmp(self: &String, s2: String) -> int;
-  extern fun ssize(self: &String) -> int;
+  fun new() -> &String : "extern";
+  fun nnew(string: &String) : "extern";
+  fun from(src: str) -> &String : "extern";
+  fun set(self: &String, src: str) : "extern";
+  fun clone(og: &String) -> &String : "extern";
+  fun clear(self: &String) : "extern";
+  fun find(s1: &String, s2: str) -> int : "extern";
+  fun cat(self: &String, s2: str) : "extern";
+  fun merge(s1: &String, s2: &String) : "extern";
+  fun cut_pos(self: &String) : "extern";
+  fun cut_str(self: &String, substr: str) : "extern";
+  fun substr_raw(self: &String, begin: int, end: int) -> str : "extern";
+  fun substr(self: &String, begin: int, end: int) -> &String : "extern";
+  fun repl(self: &String, old: str, new: str) : "extern";
+  fun fmt(self: &String, undefan) : "extern";
+  fun newfmt(self: &String, fmt: str, undefan) : "extern";
+  fun ask(self: &String, fmt: str, undefan) : "extern";
+  fun destroy(self: &String) : "extern";
+  fun destroym(n: int, undefan);
+  fun to_str(self: &String) -> str : "extern";
+  fun is_empty(self: &String) -> int : "extern";
+  fun to_int(self: &String) -> int : "extern";
+  fun to_float(self: &String) -> double : "extern"; #- Just the like double
+  fun to_double(self: &String) -> double : "extern";
+  fun lower(self: &String) : "extern";
+  fun upper(self: &String) : "extern";
+  fun ch(self: &String) -> char : "extern";
+  fun is_whitespace(self: &String) -> int : "extern";
+  fun cmp_str(self: &String, src: str) -> int : "extern";
+  fun cmp(self: &String, s2: &String) -> int : "extern";
+  fun size(self: &String) -> int : "extern";
+  fun ssize(self: &String) -> int : "extern";
 };
 
 declmod string;
 
-extern fun badd_nil(s: str) -> none;
-extern fun is_badd_nil(s: str) -> int;
-extern fun add_badd_nil(s: str) -> none;
+fun badd_nil(s: str) : "extern";
+fun is_badd_nil(s: str) -> int : "extern";
+fun add_badd_nil(s: str) : "extern";
 
-extern fun len(s: str) -> int;
+fun len(s: str) -> int : "extern";
 
-extern fun static_cat(dest: str, src: str) -> none;
-extern fun union(dest: str, src: str) -> none;
-extern fun new_union(dest: str, s1: str, s2: str) -> none;
-extern fun get_cat(s1: str, s2: str) -> str;
-extern fun cat(s1: str, s2: str) -> none;
+fun static_cat(dest: str, src: str) : "extern";
+fun union(dest: str, src: str) : "extern";
+fun new_union(dest: str, s1: str, s2: str) : "extern";
+fun get_cat(s1: str, s2: str) -> str : "extern";
+fun cat(s1: str, s2: str) : "extern";
 
-extern fun find(string: str, substring: str) -> int;
+fun find(string: str, substring: str) -> int : "extern";
 
-extern fun cutidx(s1: str, begin: int, end: int) -> str;
-extern fun bufcutidx(buf: &str, begin: int, end: int) -> none;
+fun cutidx(s1: str, begin: int, end: int) -> str : "extern";
+fun bufcutidx(buf: &str, begin: int, end: int) : "extern";
 
-extern fun cut(buf: str, begin: int, end: int) -> none;
-extern fun cut_substring(string: str, substring: str) -> none;
-extern fun bufcut(buf: &str, substr: str) -> none;
+fun cut(buf: str, begin: int, end: int) : "extern";
+fun cut_substring(string: str, substring: str) : "extern";
+fun bufcut(buf: &str, substr: str) : "extern";
 
-extern fun sub(s1: str, begin: int, end: int) -> str;
-extern fun bufsub(buf: &str, begin: int, end: int) -> none;
+fun sub(s1: str, begin: int, end: int) : "extern";
+fun bufsub(buf: &str, begin: int, end: int) : "extern";
 
-extern fun to_int(s: str) -> int;
-extern fun to_double(s: str) -> double;
+fun to_int(s: str) : "extern";
+fun to_double(s: str) : "extern";
 
-extern fun cmp(s1: str, s2: str) -> int;
-extern fun dig_to_abc(n: int) -> str;
+fun cmp(s1: str, s2: str) -> int : "extern";
+fun dig_to_abc(n: int) -> str : "extern";
 
-extern fun is_empty(s: str) -> int;
-extern fun is_whitespace(s: str) -> int;
+fun is_empty(s: str) -> int : "extern";
+fun is_whitespace(s: str) -> int : "extern";
 
-extern fun trim(s: str) -> str;
-extern fun buftrim(buf: &str) -> none;
+fun trim(s: str) -> str : "extern";
+fun buftrim(buf: &str) : "extern";
 
-extern fun repl(s: str, old_sub: str, new_sub: str) -> str;
-extern fun bufrepl(buf: &str, old_sub: str, new_sub: str) -> none;
+fun repl(s: str, old_sub: str, new_sub: str) -> str : "extern";
+fun bufrepl(buf: &str, old_sub: str, new_sub: str) : "extern";
 
-extern fun to_upper(string: str) -> str;
-extern fun to_lower(string: str) -> str;
+fun to_upper(string: str) -> str : "extern";
+fun to_lower(string: str) -> str : "extern";
 
-extern fun contains(string: str, substr: str) -> int;
-extern fun contains_case(string: str, substr: str) -> int;
-extern fun find(string: str, substr: str) -> int;
+fun contains(string: str, substr: str) -> int : "extern";
+fun contains_case(string: str, substr: str) -> int : "extern";
+fun find(string: str, substr: str) -> int : "extern";
 
-extern fun get_splited(string: str, delimiter: str, bufsize: &int) -> &str;
+fun get_splited(string: str, delimiter: str, bufsize: &int) -> &str : "extern";
 
-extern fun cpy(dest: &str, src: str) -> none;
+fun cpy(dest: &str, src: str) : "extern";
 
 cnst STR_EMPTY: str = "";
 cnst STR_WHITE: str = " ";
@@ -104,13 +105,15 @@ cnst STR_NULLT: str = "\0";
 endmod;
 
 declmod integer;
-extern fun to_str(n: int) -> str;
+fun to_str(n: int) -> str : "extern";
 endmod;
 
 declmod decimal;
-extern fun to_str(n: double, decimals: int) -> str;
+fun to_str(n: double, decimals: int) -> str : "extern";
 endmod;
 
 declmod character;
-extern fun cmp(ch1: char, ch2: char) -> int;
+fun cmp(ch1: char, ch2: char) -> int : "extern";
+fun cmp_int(c: char, i: i32) -> i32 : "extern";
+fun to_str(c: char) -> str : "extern";
 endmod;

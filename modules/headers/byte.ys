@@ -5,4 +5,4 @@
  * See LICENSE file in the project root for full license text.
 *#
 
-extern fun bytostr(s: str, size: int) -> str;
+fun bytostr(s: str, size: int) -> str : "extern";

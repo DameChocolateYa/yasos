@@ -19,8 +19,8 @@ typedef struct {
 } Vec;
 
 Vec *new$MODVec(int elem_size);
-void push_string$MODVec(Vec *vec, String val);
-String get_string$MODVec(Vec *vec, int index);
+void push_string$MODVec(Vec *vec, String *val);
+String *get_string$MODVec(Vec *vec, int index);
 void destroy$MODVec(Vec *vec);
 
 #endif

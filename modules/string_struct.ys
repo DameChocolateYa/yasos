@@ -50,48 +50,10 @@ struct Vec {
 };
 
 impl String {
-  fun new() -> String {
-    var string: String;
-
-    string.data = mem::alloc(1);
-    string.size = 0;
-
-    if string.data == nil {
-      std::perror("Could not create String\n");
-      ret string;
-    }
-
-    string.mem_busy = true;
-
-    ret string;
-  } pub;
-
-  fun from(src: str) -> String {
-    var string: String = String::new();
-
-    string.data = mem::realloc(string.data, string::len(src) + 1);
-
-    if string.data == nil {ret string;}
-
-    string::cpy(string.data, src);
-    string.size = string::len(src);
-
-    ret string;
-  } pub;
-
-  fun clone(self: &String) -> String {
-    var string: String = *self;
-
-    if string.data == nil or !string.mem_busy {
-      std::perror("Could not clone string\n");
-      ret string;
-    }
-
-    ret String::from(string.data);
-  }
-
-  fun cmp(self: &String, s2: String) -> int {
+  fun cmp(self: &String, string: &String) -> int {
     var s1: String = *self;
+    var s2: String = *string;
+
     ret s1.data == s2.data and s1.mem_busy == s2.mem_busy and s1.size == s2.size;
   } pub;
 };

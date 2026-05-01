@@ -74,11 +74,11 @@ static int get_precedence(TokenType token_type) {
   if (token_type == TokenType::plus || token_type == TokenType::minus)
     return 5;
   else if (token_type == TokenType::star || token_type == TokenType::slash ||
-           token_type == TokenType::percent)
+    token_type == TokenType::percent)
     return 6;
   else if (token_type == TokenType::l_arrow || token_type == TokenType::lte ||
-           token_type == TokenType::lt || token_type == TokenType::r_arrow ||
-           token_type == TokenType::gt || token_type == TokenType::gte)
+    token_type == TokenType::lt || token_type == TokenType::r_arrow ||
+    token_type == TokenType::gt || token_type == TokenType::gte)
     return 4;
   else if (token_type == TokenType::eq_eq || token_type == TokenType::bang_eq)
     return 3;
@@ -95,27 +95,27 @@ static int get_precedence(TokenType token_type) {
 static Type get_type_from_tok(Token tok) {
   switch (tok.type) {
   case TokenType::str_type:
-    return Type{Type::Kind::Str};
+    return Type{ Type::Kind::Str };
     break;
   case TokenType::char_type:
-    return Type{Type::Kind::Char};
+    return Type{ Type::Kind::Char };
   case TokenType::int_type:
-    return Type{Type::Kind::Int};
+    return Type{ Type::Kind::Int };
     break;
   case TokenType::double_type:
-    return Type{Type::Kind::Float};
+    return Type{ Type::Kind::Float };
     break;
   case TokenType::any_type:
-    return Type{Type::Kind::Any};
+    return Type{ Type::Kind::Any };
   case TokenType::ptr_type:
-    return Type{Type::Kind::Ptr};
+    return Type{ Type::Kind::Ptr };
   case TokenType::none:
-    return Type{Type::Kind::None};
+    return Type{ Type::Kind::None };
   case TokenType::ident:
-    return Type{Type::Kind::UserDefined, false, tok.value.value()};
+    return Type{ Type::Kind::UserDefined, false, tok.value.value() };
     break;
   default:
-    return Type{Type::Kind::UserDefined, false, tok.value.value()};
+    return Type{ Type::Kind::UserDefined, false, tok.value.value() };
     break;
   }
 }
@@ -147,7 +147,8 @@ std::string Parser::parse_mangled_chain() {
   while (peek().has_value()) {
     if (peek(1).has_value() && peek(1).value().type == TokenType::dp && peek(2).has_value() && peek(2).value().type == TokenType::dp) {
       names.push_back(consume().value.value());
-    } else break;
+    }
+    else break;
 
     if (peek().has_value() && peek().value().type == TokenType::dp && peek(1).has_value() && peek(1).value().type == TokenType::dp) {
       consume(); consume();
@@ -180,7 +181,7 @@ std::optional<NodeExpr> Parser::parse_property_chain(std::optional<NodeExpr> bas
 
     if (!peek().has_value() || peek().value().type != TokenType::ident) {
       add_error("Expected identifier after '.'",
-                peek().has_value() ? peek().value().line : -1);
+        peek().has_value() ? peek().value().line : -1);
       return std::nullopt;
     }
 
@@ -198,30 +199,33 @@ std::optional<NodeExpr> Parser::parse_property_chain(std::optional<NodeExpr> bas
         auto arg_expr = parse_expr();
         if (!arg_expr.has_value()) {
           add_error("Invalid expression in function arguments", line);
-        } else {
+        }
+        else {
           args.push_back(std::make_shared<NodeExpr>(arg_expr.value()));
         }
 
         if (peek().has_value() && peek().value().type == TokenType::comma) {
           consume();
-        } else {
+        }
+        else {
           break;
         }
       }
 
       if (!peek().has_value() || peek().value().type != TokenType::close_paren) {
         add_error("Expected ')'", line);
-      } else {
+      }
+      else {
         consume(); // ')'
       }
     }
 
-    expr = NodeExpr(NodeExprProperty{.base = std::make_shared<NodeExpr>(*expr),
+    expr = NodeExpr(NodeExprProperty{ .base = std::make_shared<NodeExpr>(*expr),
                                      .base_tok = base,
                                      .property = property,
                                      .is_func = is_func,
                                      .args = args,
-                                     .line = line});
+                                     .line = line });
   }
 
   return expr;
@@ -231,9 +235,9 @@ std::optional<NodeExpr> Parser::parse_property_chain(std::optional<NodeExpr> bas
 bool recursive_expr = false;
 std::optional<NodeExpr> Parser::parse_primary_expr() {
   if (peek().has_value() && peek().value().type == TokenType::ident &&
-  peek(1).has_value() && peek(1).value().type == TokenType::dp &&
-  peek(2).has_value() && peek(2).value().type == TokenType::dp) {
-    Token new_tok = {.type = TokenType::ident, .value = parse_mangled_chain(), .line = peek().value().line};
+    peek(1).has_value() && peek(1).value().type == TokenType::dp &&
+    peek(2).has_value() && peek(2).value().type == TokenType::dp) {
+    Token new_tok = { .type = TokenType::ident, .value = parse_mangled_chain(), .line = peek().value().line };
     m_tokens.insert(m_tokens.begin() + m_index, new_tok);
   }
 
@@ -253,27 +257,30 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
 
     consume(); consume();
 
-    return NodeExpr(NodeExprFact {.expr = std::make_shared<NodeExpr>(*expr), .line = line});
-  } else if (peek().has_value() && peek().value().type == TokenType::pipe &&
-      peek(1).has_value() && peek(1).value().type != TokenType::pipe && !recursive_expr) {
-      int line = consume().line;
+    return NodeExpr(NodeExprFact{ .expr = std::make_shared<NodeExpr>(*expr), .line = line });
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::pipe &&
+    peek(1).has_value() && peek(1).value().type != TokenType::pipe && !recursive_expr) {
+    int line = consume().line;
 
-      recursive_expr = true;
-      auto expr = parse_expr();
-      recursive_expr = false;
+    recursive_expr = true;
+    auto expr = parse_expr();
+    recursive_expr = false;
 
-      if (!expr.has_value()) {
-        add_error("Malformed Expression in abs", line);
-        return std::nullopt;
-      }
+    if (!expr.has_value()) {
+      add_error("Malformed Expression in abs", line);
+      return std::nullopt;
+    }
 
-      if (!peek().has_value() || peek().value().type != TokenType::pipe) {
-        add_error("Expected '|' to close abs expression", line);
-        return std::nullopt;
-      } else consume();
+    if (!peek().has_value() || peek().value().type != TokenType::pipe) {
+      add_error("Expected '|' to close abs expression", line);
+      return std::nullopt;
+    }
+    else consume();
 
-      return NodeExpr(NodeExprAbs {.expr = std::make_shared<NodeExpr>(*expr), .line = line});
-    } else if (peek().has_value() && is_unary_op(peek().value())) {
+    return NodeExpr(NodeExprAbs{ .expr = std::make_shared<NodeExpr>(*expr), .line = line });
+  }
+  else if (peek().has_value() && is_unary_op(peek().value())) {
     int line = peek().value().line;
     Token op = consume();
 
@@ -284,8 +291,9 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
     }
 
     return NodeExpr(NodeExprUnary{
-        .op = op, .expr = std::make_shared<NodeExpr>(*rhs_opt), .line = line});
-  } else if (peek().has_value() && peek().value().type == TokenType::open_paren) {
+        .op = op, .expr = std::make_shared<NodeExpr>(*rhs_opt), .line = line });
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::open_paren) {
     int line = peek().value().line;
     consume(); // (
 
@@ -299,7 +307,8 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
     consume(); // )
 
     return inner_expr;
-  }  else if (peek().has_value() && peek().value().type == TokenType::_is_def) {
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_is_def) {
     int line = consume().line;
 
     if (!peek().has_value() || peek().value().type != TokenType::ident) {
@@ -307,10 +316,11 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
     }
     Token name = consume();
 
-    return NodeExpr(NodeExprIsDef{.name = name, .line = line});
-  } else if (peek().has_value() && peek().value().type == TokenType::open_paren &&
-             peek(1).has_value() &&
-             (peek(1).value().type == TokenType::amp || is_type(peek(1).value()))) {
+    return NodeExpr(NodeExprIsDef{ .name = name, .line = line });
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::open_paren &&
+    peek(1).has_value() &&
+    (peek(1).value().type == TokenType::amp || is_type(peek(1).value()))) {
     int line = consume().line;
     bool is_ref = false;
 
@@ -334,8 +344,9 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
     }
 
     return NodeExpr(NodeExprCast{
-        .expr = std::make_shared<NodeExpr>(*e), .target_type = type, .line = line});
-  } else if (peek().has_value() && peek().value().type == TokenType::_is_ndef) {
+        .expr = std::make_shared<NodeExpr>(*e), .target_type = type, .line = line });
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_is_ndef) {
     int line = consume().line;
 
     if (!peek().has_value() || peek().value().type != TokenType::ident) {
@@ -343,8 +354,9 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
     }
     Token name = consume();
 
-    return NodeExpr(NodeExprIsNotDef{.name = name, .line = line});
-  } else if (peek().has_value() && peek().value().type == TokenType::_size_of) {
+    return NodeExpr(NodeExprIsNotDef{ .name = name, .line = line });
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_size_of) {
     int line = consume().line;
 
     if (!peek().has_value() || !is_type(peek().value())) {
@@ -352,9 +364,10 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
     }
     Type type = get_type_from_tok(consume());
 
-    return NodeExpr(NodeExprSizeOf{.type = type, .line = line});
-  } else if (peek().has_value() && peek().value().type == TokenType::ident &&
-             peek(1).has_value() && peek(1).value().type == TokenType::open_paren) {
+    return NodeExpr(NodeExprSizeOf{ .type = type, .line = line });
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::ident &&
+    peek(1).has_value() && peek(1).value().type == TokenType::open_paren) {
     Token name = consume();
     int line = name.line;
     consume();
@@ -364,20 +377,23 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
     while (peek().has_value() && peek().value().type != TokenType::close_paren) {
       if (auto e = parse_expr()) {
         args.push_back(e.value());
-      } else {
+      }
+      else {
         add_error("Invalid Expression in function call (expression context)", line);
       }
 
       if (peek().has_value() && peek().value().type == TokenType::comma) {
         consume();
-      } else if (peek().has_value() && peek().value().type != TokenType::close_paren) {
+      }
+      else if (peek().has_value() && peek().value().type != TokenType::close_paren) {
         add_error("Expected ',' or ')'", line);
       }
     }
 
     if (peek().has_value() && peek().value().type == TokenType::close_paren) {
       consume();
-    } else {
+    }
+    else {
       add_error("Expected ')' at the end of function call", line);
     }
 
@@ -385,10 +401,11 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
     for (auto &arg : args) {
       wrapped_args.push_back(std::make_shared<NodeExpr>(std::move(arg)));
     }
-    return NodeExpr(NodeExprCall{name, wrapped_args, line});
-  } else if (peek().has_value() && is_expr_start(peek().value()) &&
-             peek(1).has_value() && peek(1).value().type == TokenType::dot &&
-             !recursive_expr) {
+    return NodeExpr(NodeExprCall{ name, wrapped_args, line });
+  }
+  else if (peek().has_value() && is_expr_start(peek().value()) &&
+    peek(1).has_value() && peek(1).value().type == TokenType::dot &&
+    !recursive_expr) {
     int line = peek().value().line;
     recursive_expr = true;
     auto e = parse_primary_expr();
@@ -404,17 +421,19 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
     }
 
     return *expr;
-  } else if (peek().has_value() && peek().value().type == TokenType::amp &&
-                 peek(1).has_value() && peek(1).value().type == TokenType::amp ||
-             peek().has_value() && peek().value().type == TokenType::pipe &&
-                 peek(1).has_value() && peek(1).value().type == TokenType::pipe) {
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::amp &&
+    peek(1).has_value() && peek(1).value().type == TokenType::amp ||
+    peek().has_value() && peek().value().type == TokenType::pipe &&
+    peek(1).has_value() && peek(1).value().type == TokenType::pipe) {
     int line = consume().line;
     consume();
 
     add_error("Neither && nor || are valid operators. Use and / or instead", line,
-              ErrType::WrongAndOr);
-  } else if (peek().has_value() && peek().value().type == TokenType::ref ||
-             peek().value().type == TokenType::amp) {
+      ErrType::WrongAndOr);
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::ref ||
+    peek().value().type == TokenType::amp) {
     int line = peek().value().line;
     consume();
 
@@ -423,9 +442,10 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
     }
     Token ident = consume();
 
-    return NodeExpr(NodeExprGetPtr{.ident = ident, .line = line});
-  } else if (peek().has_value() && peek().value().type == TokenType::deref ||
-             peek().value().type == TokenType::star) {
+    return NodeExpr(NodeExprGetPtr{ .ident = ident, .line = line });
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::deref ||
+    peek().value().type == TokenType::star) {
     int line = consume().line; // deref
     NodeExpr expr;
 
@@ -437,8 +457,9 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
     expr = *e;
 
     return NodeExpr(
-        NodeExprDeref{.expr = std::make_shared<NodeExpr>(expr), .line = line});
-  } else if (peek().has_value() && peek().value().type == TokenType::_new) {
+      NodeExprDeref{ .expr = std::make_shared<NodeExpr>(expr), .line = line });
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_new) {
     int line = consume().line;
 
     if (!peek().has_value()) {
@@ -447,7 +468,7 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
     }
     Type type = get_type_from_tok(consume());
 
-    return NodeExpr(NodeExprNew{.type = type, .line = line});
+    return NodeExpr(NodeExprNew{ .type = type, .line = line });
   }
 
   else if (peek().has_value() && peek().value().type == TokenType::_list) {
@@ -467,19 +488,21 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
       }
       elements.push_back(e.value());
       if (!peek().has_value() || (peek().value().type != TokenType::r_bracket &&
-                                  peek().value().type != TokenType::comma)) {
+        peek().value().type != TokenType::comma)) {
         add_error("Expected ',' or '>'\n", line);
       }
       if (peek().value().type == TokenType::comma) {
         consume();
         continue;
-      } else
+      }
+      else
         break;
     }
     consume();
 
-    return NodeExpr(NodeExprList({.elements = elements, .line = line}));
-  } else if (peek().has_value() && peek().value().type == TokenType::_nwstruct) {
+    return NodeExpr(NodeExprList({ .elements = elements, .line = line }));
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_nwstruct) {
     int line = peek().value().line;
     consume();
 
@@ -504,16 +527,18 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
         add_error("Expected '}'", line);
       }
       consume();
-    } else if (peek().has_value()) {
+    }
+    else if (peek().has_value()) {
       add_error("Expected declaration of struct or at least the end of the expression",
-                line);
+        line);
     }
 
     return NodeExpr(NodeExprStruct{
-        .template_name = struct_template_name, .fields = fields, .line = line});
-  } else if (peek().has_value() && is_expr_start(peek().value()) &&
-             peek(1).has_value() && peek(1).value().type == TokenType::l_bracket &&
-             !recursive_expr) {
+        .template_name = struct_template_name, .fields = fields, .line = line });
+  }
+  else if (peek().has_value() && is_expr_start(peek().value()) &&
+    peek(1).has_value() && peek(1).value().type == TokenType::l_bracket &&
+    !recursive_expr) {
     int line = peek().value().line;
     recursive_expr = true;
     auto e = parse_primary_expr();
@@ -537,39 +562,51 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
     consume();
 
     return NodeExpr(
-        NodeExprListElement{.list_expr = std::make_shared<NodeExpr>(list_expr),
-                            .index = index,
-                            .line = line});
-  } else if (peek().has_value() && peek().value().type == TokenType::int_lit) {
-    return NodeExpr(NodeExprIntLit{consume()});
-  } else if (peek().has_value() && peek().value().type == TokenType::ident) {
+      NodeExprListElement{ .list_expr = std::make_shared<NodeExpr>(list_expr),
+                          .index = index,
+                          .line = line });
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::int_lit) {
+    return NodeExpr(NodeExprIntLit{ consume() });
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::ident) {
     last_token = peek().value();
-    return NodeExpr(NodeExprIdent{consume()});
-  } else if (peek().has_value() && peek().value().type == TokenType::str_lit) {
-    return NodeExpr(NodeExprStrLit{consume()});
-  } else if (peek().has_value() && peek().value().type == TokenType::char_lit) {
+    return NodeExpr(NodeExprIdent{ consume() });
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::str_lit) {
+    return NodeExpr(NodeExprStrLit{ consume() });
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::char_lit) {
     return NodeExpr(NodeExprCharLit(consume()));
-  } else if (peek().has_value() && peek().value().type == TokenType::float_lit) {
-    return NodeExpr(NodeExprFloatLit{consume()});
-  } else if (peek().has_value() && peek().value().type == TokenType::none) {
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::float_lit) {
+    return NodeExpr(NodeExprFloatLit{ consume() });
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::none) {
     return NodeExpr(NodeExprNone{});
-  } else if (peek().has_value() && peek().value().type == TokenType::_nullptr) {
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_nullptr) {
     consume();
     return NodeExpr(NodeExprNullptr{});
-  } else if (peek().has_value() && peek().value().type == TokenType::no_arg) {
-    return NodeExpr(NodeExprNoArg{consume()});
-  } else if (peek().has_value() && peek().value().type == TokenType::cr) {
-    return NodeExpr(NodeExprCR{consume()});
-  } else if (peek().has_value() && peek().value().type == TokenType::_true) {
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::no_arg) {
+    return NodeExpr(NodeExprNoArg{ consume() });
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::cr) {
+    return NodeExpr(NodeExprCR{ consume() });
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_true) {
     int line = consume().line;
     return NodeExpr(NodeExprIntLit{
-        .int_lit = Token{.type = TokenType::int_lit, .value = "1", .line = line}});
+        .int_lit = Token{.type = TokenType::int_lit, .value = "1", .line = line} });
     // return NodeExpr(NodeExprBoolValue{1});
-  } else if (peek().has_value() && peek().value().type == TokenType::_false) {
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_false) {
     int line = consume().line;
     return NodeExpr(NodeExprIntLit{
-        .int_lit = Token{.type = TokenType::int_lit, .value = "0", .line = line}});
-  } else if (peek().has_value() && peek().value().type == TokenType::open_paren) {
+        .int_lit = Token{.type = TokenType::int_lit, .value = "0", .line = line} });
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::open_paren) {
     int line = peek().value().line;
     auto inner_expr = parse_expr(0);
     if (!peek().has_value() || peek().value().type != TokenType::close_paren) {
@@ -596,10 +633,10 @@ std::optional<NodeExpr> Parser::parse_expr(int min_precedence) {
     auto op_token = *op_token_opt;
 
     if (op_token.type == TokenType::close_paren || op_token.type == TokenType::comma ||
-        op_token.type == TokenType::r_bracket || op_token.type == TokenType::r_key ||
-        op_token.type == TokenType::l_key || op_token.type == TokenType::dp ||
-        op_token.type == TokenType::semi || is_assignment_op(op_token) || 
-        op_token.type == TokenType::bang || op_token.type == TokenType::pipe) {
+      op_token.type == TokenType::r_bracket || op_token.type == TokenType::r_key ||
+      op_token.type == TokenType::l_key || op_token.type == TokenType::dp ||
+      op_token.type == TokenType::semi || is_assignment_op(op_token) ||
+      op_token.type == TokenType::bang || op_token.type == TokenType::pipe) {
       break;
     }
 
@@ -617,8 +654,8 @@ std::optional<NodeExpr> Parser::parse_expr(int min_precedence) {
       break;
     auto rhs = *rhs_opt;
 
-    lhs = NodeExpr(NodeExprBinary{std::make_shared<NodeExpr>(*lhs), op_token,
-      std::make_shared<NodeExpr>(rhs), op_token.line});
+    lhs = NodeExpr(NodeExprBinary{ std::make_shared<NodeExpr>(*lhs), op_token,
+      std::make_shared<NodeExpr>(rhs), op_token.line });
   }
   return lhs;
 }
@@ -633,13 +670,14 @@ std::optional<NodeStmt> Parser::parse_stmt() {
   if (peek().has_value() && peek().value().type == TokenType::ident &&
     peek(1).has_value() && peek(1).value().type == TokenType::dp &&
     peek(2).has_value() && peek(2).value().type == TokenType::dp) {
-    Token new_tok = {.type = TokenType::ident, .value = parse_mangled_chain(), .line = peek().value().line};
+    Token new_tok = { .type = TokenType::ident, .value = parse_mangled_chain(), .line = peek().value().line };
     m_tokens.insert(m_tokens.begin() + m_index, new_tok);
-  } else if (peek().has_value() && peek().value().type == TokenType::ident &&
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::ident &&
     peek(1).has_value() && peek(1).value().type == TokenType::dot &&
     peek(2).has_value() && peek(2).value().type == TokenType::ident &&
     peek(3).has_value() && peek(3).value().type == TokenType::open_paren) {
-      int line = peek().value().line;
+    int line = peek().value().line;
     recursive_expr = true;
     auto e = parse_primary_expr();
     Token base = last_token;
@@ -654,9 +692,9 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     }
 
     NodeExprProperty expr_prop = std::get<NodeExprProperty>(expr->var);
-    
+
     //result = NodeStmt{.var = NodeStmtCall{.name = expr_prop., .args = std::get<NodeExprProperty>(expr->var).args, .line = line}};
-    result = NodeStmt{.var = NodeStmtProperty{.ident = base, .expr = *expr, .line = line}};
+    result = NodeStmt{ .var = NodeStmtProperty{.ident = base, .expr = *expr, .line = line} };
 
     if (need_semi && !in_for) {
       if (!peek().has_value() || peek().value().type != TokenType::semi)
@@ -671,7 +709,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     line = peek().value().line;
 
   if (peek().has_value() && peek().value().type == TokenType::ident &&
-      peek().value().value == "__asm") {
+    peek().value().value == "__asm") {
     consume();
     need_semi = false;
 
@@ -696,7 +734,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         add_error("Expected string expression in asm instruction", line);
       }
       format_instruction =
-          std::get<NodeExprStrLit>(e->var).str_lit.value.value_or("nop");
+        std::get<NodeExprStrLit>(e->var).str_lit.value.value_or("nop");
 
       while (peek().has_value() && peek().value().type != TokenType::close_paren) {
         if (!peek().has_value() || peek().value().type != TokenType::dp) {
@@ -719,7 +757,8 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
       if (peek().has_value() && peek().value().type == TokenType::comma) {
         consume();
-      } else if (peek().has_value() && peek().value().type == TokenType::r_key)
+      }
+      else if (peek().has_value() && peek().value().type == TokenType::r_key)
         break;
     }
 
@@ -731,9 +770,10 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
     result = NodeStmt{
         .var = NodeStmtAsmUserWrite{
-            .format_instructions = format_instructions, .exprs = exprs, .line = line}};
+            .format_instructions = format_instructions, .exprs = exprs, .line = line} };
 
-  } else if (peek().has_value() && peek().value().type == TokenType::str_lit) {
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::str_lit) {
     Token fmt = consume();
 
     std::vector<NodeExpr> args;
@@ -749,28 +789,31 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
         if (peek().has_value() && peek().value().type == TokenType::comma) {
           consume();
-        } else if (peek().has_value() && peek().value().type != TokenType::semi) {
+        }
+        else if (peek().has_value() && peek().value().type != TokenType::semi) {
           add_error("Expected ',' or ';'", line);
         }
       }
     }
 
-    result = NodeStmt(NodeStmtPrint{fmt, args, line});
-  } else if (peek().has_value() && peek().value().type == TokenType::ident &&
-             peek(1).has_value() && peek(1).value().type == TokenType::dp) {
+    result = NodeStmt(NodeStmtPrint{ fmt, args, line });
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::ident &&
+    peek(1).has_value() && peek(1).value().type == TokenType::dp) {
     Token ident = consume();
     consume();
 
     need_semi = false;
-    result = NodeStmt{.var = NodeStmtLabel{.ident = ident, .line = line}};
-  } else if (peek().has_value() &&
-             (peek().value().type == TokenType::var ||
-              peek().value().type == TokenType::cnst) &&
-             peek(1).has_value() && peek(1).value().type == TokenType::ident) {
+    result = NodeStmt{ .var = NodeStmtLabel{.ident = ident, .line = line} };
+  }
+  else if (peek().has_value() &&
+    (peek().value().type == TokenType::var ||
+      peek().value().type == TokenType::cnst) &&
+    peek(1).has_value() && peek(1).value().type == TokenType::ident) {
     int mut = peek().value().type == TokenType::var ? true : false;
     consume();
     Token ident = consume();
-    Token type = Token{.type = TokenType::null_tok, .value = "", .line = line};
+    Token type = Token{ .type = TokenType::null_tok, .value = "", .line = line };
     NodeStmtVar stmt_var;
     stmt_var.ident = ident;
     stmt_var.is_mutable = mut;
@@ -807,8 +850,9 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         add_error("Constant need to be declared", line);
       }
 
-      result = NodeStmt{.var = stmt_var};
-    } else {
+      result = NodeStmt{ .var = stmt_var };
+    }
+    else {
       consume();
 
       auto expr = parse_expr();
@@ -817,11 +861,12 @@ std::optional<NodeStmt> Parser::parse_stmt() {
       }
       stmt_var.expr = expr.value();
 
-      result = NodeStmt{.var = stmt_var};
+      result = NodeStmt{ .var = stmt_var };
     }
-  } else if (peek().has_value() && peek().value().type == TokenType::_fnc ||
-             peek().has_value() && peek().value().type == TokenType::_extern &&
-                 peek(1).has_value() && peek(1).value().type == TokenType::_fnc) {
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_fnc ||
+    peek().has_value() && peek().value().type == TokenType::_extern &&
+    peek(1).has_value() && peek(1).value().type == TokenType::_fnc) {
     bool is_pub = false;
     bool is_extern = false;
     if (peek().value().type == TokenType::_extern) {
@@ -833,17 +878,17 @@ std::optional<NodeStmt> Parser::parse_stmt() {
       add_error("Expected name in the function declaration\n", line);
     }
 
-    NodeStmtVar ret_var = {.line = -1}; // To initialize with no existent return method
+    NodeStmtVar ret_var = { .line = -1 }; // To initialize with no existent return method
     if (peek().has_value() && peek().value().type == TokenType::ident &&
-        peek(1).has_value() && peek(1).value().type == TokenType::dp) {
+      peek(1).has_value() && peek(1).value().type == TokenType::dp) {
       ret_var.line = line;
       ret_var.ident = consume();
 
       if (!peek().has_value() || peek().value().type != TokenType::dp &&
-          !peek(1).has_value()) {
-            add_error("Expected type after return name declaration\n");
-          }
-      
+        !peek(1).has_value()) {
+        add_error("Expected type after return name declaration\n");
+      }
+
       consume();
       ret_var.type = parse_type();
       consume();
@@ -857,58 +902,64 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     Token name = consume();
     std::vector<CustomFuncArgs> args;
     std::vector<std::string> absolute_type_name_args;
+    std::vector<std::string> flags;
 
     bool has_args = false;
     bool vargs = false;
     if (peek().has_value() && peek().value().type == TokenType::open_paren) {
-    consume();
-    has_args = true;
-    while (peek().has_value() && peek().value().type != TokenType::close_paren) {
-      if (peek().has_value() && peek().value().type == TokenType::ident) {
-        std::string arg_name = consume().value.value();
-        Type arg_type;
-        Token arg_type_tok;
+      consume();
+      has_args = true;
+      while (peek().has_value() && peek().value().type != TokenType::close_paren) {
+        if (peek().has_value() && peek().value().type == TokenType::ident) {
+          std::string arg_name = consume().value.value();
+          Type arg_type;
+          Token arg_type_tok;
 
-        if (arg_name == "undefan") {
-          // arg_type = Type{Type::Kind::NxtUndefNum};
-          vargs = true;
-          break;
-        } else if (arg_name == "undefa") {
-          arg_type = Type{Type::Kind::Any};
-        } else {
-          if (!peek().has_value()) {
-            add_error("Malformed expression\n", line);
+          if (arg_name == "undefan") {
+            // arg_type = Type{Type::Kind::NxtUndefNum};
+            vargs = true;
+            break;
           }
-          consume();
-          if (!peek().has_value()) {
-            add_error("Malformed expression\n", line);
+          else if (arg_name == "undefa") {
+            arg_type = Type{ Type::Kind::Any };
           }
+          else {
+            if (!peek().has_value()) {
+              add_error("Malformed expression\n", line);
+            }
+            consume();
+            if (!peek().has_value()) {
+              add_error("Malformed expression\n", line);
+            }
 
-          arg_type = parse_type();
-          consume();
-        }
-        args.push_back({.name = arg_name, .arg_type = arg_type});
-        absolute_type_name_args.push_back(arg_type_tok.value.value());
+            arg_type = parse_type();
+            consume();
+          }
+          args.push_back({ .name = arg_name, .arg_type = arg_type });
+          absolute_type_name_args.push_back(arg_type_tok.value.value());
 
-        if (peek().has_value() && peek().value().type == TokenType::comma) {
-          consume();
-          continue;
-        } else if (peek().has_value() &&
-                   peek().value().type == TokenType::close_paren) {
-          break;
+          if (peek().has_value() && peek().value().type == TokenType::comma) {
+            consume();
+            continue;
+          }
+          else if (peek().has_value() &&
+            peek().value().type == TokenType::close_paren) {
+            break;
+          }
         }
-      } else if (peek().has_value() && peek().value().type == TokenType::none) {
-        consume();
-        if (has_args ||
+        else if (peek().has_value() && peek().value().type == TokenType::none) {
+          consume();
+          if (has_args ||
             (peek().has_value() && peek().value().type != TokenType::close_paren)) {
-          add_error(
+            add_error(
               "None must be a unique and no named argument in function declaration",
               line);
+          }
         }
-      } else {
-        add_error("Malformed expression in function declaration", line);
+        else {
+          add_error("Malformed expression in function declaration", line);
+        }
       }
-    }
     }
     if (has_args) {
       if (peek().has_value() && peek().value().type == TokenType::close_paren) consume();
@@ -917,9 +968,9 @@ std::optional<NodeStmt> Parser::parse_stmt() {
       }
     }
 
-    Type return_type = Type{Type::Kind::None};
+    Type return_type = Type{ Type::Kind::None };
     if (peek().has_value() && peek().value().type == TokenType::minus &&
-        peek(1).has_value() && peek(1).value().type == TokenType::r_arrow) {
+      peek(1).has_value() && peek(1).value().type == TokenType::r_arrow) {
       int line = peek().value().line;
       consume();
       consume();
@@ -963,37 +1014,84 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         is_pub = true;
         need_semi = true;
       }
-    } else if (peek().has_value() && peek().value().type == TokenType::_pub) {
+
+      if (peek().has_value() && peek().value().type == TokenType::dp) {
+        consume();
+        need_semi = true;
+
+        while (peek().has_value() && peek().value().type != TokenType::semi) {
+          if (!peek().has_value() || peek().value().type != TokenType::str_lit) {
+            add_error("Expected flag", line);
+            break;
+          }
+
+          flags.push_back(consume().value.value());
+
+          if (!peek().has_value() || (peek().value().type != TokenType::comma &&
+            peek().value().type != TokenType::semi)) {
+            add_error("function declaration: Expected more flags or the end of the instruction", line);
+            break;
+          }
+          else if (peek().value().type == TokenType::comma)
+            consume();
+        }
+      }
+    }
+    else if (peek().has_value() && peek().value().type == TokenType::_pub) {
       consume();
       is_pub = true;
       need_semi = true;
     }
+    else if (peek().has_value() && peek().value().type == TokenType::dp) {
+      consume();
+      need_semi = true;
+
+      while (peek().has_value() && peek().value().type != TokenType::semi) {
+        if (!peek().has_value() || peek().value().type != TokenType::str_lit) {
+          add_error("Expected flag", line);
+          break;
+        }
+
+        flags.push_back(consume().value.value());
+
+        if (!peek().has_value() || (peek().value().type != TokenType::comma &&
+          peek().value().type != TokenType::semi)) {
+          add_error("function declaration: Expected more flags or the end of the instruction", line);
+          break;
+        }
+        else if (peek().value().type == TokenType::comma)
+          consume();
+      }
+    }
     result =
-        NodeStmt{NodeStmtDefFunc{.name = name,
-          .args = args,
-          .return_type = return_type,
-          .is_defined = is_defined,
-          .code_branch = code_branch,
-          .is_pub = is_pub,
-          .is_extern = is_extern,
-          .absolute_type_name_args = absolute_type_name_args,
-          .is_vargs = vargs,
-          .ret_var = ret_var,
-          .line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::ident &&
-             peek(1).has_value() &&
-             (peek(1).value().type == TokenType::plusplus ||
-              peek(1).value().type == TokenType::minusminus)) {
+      NodeStmt{ NodeStmtDefFunc{.name = name,
+        .args = args,
+        .return_type = return_type,
+        .is_defined = is_defined,
+        .code_branch = code_branch,
+        .is_pub = is_pub,
+        .is_extern = is_extern,
+        .absolute_type_name_args = absolute_type_name_args,
+        .is_vargs = vargs,
+        .ret_var = ret_var,
+        .flags = flags,
+        .line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::ident &&
+    peek(1).has_value() &&
+    (peek(1).value().type == TokenType::plusplus ||
+      peek(1).value().type == TokenType::minusminus)) {
     Token ident = consume(); // Identifier   ...var1...
     int line = ident.line;
     Token op = consume(); // Operator (+=, -=, *=, /=)
 
-    NodeStmtVar reassignment{.ident = ident,
+    NodeStmtVar reassignment{ .ident = ident,
                              .expr = NodeExpr(NodeExprUnaryIncDec{
-                                 .ident = ident, .op_token = op, .line = line})};
-    result = NodeStmt{.var = reassignment};
-  } else if (peek().has_value() && (peek().value().type == TokenType::plusplus ||
-                                    peek().value().type == TokenType::minusminus)) {
+                                 .ident = ident, .op_token = op, .line = line}) };
+    result = NodeStmt{ .var = reassignment };
+  }
+  else if (peek().has_value() && (peek().value().type == TokenType::plusplus ||
+    peek().value().type == TokenType::minusminus)) {
     Token op_tok = consume();
     auto e = parse_expr();
     if (!e.has_value()) {
@@ -1003,34 +1101,36 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     NodeExpr expr = *e;
     switch (op_tok.type) {
     case TokenType::plusplus:
-      op_tok = Token{.type = TokenType::plus_eq, .value = "+=", .line = line};
+      op_tok = Token{ .type = TokenType::plus_eq, .value = "+=", .line = line };
       break;
     case TokenType::minusminus:
-      op_tok = Token{.type = TokenType::minus_eq, .value = "-=", .line = line};
+      op_tok = Token{ .type = TokenType::minus_eq, .value = "-=", .line = line };
       break;
     default:
       add_error("THIS SHOULD BE ALREADY CONTROLLED", line);
       break;
     }
     NodeExpr val = NodeExpr(NodeExprIntLit{
-        .int_lit = Token{.type = TokenType::int_lit, .value = "1", .line = line}});
+        .int_lit = Token{.type = TokenType::int_lit, .value = "1", .line = line} });
 
     result =
-        NodeStmt{.var = NodeStmtAssign{
-                     .target = expr, .op_tok = op_tok, .value = val, .line = line}};
-  } else if (peek().has_value() &&
-             (peek().value().type == TokenType::plusplus ||
-              peek().value().type == TokenType::minusminus) &&
-             peek(1).has_value() && peek(1).value().type == TokenType::ident) {
+      NodeStmt{ .var = NodeStmtAssign{
+                   .target = expr, .op_tok = op_tok, .value = val, .line = line} };
+  }
+  else if (peek().has_value() &&
+    (peek().value().type == TokenType::plusplus ||
+      peek().value().type == TokenType::minusminus) &&
+    peek(1).has_value() && peek(1).value().type == TokenType::ident) {
     Token op = consume();
     int line = op.line;
     Token ident = consume();
 
-    NodeStmtVarRe reassignment{.ident = ident,
+    NodeStmtVarRe reassignment{ .ident = ident,
                                .expr = NodeExpr(NodeExprUnaryIncDec{
-                                   .ident = ident, .op_token = op, .line = line})};
-    result = NodeStmt{.var = reassignment};
-  } else if (peek().has_value() && peek().value().type == TokenType::_if) {
+                                   .ident = ident, .op_token = op, .line = line}) };
+    result = NodeStmt{ .var = reassignment };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_if) {
     consume(); // If
 
     auto condition = parse_expr();
@@ -1102,7 +1202,8 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
         elif_conditions.push_back(elif_condition.value_or(NodeExpr(NodeExprNone{})));
         elif_branches.push_back(elif_then_branch);
-      } else if (peek()->type == TokenType::_else) {
+      }
+      else if (peek()->type == TokenType::_else) {
         consume(); // consume 'else'
 
         if (!peek().has_value() || peek()->type != TokenType::l_key) {
@@ -1128,19 +1229,20 @@ std::optional<NodeStmt> Parser::parse_stmt() {
       }
 
       if (!peek().has_value() || (peek().value().type != TokenType::_elif &&
-                                  peek().value().type != TokenType::_else))
+        peek().value().type != TokenType::_else))
         break;
     }
-    NodeStmtIf if_stmt{.condition = condition.value(),
+    NodeStmtIf if_stmt{ .condition = condition.value(),
                        .then_branch = then_branch,
                        .elif_conditions = elif_conditions,
                        .elif_branches = elif_branches,
                        .else_branch = else_branch,
-                       .line = line};
+                       .line = line };
 
     need_semi = false;
-    result = NodeStmt{.var = if_stmt};
-  } else if (peek().has_value() && peek().value().type == TokenType::_while) {
+    result = NodeStmt{ .var = if_stmt };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_while) {
     consume(); // while
     std::vector<NodeStmt> bfw;
     std::vector<NodeStmt> afi;
@@ -1190,7 +1292,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
             std::cerr << "Expected ']'\n";
             terminate(EXIT_FAILURE);
         }
-        consume(); // 
+        consume(); //
     }*/
 
     if (!peek().has_value() || peek().value().type != TokenType::l_key) {
@@ -1214,12 +1316,13 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     consume(); // }
 
     need_semi = false;
-    result = NodeStmt{.var = NodeStmtWhile{.condition = condition,
+    result = NodeStmt{ .var = NodeStmtWhile{.condition = condition,
                                            .then_branch = then_branch,
                                            .bfw = bfw,
                                            .afi = afi,
-                                           .line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::_loop) {
+                                           .line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_loop) {
     consume();
     std::vector<NodeStmt> then_branch;
     if (!peek().has_value()) {
@@ -1243,8 +1346,9 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     }
 
     need_semi = false;
-    result = NodeStmt{.var = NodeStmtLoop{.then_branch = then_branch, .line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::_for) {
+    result = NodeStmt{ .var = NodeStmtLoop{.then_branch = then_branch, .line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_for) {
     consume();
     need_semi = false;
 
@@ -1256,7 +1360,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
     std::vector<NodeStmt> init;
     std::vector<NodeStmt> update;
-    NodeExpr condition = NodeExpr(NodeExprBoolValue{.value = 1, .line = line});
+    NodeExpr condition = NodeExpr(NodeExprBoolValue{ .value = 1, .line = line });
     int index_status = 0; // 0 = init, 1 = expression, 2 = update
     while (peek().has_value() && peek().value().type != TokenType::l_key) {
       if (index_status != 2) {
@@ -1264,7 +1368,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         if (e.has_value() && index_status != 2) {
           condition = *e;
           if ((index_status != 2) && !peek().has_value() ||
-              peek().value().type != TokenType::semi) {
+            peek().value().type != TokenType::semi) {
             add_error("Expected ';' after expression in for loop", line);
             return std::nullopt;
           }
@@ -1278,20 +1382,23 @@ std::optional<NodeStmt> Parser::parse_stmt() {
       auto stmt = parse_stmt();
       in_for = false;
       if (index_status == 0 &&
-          (!peek().has_value() || peek().value().type != TokenType::semi)) {
+        (!peek().has_value() || peek().value().type != TokenType::semi)) {
         add_error("Expected ';' in for instruction", line);
-      } else if (index_status == 2 && peek().has_value()) {
+      }
+      else if (index_status == 2 && peek().has_value()) {
         if (peek().value().type != TokenType::semi) {
           if (peek().value().type != TokenType::l_key) {
             add_error("Expected ';' in for instruction", line);
           }
-        } else if (peek().value().type == TokenType::semi &&
-                   (!peek(1).has_value() || peek(1).value().type == TokenType::l_key)) {
+        }
+        else if (peek().value().type == TokenType::semi &&
+          (!peek(1).has_value() || peek(1).value().type == TokenType::l_key)) {
           add_error("Extra ';' at the end of for instruction", line);
         }
         if (peek().value().type == TokenType::semi)
           consume();
-      } else if (index_status == 0)
+      }
+      else if (index_status == 0)
         consume();
       if (!stmt.has_value()) {
         // add_error(std::string("Malformed statment/expression in for loop ") +
@@ -1332,21 +1439,22 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         return std::nullopt;
       }
       consume();
-    } else if (peek().value().type != TokenType::semi) {
+    }
+    else if (peek().value().type != TokenType::semi) {
       add_error("Expected code block or ';'", line);
       return std::nullopt;
     }
 
     need_semi = false;
-    result = NodeStmt{.var = NodeStmtFor{.init = init,
+    result = NodeStmt{ .var = NodeStmtFor{.init = init,
                                          .condition = condition,
                                          .update = update,
                                          .code_branch = code_branch,
-                                         .line = line}};
+                                         .line = line} };
   }
 
   else if (peek().has_value() && peek().value().type == TokenType::use &&
-           peek(1).has_value() && peek(1).value().type == TokenType::str_lit) {
+    peek(1).has_value() && peek(1).value().type == TokenType::str_lit) {
     int line = peek().value().line;
     consume();
     NodeStmtUhead stmt_import;
@@ -1354,7 +1462,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     stmt_import.mod_name = consume();
     stmt_import.line = line;
 
-    result = NodeStmt{.var = stmt_import};
+    result = NodeStmt{ .var = stmt_import };
   }
   else if (peek().has_value() && peek().value().type == TokenType::import) {
     int line = peek().value().line;
@@ -1364,7 +1472,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     stmt_import.mod_name = consume();
     stmt_import.line = line;
 
-    result = NodeStmt{.var = stmt_import};
+    result = NodeStmt{ .var = stmt_import };
   }
 
   /*else if (peek().has_value() && peek().value().type == TokenType::use &&
@@ -1408,12 +1516,14 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
         if (peek().has_value() && peek().value().type == TokenType::comma) {
           consume(); // ,
-        } else if (peek().has_value() && peek().value().type != TokenType::r_key) {
+        }
+        else if (peek().has_value() && peek().value().type != TokenType::r_key) {
           add_error("Expected ',' or '}'", line);
         }
       }
       consume();
-    } else if (peek().has_value() && peek().value().type == TokenType::ident) {
+    }
+    else if (peek().has_value() && peek().value().type == TokenType::ident) {
       mkpub.functions.push_back(consume());
     }
 
@@ -1423,20 +1533,23 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
     consume();
 
-    result = NodeStmt{.var = mkpub};
-  } else if (peek().has_value() && peek().value().type == TokenType::ident &&
-             peek(1).has_value() && peek(1).value().type == TokenType::dp) {
+    result = NodeStmt{ .var = mkpub };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::ident &&
+    peek(1).has_value() && peek(1).value().type == TokenType::dp) {
     need_semi = false;
     Token name = consume();
     int line = peek().value().line;
     consume();
-    result = NodeStmt{.var = NodeStmtDefFunc{.name = name, .line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::endfn) {
+    result = NodeStmt{ .var = NodeStmtDefFunc{.name = name, .line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::endfn) {
     need_semi = false;
     int line = peek().value().line;
     consume();
-    result = NodeStmt{.var = NodeStmtEndfn{.line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::ret) {
+    result = NodeStmt{ .var = NodeStmtEndfn{.line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::ret) {
     int line = peek().value().line;
     consume(); // ret keyword
     auto e = parse_expr();
@@ -1445,8 +1558,9 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     }
     NodeExpr expr = e.value();
 
-    result = NodeStmt{.var = NodeStmtRet{.value = expr, .line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::_unload) {
+    result = NodeStmt{ .var = NodeStmtRet{.value = expr, .line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_unload) {
     int line = peek().value().line;
     consume(); // unload
     std::vector<Token> vars;
@@ -1462,32 +1576,37 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         if (peek().has_value() && peek().value().type == TokenType::comma) {
           consume();
           continue;
-        } else
+        }
+        else
           break;
       }
       if (!peek().has_value() || peek().value().type != TokenType::r_key) {
         add_error("Expected '}' or ',' after identifier", line);
       }
       consume();
-    } else {
+    }
+    else {
       if (!peek().has_value() || peek().value().type != TokenType::ident) {
         add_error("Expected variable to unload", line);
       }
       vars.push_back(consume());
     }
 
-    result = NodeStmt{.var = NodeStmtUnload{.vars = vars, .line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::_stop) {
+    result = NodeStmt{ .var = NodeStmtUnload{.vars = vars, .line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_stop) {
     int line = peek().value().line;
     consume(); // stop
 
-    result = NodeStmt{.var = NodeStmtStop{.line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::_continue) {
+    result = NodeStmt{ .var = NodeStmtStop{.line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_continue) {
     int line = peek().value().line;
     consume(); // continue
 
-    result = NodeStmt{.var = NodeStmtContinue{.line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::_declmod) {
+    result = NodeStmt{ .var = NodeStmtContinue{.line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_declmod) {
     consume(); // declmod
     int line = peek().value().line;
 
@@ -1496,13 +1615,15 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     }
     Token module_name = consume();
 
-    result = NodeStmt{.var = NodeStmtDeclmod{.module_name = module_name, .line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::_endmod) {
+    result = NodeStmt{ .var = NodeStmtDeclmod{.module_name = module_name, .line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_endmod) {
     int line = peek().value().line;
     consume(); // endmod
 
-    result = NodeStmt{.var = NodeStmtEndmod{.line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::_umod) {
+    result = NodeStmt{ .var = NodeStmtEndmod{.line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_umod) {
     consume(); //_umod
     int line = peek().value().line;
     if (!peek().has_value() || peek().value().type != TokenType::ident) {
@@ -1515,8 +1636,9 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     }
     consume();
 
-    return NodeStmt{.var = NodeStmtUmod{.module_name = module_name, .line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::_ubeepmod) {
+    return NodeStmt{ .var = NodeStmtUmod{.module_name = module_name, .line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_ubeepmod) {
     int line = peek().value().line;
     consume();
     if (!peek().has_value() || peek().value().type != TokenType::ident) {
@@ -1529,8 +1651,9 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     }
     consume();
 
-    return NodeStmt{.var = NodeStmtUbeepmod{.module_name = module_name, .line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::_llibrary) {
+    return NodeStmt{ .var = NodeStmtUbeepmod{.module_name = module_name, .line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_llibrary) {
     int line = peek().value().line;
     consume();
 
@@ -1544,8 +1667,9 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     }
     Token path = consume();
 
-    return NodeStmt{.var = NodeStmtLlibrary{.name = path, .line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::_libpath) {
+    return NodeStmt{ .var = NodeStmtLlibrary{.name = path, .line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_libpath) {
     int line = peek().value().line;
     consume();
 
@@ -1559,7 +1683,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     }
     Token path = consume();
 
-    result = NodeStmt{.var = NodeStmtLibpath{.path = path, .line = line}};
+    result = NodeStmt{ .var = NodeStmtLibpath{.path = path, .line = line} };
   }
   /*else if (peek().has_value() && peek().value().type == TokenType::_sptr) {
     int line = peek().value().line;
@@ -1597,15 +1721,17 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     }
     Token ident = consume();
 
-    result = NodeStmt{.var = NodeStmtGlobl{.ident = ident, .line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::_header) {
+    result = NodeStmt{ .var = NodeStmtGlobl{.ident = ident, .line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_header) {
     int line = peek().value().line;
-    return NodeStmt{.var = NodeStmtHeader{.line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::_leave) {
+    return NodeStmt{ .var = NodeStmtHeader{.line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_leave) {
     int line = peek().value().line;
     consume();
 
-    result = NodeStmt{.var = NodeStmtLeave{.line = line}};
+    result = NodeStmt{ .var = NodeStmtLeave{.line = line} };
   }
   /*else if (peek().has_value() && peek().value().type == TokenType::ident &&
   peek(1).has_value() && peek(1).value().type == TokenType::l_bracket) { int line =
@@ -1674,7 +1800,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
       const std::string &field_name = name.value.value();
       Type type = parse_type();
       consume();
-      fields.push_back({field_name, type});
+      fields.push_back({ field_name, type });
 
       if (!peek().has_value() || peek().value().type != TokenType::semi) {
         add_error("Expected ';'", line);
@@ -1688,9 +1814,10 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     consume();
 
     result = NodeStmt{
-        .var = NodeStmtStruct{.name = struct_name, .fields = fields, .line = line}};
-  } else if(peek().has_value() && peek().value().type == TokenType::_impl) {
-    int line  = consume().line;
+        .var = NodeStmtStruct{.name = struct_name, .fields = fields, .line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_impl) {
+    int line = consume().line;
     if (!peek().has_value() || peek().value().type != TokenType::ident) {
       add_error("Expected the name of the struct");
     }
@@ -1709,7 +1836,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
       if (!op_stmt.has_value()) {
         add_error("Invalid statment in struct implementation", line);
       }
-      
+
       NodeStmt stmt = *op_stmt;
       if (!std::holds_alternative<NodeStmtDefFunc>(stmt.var)) {
         add_error("Expected Function declarament in struct implementation", line);
@@ -1725,8 +1852,9 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     consume();
 
     need_semi = true;
-    result = NodeStmt{.var = NodeStmtImpl{.struct_name = ident, .funcs = funcs, .line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::_def) {
+    result = NodeStmt{ .var = NodeStmtImpl{.struct_name = ident, .funcs = funcs, .line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_def) {
     consume();
     need_semi = true;
 
@@ -1742,16 +1870,18 @@ std::optional<NodeStmt> Parser::parse_stmt() {
       }
     }
 
-    result = NodeStmt{.var = NodeStmtDefine{.name = ident, .value = value, .line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::_undef) {
+    result = NodeStmt{ .var = NodeStmtDefine{.name = ident, .value = value, .line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_undef) {
     consume();
     if (!peek().has_value() || peek().value().type != TokenType::ident) {
       add_error("Expected identifier", line);
     }
     Token ident = consume();
 
-    result = NodeStmt{.var = NodeStmtUndef{.name = ident, .line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::_pre_if) {
+    result = NodeStmt{ .var = NodeStmtUndef{.name = ident, .line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_pre_if) {
     consume(); // If
 
     if (!peek().has_value() || peek().value().type != TokenType::ident) {
@@ -1764,8 +1894,8 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
     std::vector<NodeStmt> then_branch;
     while (peek().has_value() && peek().value().type != TokenType::_pre_endif &&
-           peek().value().type != TokenType::_pre_elif &&
-           peek().value().type != TokenType::_pre_else) {
+      peek().value().type != TokenType::_pre_elif &&
+      peek().value().type != TokenType::_pre_else) {
       auto stmt = parse_stmt();
       if (!stmt.has_value()) {
         add_error("Invalid statment in 'if' block", line);
@@ -1774,8 +1904,8 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     }
 
     if (!peek().has_value() || (peek().value().type != TokenType::_pre_endif &&
-                                peek().value().type != TokenType::_pre_elif &&
-                                peek().value().type != TokenType::_pre_else)) {
+      peek().value().type != TokenType::_pre_elif &&
+      peek().value().type != TokenType::_pre_else)) {
       add_error("Expected '}' to end 'if' block", line);
     }
     if (peek().value().type == TokenType::_pre_endif)
@@ -1796,8 +1926,8 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
         std::vector<NodeStmt> elif_then_branch;
         while (peek().has_value() && (peek().value().type != TokenType::_pre_elif &&
-                                      peek().value().type != TokenType::_pre_else &&
-                                      peek().value().type != TokenType::_pre_endif)) {
+          peek().value().type != TokenType::_pre_else &&
+          peek().value().type != TokenType::_pre_endif)) {
           auto stmt = parse_stmt();
           if (!stmt.has_value()) {
             add_error("Invalid statment in 'elif' block", line);
@@ -1806,15 +1936,16 @@ std::optional<NodeStmt> Parser::parse_stmt() {
         }
 
         if (!peek().has_value() || (peek().value().type != TokenType::_pre_elif &&
-                                    peek().value().type != TokenType::_pre_endif &&
-                                    peek().value().type != TokenType::_pre_else)) {
+          peek().value().type != TokenType::_pre_endif &&
+          peek().value().type != TokenType::_pre_else)) {
           add_error("Expected '}' to end 'elif' block", line);
         }
         if (peek().value().type == TokenType::_pre_endif)
           consume(); // }
 
         elif_branches.push_back(elif_then_branch);
-      } else if (peek()->type == TokenType::_pre_else) {
+      }
+      else if (peek()->type == TokenType::_pre_else) {
         consume(); // consume 'else'
 
         std::vector<NodeStmt> else_block;
@@ -1835,19 +1966,20 @@ std::optional<NodeStmt> Parser::parse_stmt() {
       }
 
       if (!peek().has_value() || (peek().value().type != TokenType::_pre_elif &&
-                                  peek().value().type != TokenType::_pre_else))
+        peek().value().type != TokenType::_pre_else))
         break;
     }
-    NodeStmtPreprocessorCond if_stmt{.condition = condition,
+    NodeStmtPreprocessorCond if_stmt{ .condition = condition,
                                      .then_branch = then_branch,
                                      .elif_conditions = elif_conditions,
                                      .elif_branches = elif_branches,
                                      .else_branch = else_branch,
-                                     .line = line};
+                                     .line = line };
 
     need_semi = false;
-    result = NodeStmt{.var = if_stmt};
-  } else if (peek().has_value() && peek().value().type == TokenType::_pre_error) {
+    result = NodeStmt{ .var = if_stmt };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_pre_error) {
     consume();
     std::string msg_error = "CUSTOM ERROR WITH NO MESSAGE";
     need_semi = false;
@@ -1856,8 +1988,9 @@ std::optional<NodeStmt> Parser::parse_stmt() {
       msg_error = consume().value.value_or(msg_error);
     }
 
-    result = NodeStmt{.var = NodeStmtPreError{.err_msg = msg_error, .line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::_pre_warning) {
+    result = NodeStmt{ .var = NodeStmtPreError{.err_msg = msg_error, .line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_pre_warning) {
     consume();
     std::string msg_warning = "CUSTOM WARNING WITH NO MESSAGE";
     need_semi = false;
@@ -1866,18 +1999,21 @@ std::optional<NodeStmt> Parser::parse_stmt() {
       msg_warning = consume().value.value_or(msg_warning);
     }
 
-    result = NodeStmt{.var = NodeStmtPreWarning{.warn_msg = msg_warning, .line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::_goto) {
+    result = NodeStmt{ .var = NodeStmtPreWarning{.warn_msg = msg_warning, .line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::_goto) {
     consume();
     Token ident;
 
     if (!peek().has_value() || peek().value().type != TokenType::ident) {
       add_error("Expected identifier in 'goto' instruction", line);
-    } else
+    }
+    else
       ident = consume();
 
-    result = NodeStmt{.var = NodeStmtGoto{.ident = ident, .line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::l_key) {
+    result = NodeStmt{ .var = NodeStmtGoto{.ident = ident, .line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::l_key) {
     consume();
     std::vector<NodeStmt> code_branch;
 
@@ -1892,14 +2028,16 @@ std::optional<NodeStmt> Parser::parse_stmt() {
 
     if (!peek().has_value() || peek().value().type != TokenType::r_key) {
       add_error("Expected '}", line);
-    } else
+    }
+    else
       consume();
 
     need_semi = false;
-    result = NodeStmt{.var = NodeStmtScope{.code_branch = code_branch, .line = line}};
-  } else if (peek().has_value() && peek().value().type == TokenType::ident &&
-           peek(1).has_value() && peek(1).value().type == TokenType::open_paren ||
-          peek(1).has_value() && peek(1).value().type == TokenType::semi) {
+    result = NodeStmt{ .var = NodeStmtScope{.code_branch = code_branch, .line = line} };
+  }
+  else if (peek().has_value() && peek().value().type == TokenType::ident &&
+    peek(1).has_value() && peek(1).value().type == TokenType::open_paren ||
+    peek(1).has_value() && peek(1).value().type == TokenType::semi) {
     Token name = consume();
     int line = name.line;
 
@@ -1907,21 +2045,22 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     bool has_args = false;
 
     if (peek().has_value() && peek().value().type == TokenType::open_paren) {
-    consume();
-    has_args = true;
-    while (peek().has_value() && peek().value().type != TokenType::close_paren) {
-      auto arg = parse_expr();
-      if (!arg.has_value()) {
-        add_error("Invalid Expression in function call", line);
-      }
-      args.push_back(arg.value());
+      consume();
+      has_args = true;
+      while (peek().has_value() && peek().value().type != TokenType::close_paren) {
+        auto arg = parse_expr();
+        if (!arg.has_value()) {
+          add_error("Invalid Expression in function call", line);
+        }
+        args.push_back(arg.value());
 
-      if (peek().has_value() && peek().value().type == TokenType::comma) {
-        consume();
-      } else if (peek().has_value() && peek().value().type != TokenType::close_paren) {
-        add_error("Expected ',' or ')'", line);
+        if (peek().has_value() && peek().value().type == TokenType::comma) {
+          consume();
+        }
+        else if (peek().has_value() && peek().value().type != TokenType::close_paren) {
+          add_error("Expected ',' or ')'", line);
+        }
       }
-    }
     }
 
     if (has_args) {
@@ -1935,10 +2074,11 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     for (auto &arg : args) {
       wrapped_args.push_back(std::make_shared<NodeExpr>(std::move(arg)));
     }
-    result = NodeStmt(NodeStmtCall{name, wrapped_args, line});
+    result = NodeStmt(NodeStmtCall{ name, wrapped_args, line });
 
     // return NodeStmt(.var = NodeStmtCall{name, args}};
-  } else {
+  }
+  else {
     int line = peek()->line;
     auto target_expr_opt = parse_expr();
     if (!target_expr_opt.has_value())
@@ -1958,11 +2098,11 @@ std::optional<NodeStmt> Parser::parse_stmt() {
       return std::nullopt;
 
     // crear NodeStmtAssign
-    NodeStmtAssign assign_stmt{.target = target_expr,
+    NodeStmtAssign assign_stmt{ .target = target_expr,
       .op_tok = op_tok,
       .value = value_expr.value(),
-      .line = line};
-    result = NodeStmt{.var = assign_stmt};
+      .line = line };
+    result = NodeStmt{ .var = assign_stmt };
   }
 
   if (need_semi && !in_for) {

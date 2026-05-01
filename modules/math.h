@@ -5,6 +5,6 @@
  * See LICENSE file in the project root for full license text.
 */
 
-double pow(double base, int exponent);
+double pow(double base, int exponent); // ? LIBC ?
 
-double round(double num, int decimals);
+double round$MODmath(double num, int decimals);

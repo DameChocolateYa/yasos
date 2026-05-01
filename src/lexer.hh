@@ -124,7 +124,7 @@ enum class TokenType {
   _pre_endif,
   _pre_error,
   _pre_warning,
-  _size_of
+  _size_of,
 };
 
 struct Token {

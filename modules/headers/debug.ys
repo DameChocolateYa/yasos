@@ -6,5 +6,5 @@
 *#
 
 declmod debug;
-extern fun helloworld;
+fun helloworld : "extern";
 endmod;

@@ -563,7 +563,7 @@ double randf$MODstd(double min, double max, int decimals) {
   double scaled = min + normalized * (max - min);
 
   double factor = pow(10.0, decimals);
-  return round(scaled * factor, decimals) / factor;
+  return round$MODmath(scaled * factor, decimals) / factor;
 }
 
 __attribute__((visibility("default")))
@@ -592,10 +592,10 @@ int is_valid_double$MODstd(const char* str) {
 
 __attribute__((visibility("default")))
 Vec *args$MODstd(int argc, char **argv) {
-  Vec *args = new$MODVec(sizeof(String));
+  Vec *args = new$MODVec(sizeof(String*));
 
   for (int i = 0; i < argc; i++) {
-    String arg = from$MODString(argv[i]);
+    String *arg = from$MODString(argv[i]);
     push_string$MODVec(args, arg);
   }
 
@@ -604,14 +604,14 @@ Vec *args$MODstd(int argc, char **argv) {
 
 __attribute__((visibility("default")))
 void free_args$MODstd(Vec *args) {
-  if (args->data == NULL || !args->is_membusy || args->elem_size != sizeof(String)) {
+  if (args->data == NULL || !args->is_membusy || args->elem_size != sizeof(String*)) {
     fprintf(stderr, "std::free_args: Could not free main arguments\n");
     return;
   }
 
   for (int i = 0; i < args->size; i++) {
-    String s = get_string$MODVec(args, i);
-    destroy$MODString(&s);
+    String *s = get_string$MODVec(args, i);
+    destroy$MODString(s);
   }
 
   destroy$MODVec(args);

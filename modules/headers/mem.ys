@@ -6,12 +6,12 @@
 *#
 
 declmod mem;
-extern fun alloc(size: int) -> &any;
-extern fun realloc(pointer: &any, size: int) -> &any;
-extern fun free(pointer: &any) -> none;
-extern fun calloc(amount: int, size: int) -> &any;
-extern fun free_array(array: &any, size: int);
-extern fun free_arrayN(array: &any);
+fun alloc(size: int) -> &any : "extern";
+fun realloc(pointer: &any, size: int) -> &any : "extern";
+fun free(pointer: &any) : "extern";
+fun calloc(amount: int, size: int) -> &any : "extern";
+fun free_array(array: &any, size: int) : "extern";
+fun free_arrayN(array: &any) : "extern";
 
-extern fun as_int(x: &any) -> int;
+fun as_int(x: &any) -> int : "extern";
 endmod;

@@ -17,8 +17,8 @@ typedef struct {
 int len$MODstring(const char* s);
 void cpy$MODstring(char *dest, const char *src);
 
-String new$MODString();
-String from$MODString(const char *src);
+String *new$MODString();
+String *from$MODString(const char *src);
 void destroy$MODString(String *s);
 
 #endif

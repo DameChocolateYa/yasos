@@ -94,6 +94,11 @@ static bool is_call(const NodeExpr &expr) {
   return std::holds_alternative<NodeExprCall>(expr.var);
 }
 
+static bool is_string_in_vec(const std::string &string, const std::vector<std::string>& vector) {
+  for (const auto& elem : vector) {if (string == elem) return true;}
+  return false;
+}
+
 llvm::Value *str_to_val(Generator *gen, const std::string &value) {
   llvm::Constant *str_constant =
     llvm::ConstantDataArray::getString(TheContext, value, true);
@@ -1743,6 +1748,13 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
 
     void operator()(const NodeStmtDefFunc &stmt_def_func) const {
       std::string name = stmt_def_func.name.value.value();
+      bool is_pub = stmt_def_func.is_pub;
+      bool is_extern = stmt_def_func.is_extern;
+
+      if (is_string_in_vec("main", stmt_def_func.flags)) name = "main";
+      if (is_string_in_vec("pub", stmt_def_func.flags)) is_pub = true;
+      if (is_string_in_vec("extern", stmt_def_func.flags)) is_extern = true;
+
       for (const auto &mod : m_mod) {
         name.append("$MOD" + mod);
       }
@@ -1767,11 +1779,11 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       llvm::FunctionType *func_type =
         llvm::FunctionType::get(stmt_def_func.ret_var.line == -1 ? ret_type : ret_type_c, param_types, stmt_def_func.is_vargs);
 
-      llvm::GlobalValue::LinkageTypes linkage = stmt_def_func.is_extern
+      llvm::GlobalValue::LinkageTypes linkage = is_extern
         ? llvm::Function::ExternalLinkage
         : llvm::Function::InternalLinkage;
 
-      linkage = stmt_def_func.is_pub ? llvm::Function::ExternalLinkage : linkage;
+      linkage = is_pub ? llvm::Function::ExternalLinkage : linkage;
 
       if (name == "main")
         linkage = llvm::Function::ExternalLinkage;
@@ -1798,7 +1810,7 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       func->addFnAttr("stackrealign");
       func->setCallingConv(llvm::CallingConv::C);
 
-      if (!stmt_def_func.is_defined || stmt_def_func.is_extern)
+      if (!stmt_def_func.is_defined || is_extern)
         return;
 
 

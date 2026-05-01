@@ -345,6 +345,7 @@ struct NodeStmtDefFunc {
   std::vector<std::string> absolute_type_name_args;
   bool is_vargs;
   NodeStmtVar ret_var; // Optional...
+  std::vector<std::string> flags;
   int line;
 };
 

@@ -39,7 +39,7 @@ std::vector<Token> Lexer::tokenize() {
         tokens.push_back({.type = TokenType::char_type, .line = local_lines});
         buf.clear();
         continue;
-      } else if (buf == "int") {
+      } else if (buf == "int" || buf == "i32") { // i32 is literally int, let the suffer begin with i64, i128...
         tokens.push_back({.type = TokenType::int_type, .value = "int_type", .line = local_lines});
         buf.clear();
         continue;

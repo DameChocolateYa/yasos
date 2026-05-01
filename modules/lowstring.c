@@ -285,6 +285,18 @@ __attribute__((visibility("default")))
 int cmp$MODcharacter(const char c1, const char c2) { return c1 == c2; }
 
 __attribute__((visibility("default")))
+int cmp_int$MODcharacter(const char c, const int i) { return c == i; }
+
+__attribute__((visibility("default")))
+char *to_str$MODcharacter(char c) {
+  char *s = alloc$MODmem(2);
+  s[0] = c;
+  s[1] = '\0';
+
+  return s;
+}
+
+__attribute__((visibility("default")))
 char *dig_to_abc$MODstring(const int n) {
   if (n >= 0 && n < 26) {
     char *res = (char *)alloc$MODmem(2); // 1 para la letra, 1 para '\0'
@@ -514,6 +526,40 @@ void nnew$MODString(String *string) {
 }
 
 __attribute__((visibility("default")))
+String *new$MODString() {
+  String *string = alloc$MODmem(sizeof(String));
+  string->data = alloc$MODmem(1);
+  string->size = 0;
+
+  if (!string->data) {
+    fprintf(stderr, "Could not create String\n");
+    return NULL;
+  }
+
+  string->mem_busy = true;
+
+  return string;
+}
+
+__attribute__((visibility("default")))
+String *from$MODString(const char *src) {
+  String *string = new$MODString();
+
+  string->data = realloc$MODmem(string->data, len$MODstring(src) + 1);
+  string->size = len$MODstring(src);
+
+  if (!string->data) {
+    fprintf(stderr, "Could not create String\n");
+    return NULL;
+  }
+
+  cpy$MODstring(string->data, src);
+  string->mem_busy = true;
+
+  return string;
+}
+
+__attribute__((visibility("default")))
 void set$MODString(String *string, const char *src) {
   if (!string->data || !string->mem_busy || !src) return;
 
@@ -529,10 +575,10 @@ void set$MODString(String *string, const char *src) {
 }
 
 __attribute__((visibility("default")))
-String clone$MODString(String *string) {
+String *clone$MODString(String *string) {
   if (!string->data || !string->mem_busy) {
     fprintf(stderr, "Could not clone string\n");
-    return (String) { NULL, 0, false };
+    return NULL;
   }
 
   return from$MODString(string->data);
@@ -547,14 +593,14 @@ void clear$MODString(String *string) {
 }
 
 __attribute__((visibility("default")))
-size_t find$MODString(String *s1, const char *s2) {
-  size_t n = s1->size;
-  size_t m = strlen(s2);
+int find$MODString(String *s1, const char *s2) {
+  int n = s1->size;
+  int m = strlen(s2);
 
   if (m > n) return -1;
 
-  for (size_t i = 0; i <= n - m; i++) {
-    size_t j = 0;
+  for (int i = 0; i <= n - m; i++) {
+    int j = 0;
     for (; j < m; j++) {
       if (s1->data[i + j] != s2[j]) break;
     }
@@ -568,7 +614,7 @@ __attribute__((visibility("default")))
 void cat$MODString(String *string, const char *s2) {
   if (!string->data || !string->mem_busy || !s2) return;
 
-  size_t new_size = string->size + strlen(s2);
+  int new_size = string->size + strlen(s2);
   new_size = new_size == 0 ? 1 : new_size;
 
   string->data = realloc$MODmem(string->data, new_size);
@@ -582,17 +628,17 @@ void cat$MODString(String *string, const char *s2) {
 }
 
 __attribute__((visibility("default")))
-void merge$MODString(String *s1, String s2) {
-  if (!s1->data || !s1->mem_busy || !s2.data || !s2.mem_busy) return;
+void merge$MODString(String *s1, String *s2) {
+  if (!s1->data || !s1->mem_busy || !s2->data || !s2->mem_busy) return;
 
-  s1->data = realloc$MODmem(s1->data, s1->size + s2.size);
+  s1->data = realloc$MODmem(s1->data, s1->size + s2->size);
   if (!s1->data) {
     fprintf(stderr, "Could not realloc$MODmemate memory for string concatenation\n");
     return;
   }
 
-  strcpy(s1->data + s1->size, s2.data);
-  s1->size += s2.size;
+  strcpy(s1->data + s1->size, s2->data);
+  s1->size += s2->size;
   s1->data[s1->size] = '\0';
 }
 
@@ -651,13 +697,13 @@ char *substr_raw$MODString(String *string, int begin, int end) {
 }
 
 __attribute__((visibility("default")))
-String substr$MODString(String *string, int begin, int end) {
+String *substr$MODString(String *string, int begin, int end) {
   if (begin > end) {
     int t = begin; begin = end; end = t;
   }
 
   if (begin < 0 || end > string->size)
-    return (String) { NULL, 0, false};
+    {}//return (String) { NULL, 0, false};
 
   int len = end - begin + 1;
   char *s = alloc$MODmem(len + 1);
@@ -667,7 +713,7 @@ String substr$MODString(String *string, int begin, int end) {
 
   s[len] = '\0';
 
-  String new_string = from$MODString(s);
+  String *new_string = from$MODString(s);
   free$MODmem(s);
   return new_string;
 }
@@ -678,12 +724,12 @@ void repl$MODString(String *string, const char *old, const char *new) {
   int loc = find$MODString(string, old);
   if (loc == -1) return;
 
-  String after = substr$MODString(string, loc + strlen(old), string->size);
+  String *after = substr$MODString(string, loc + strlen(old), string->size);
   cut_pos$MODString(string, loc, string->size);
   cat$MODString(string, new);
   merge$MODString(string, after);
 
-  destroy$MODString(&after);
+  destroy$MODString(after);
 }
 
 __attribute__((visibility("default")))
@@ -748,11 +794,15 @@ void ask$MODString(String *string, const char *fmt, ...) {
 
 __attribute__((visibility("default")))
 void destroy$MODString(String *string) {
+  if (!string) return;
+  
   if (string->mem_busy) {
     free$MODmem(string->data);
     string->size = 0;
     string->mem_busy = false;
   }
+
+  free$MODmem(string);
 }
 
 __attribute__((visibility("default")))
@@ -849,6 +899,12 @@ int cmp_str$MODString(String *self, const char *src) {
   return true;
 }
 
+__attribute__((visibility("default")))
+int size$MODString(String *self) {
+  if (!self) return -1;
+  return self->size;
+}
+
 /*__attribute__((visibility("default")))
 int cmp$MODString(String *self, String *s2) { // This should not work in most of the cases, it needs to have the same memory direction
   printf("%d, %d\n", self->mem_busy, s2->mem_busy);
@@ -856,6 +912,7 @@ int cmp$MODString(String *self, String *s2) { // This should not work in most of
   return false;
 }*/
 
+// This should not be used frecuently, 'cause in yasos it is used pointers
 __attribute__((visibility("default")))
 size_t ssize$MODString() {
   return sizeof(String);

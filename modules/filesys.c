@@ -139,7 +139,8 @@ char *read$MODFile(File *self) {
     self->buffer[bytes_readed] = '\0';  
   }
 
-  return self->buffer;
+ return self->buffer;
+ return "a";
 }
 
 __attribute__((visibility("default")))

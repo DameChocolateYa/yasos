@@ -109,7 +109,7 @@ void push_int$MODVec(Vec *vec, int val) {
 }
 
 __attribute__((visibility("default")))
-void push_string$MODVec(Vec *vec, String val) {
+void push_string$MODVec(Vec *vec, String *val) {
   push$MODVec(vec, &val);
 }
 
@@ -150,7 +150,7 @@ void pushm_string$MODVec(Vec *vec, int n, ...) {
   va_start(args, n);
 
   for (int i = 0; i < n; i++) {
-    String val = va_arg(args, String);
+    String *val = va_arg(args, String*);
     push_string$MODVec(vec, val);
   }
 
@@ -204,9 +204,9 @@ int get_int$MODVec(Vec *vector, int index) {
 }
 
 __attribute__((visibility("default")))
-String get_string$MODVec(Vec *vector, int index) {
-  String* ptr = (String*)get$MODVec(vector, index);
-  return ptr ? *ptr : (String) { NULL, 0, false };
+String *get_string$MODVec(Vec *vector, int index) {
+  String* ptr = *(String**)get$MODVec(vector, index);
+  return ptr;
 }
 
 __attribute__((visibility("default")))
@@ -227,7 +227,7 @@ void set_int$MODVec(Vec* vector, int index, int val) {
 }
 
 __attribute__((visibility("default")))
-void set_string$MODVec(Vec* vector, int index, String val) {
+void set_string$MODVec(Vec* vector, int index, String *val) {
   set$MODVec(vector, index, &val);
 }
 
@@ -274,7 +274,7 @@ void setm_string$MODVec(Vec* vector, int n, ...) {
 
   for (int i = 0; i < n; i++) {
     int index = va_arg(args, int);
-    String val = va_arg(args, String);
+    String *val = va_arg(args, String *);
 
     if (index < 0 || index >= vector->size) {
       fprintf(stderr, "set$MODVecstringm: index out of range - omiting current element\n");
