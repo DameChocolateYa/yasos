@@ -509,7 +509,6 @@ void cpy$MODstring(char *dest, const char *src) {
 
 // Functions of String struct implementation
 
-#include "critical.h"
 #include <stdarg.h>
 
 __attribute__((visibility("default")))
