@@ -17,6 +17,7 @@ enum ErrType {
 
 enum WarnType {
   DefWarn,
+  Default
 };
 
 extern std::unordered_map<ErrType, std::string> error_types;

@@ -43,8 +43,16 @@ std::vector<Token> Lexer::tokenize() {
         tokens.push_back({.type = TokenType::int_type, .value = "int_type", .line = local_lines});
         buf.clear();
         continue;
+      } else if (buf == "i64") {
+        tokens.push_back({.type = TokenType::i64_type, .value = "i64_type", .line = local_lines});
+        buf.clear();
+        continue;
       } else if (buf == "double") {
         tokens.push_back({.type = TokenType::double_type, .line = local_lines});
+        buf.clear();
+        continue;
+      } else if (buf == "boolean" || buf == "bool") {
+        tokens.push_back({.type = TokenType::boolean_type, .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "any") {

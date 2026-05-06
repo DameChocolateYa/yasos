@@ -11,7 +11,7 @@
 typedef struct {
   char *data;
   int size;
-  int mem_busy;  
+  bool mem_busy;  
 } String;
 
 int len$MODstring(const char* s);

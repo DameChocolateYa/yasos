@@ -15,7 +15,7 @@ typedef struct {
   int size;
   int capacity;
   int elem_size;
-  int is_membusy;
+  bool is_membusy;
 } Vec;
 
 Vec *new$MODVec(int elem_size);

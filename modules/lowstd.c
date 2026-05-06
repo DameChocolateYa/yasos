@@ -228,6 +228,32 @@ char *strbuf$MODstd(const char *fmt, int *len_r, va_list args) {
       }
       break;
     }
+    case 'l': {
+      if (p[1] == 'd') {
+        long int d = va_arg(args, long int);
+        len = int_to_str(d, tmp, sizeof(tmp));
+        for (int i = 0; i < len; i++) {
+          if (pos >= capacity) {
+            capacity *= 2;
+            out = (char *)realloc$MODmem(out, capacity);
+          }
+          out[pos++] = tmp[i];
+        }
+        p++;
+      } else {
+        if (pos >= capacity) {
+          capacity *= 2;
+          out = (char *)realloc$MODmem(out, capacity);
+        }
+        out[pos++] = '%';
+        if (pos >= capacity) {
+          capacity *= 2;
+          out = (char *)realloc$MODmem(out, capacity);
+        }
+        out[pos++] = 'l';
+      }
+      break;
+    }
     case 'd': {
       int d = va_arg(args, int);
       len = int_to_str(d, tmp, sizeof(tmp));

@@ -16,7 +16,7 @@ typedef struct {
   int bufsize;
   int pos;
   int flags;
-  int is_open;
+  bool is_open;
 } File;
 
 extern int sys_open(const char *path, int flags, int mode);

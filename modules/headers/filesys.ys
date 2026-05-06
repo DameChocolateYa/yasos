@@ -11,7 +11,7 @@ struct File {
   bufsize: int;
   pos: int;
   flags: int;
-  is_open: int;
+  is_open: bool;
 };
 
 impl File {

@@ -35,6 +35,8 @@ bool is_type(Token tok) {
   switch (tok.type) {
   case TokenType::str_type:
   case TokenType::int_type:
+  case TokenType::i64_type:
+  case TokenType::boolean_type:
   case TokenType::ident:
   case TokenType::double_type:
   case TokenType::any_type:
@@ -101,6 +103,12 @@ static Type get_type_from_tok(Token tok) {
     return Type{ Type::Kind::Char };
   case TokenType::int_type:
     return Type{ Type::Kind::Int };
+    break;
+  case TokenType::i64_type:
+    return Type{ Type::Kind::I64 };
+    break;
+  case TokenType::boolean_type:
+    return Type{ Type::Kind::Boolean };
     break;
   case TokenType::double_type:
     return Type{ Type::Kind::Float };
@@ -173,7 +181,6 @@ std::string Parser::parse_mangled_chain() {
 static Token last_token;
 
 std::optional<NodeExpr> Parser::parse_property_chain(std::optional<NodeExpr> base_expr, Token base) {
-  // std::optional<NodeExpr> expr = base_expr;
   std::optional<NodeExpr> expr = base_expr;
 
   while (peek().has_value() && peek().value().type == TokenType::dot) {
@@ -997,7 +1004,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
       while (peek().has_value() && peek().value().type != TokenType::r_key) {
         auto stmt = parse_stmt();
         if (!stmt.has_value()) {
-          add_warning("Empty block in func", line);
+          add_warning("Empty block in func", line, WarnType::Default);
           break;
         }
         code_branch.push_back(stmt.value());
@@ -1802,10 +1809,8 @@ std::optional<NodeStmt> Parser::parse_stmt() {
       consume();
       fields.push_back({ field_name, type });
 
-      if (!peek().has_value() || peek().value().type != TokenType::semi) {
-        add_error("Expected ';'", line);
-      }
-      consume();
+      if (peek().has_value() && peek().value().type == TokenType::semi)
+        consume();
     }
 
     if (!peek().has_value() || peek().value().type != TokenType::r_key) {
@@ -1813,6 +1818,10 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     }
     consume();
 
+    if (peek().has_value() && peek().value().type == TokenType::semi)
+      consume();
+
+    need_semi = false;
     result = NodeStmt{
         .var = NodeStmtStruct{.name = struct_name, .fields = fields, .line = line} };
   }
@@ -1851,7 +1860,10 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     }
     consume();
 
-    need_semi = true;
+    if (peek().has_value() && peek().value().type == TokenType::semi)
+      consume();
+
+    need_semi = false;
     result = NodeStmt{ .var = NodeStmtImpl{.struct_name = ident, .funcs = funcs, .line = line} };
   }
   else if (peek().has_value() && peek().value().type == TokenType::_def) {

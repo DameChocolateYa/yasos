@@ -12,7 +12,7 @@
 struct String {
 	data: &char;
 	size: int;
-  mem_busy: int;
+  mem_busy: bool;
 };
 
 #--

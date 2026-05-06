@@ -22,7 +22,9 @@
 struct Type {
   enum class Kind {
     Int,
-    Float,
+    I64,
+    Float, // This should be double but whatever, we can change it later if we want to
+    Boolean,
     Str,
     Char,
     None,
