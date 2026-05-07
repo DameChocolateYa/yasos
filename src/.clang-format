@@ -1,0 +1,4 @@
+BasedOnStyle: Google
+BreakBeforeBraces: Attach
+PointerAlignment: Right
+IndentWidth: 2
