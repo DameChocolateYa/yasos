@@ -476,6 +476,10 @@ llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
 
     llvm::Value *operator()(const NodeExprIntLit &expr_int_lit) {
       auto valueStr = expr_int_lit.int_lit.value.value_or("0");
+      if (expr_int_lit.type == IntType::Boolean) {
+        return llvm::ConstantInt::get(llvm::Type::getInt1Ty(TheContext),
+                                      valueStr == "0" ? 0 : 1);
+      }
 
       long long value = std::stoll(valueStr);
 

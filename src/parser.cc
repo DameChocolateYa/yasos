@@ -605,13 +605,13 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
   else if (peek().has_value() && peek().value().type == TokenType::_true) {
     int line = consume().line;
     return NodeExpr(NodeExprIntLit{
-        .int_lit = Token{.type = TokenType::int_lit, .value = "1", .line = line} });
+        .int_lit = Token{.type = TokenType::int_lit, .value = "1", .line = line}, .type = IntType::Boolean });
     // return NodeExpr(NodeExprBoolValue{1});
   }
   else if (peek().has_value() && peek().value().type == TokenType::_false) {
     int line = consume().line;
     return NodeExpr(NodeExprIntLit{
-        .int_lit = Token{.type = TokenType::int_lit, .value = "0", .line = line} });
+        .int_lit = Token{.type = TokenType::int_lit, .value = "0", .line = line}, .type = IntType::Boolean });
   }
   else if (peek().has_value() && peek().value().type == TokenType::open_paren) {
     int line = peek().value().line;

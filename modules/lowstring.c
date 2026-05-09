@@ -869,6 +869,36 @@ void lower$MODString(String *string) {
 }
 
 __attribute__((visibility("default")))
+void trim$MODString(String *self) {
+  if (self == NULL || self->data == NULL || self->size <= 0)
+    return;
+
+  char *start = self->data;
+  char *end;
+
+  while (*start && isspace((unsigned char)*start))
+    start++;
+
+  if (*start == '\0') {
+    self->data[0] = '\0';
+    self->size = 0;
+    return;
+  }
+
+  end = start + strlen(start) - 1;
+
+  while (end > start && isspace((unsigned char)*end))
+    end--;
+
+  *(end + 1) = '\0';
+
+  if (start != self->data)
+    memmove(self->data, start, (end - start + 2));
+
+  self->size = strlen(self->data);
+}
+
+__attribute__((visibility("default")))
 char ch$MODString(String *string, int index) {
   if (index < 0 || index >= string->size)
     return '?';

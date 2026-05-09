@@ -38,6 +38,7 @@ impl String {
   fun to_double(self: &String) -> double : "extern";
   fun lower(self: &String) : "extern";
   fun upper(self: &String) : "extern";
+  fun trim(self: &String) : "extern";
   fun ch(self: &String) -> char : "extern";
   fun is_whitespace(self: &String) -> int : "extern";
   fun cmp_str(self: &String, src: str) -> int : "extern";

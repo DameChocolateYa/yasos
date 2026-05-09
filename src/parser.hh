@@ -48,8 +48,14 @@ struct Type {
 struct NodeExpr;
 using NodeExprPtr = std::shared_ptr<NodeExpr>;
 
+enum class IntType {
+  I32,
+  I64,
+  Boolean // This is a little weird but it is easier to handle it as an int type
+};
 struct NodeExprIntLit {
   Token int_lit;
+  IntType type; // i32, i64 or boolean
   int line;
 };
 

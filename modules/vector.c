@@ -104,6 +104,11 @@ void set$MODVec(Vec *vec, int index, void *val) {
 }
 
 __attribute__((visibility("default")))
+void push_ptr$MODVec(Vec *vec, void *ptr) {
+  push$MODVec(vec, &ptr);
+}
+
+__attribute__((visibility("default")))
 void push_int$MODVec(Vec *vec, int val) {
   push$MODVec(vec, &val);
 }
@@ -195,6 +200,12 @@ void* get$MODVec(Vec *vector, int index) {
   }
 
   return (char*)vector->data + index * vector->elem_size;
+}
+
+__attribute__((visibility("default")))
+void *get_ptr$MODVec(Vec *vector, int index) {
+  void **ptr = (void**)get$MODVec(vector, index);
+  return ptr ? *ptr : NULL;
 }
 
 __attribute__((visibility("default")))

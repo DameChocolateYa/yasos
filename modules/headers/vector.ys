@@ -33,6 +33,7 @@ impl Vec {
   fun erase_all(self: &Vec) : "extern";
   fun set(self: &Vec, index: int, val: &any) : "extern";
 
+  fun push_ptr(self: &Vec, val: &any) : "extern";
   fun push_int(self: &Vec, val: int) : "extern";
   fun push_string(self: &Vec, val: &String) : "extern";
   fun push_double(self: &Vec, val: double) : "extern";
@@ -45,6 +46,7 @@ impl Vec {
   fun pushm_vec(self: &Vec, n: int, undefan) : "extern";
 
   fun get(self: &Vec, index: int) -> &any : "extern";
+  fun get_ptr(self: &Vec, index: i32) -> &any : "extern";
   fun get_int(self: &Vec, index: int) -> int : "extern";
   fun get_string(self: &Vec, index: int) -> &String : "extern";
   fun get_double(self: &Vec, index: int) -> double : "extern";
