@@ -181,7 +181,8 @@ struct NodeExprStruct {
 };
 
 struct NodeExprNew {
-  Type type;
+  std::string func_name;
+  std::vector<std::shared_ptr<NodeExpr>> args;
   int line;
 };
 
@@ -497,6 +498,11 @@ struct NodeStmtScope {
   int line;
 };
 
+struct NodeStmtNmem {
+  Token ident;
+  int line;
+};
+
 struct NodeStmt {
   std::variant<NodeStmtAsmUserWrite, NodeStmtAssign, NodeStmtVar, NodeStmtVarRe,
     NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile,
@@ -507,7 +513,7 @@ struct NodeStmt {
     NodeStmtGlobl, NodeStmtHeader, NodeStmtUhead, NodeStmtLeave,
     NodeStmtListElement, NodeStmtStruct, NodeStmtImpl, NodeStmtDefine, NodeStmtUndef,
     NodeStmtPreprocessorCond, NodeStmtPreError, NodeStmtPreWarning,
-    NodeStmtPrint, NodeStmtLabel, NodeStmtGoto, NodeStmtScope>
+    NodeStmtPrint, NodeStmtLabel, NodeStmtGoto, NodeStmtScope, NodeStmtNmem>
       var;
   int line;
 };

@@ -1,0 +1,26 @@
+#*
+ * yasos - a compiler for yasos language
+ * Copyright (c) 2025-2026 DameChocolateYa
+ * Licensed under the BSD 3-Clause License.
+ * See LICENSE file in the project root for full license text.
+*#
+
+#*
+ * references.ys
+ * Use of references (also known as pointers)
+*#
+
+fun example(x: &i32, y: i32) {
+	*x += y;
+}
+
+fun main {
+	var x: i32 = 3;
+	var y: &i32 = &x;
+
+	"%p\n", y;
+	"%d\n", *y;
+
+	example(y, 2);
+	"%d\n", *y;
+}

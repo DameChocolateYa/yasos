@@ -1,0 +1,49 @@
+#*
+ * yasos - a compiler for yasos language
+ * Copyright (c) 2025-2026 DameChocolateYa
+ * Licensed under the BSD 3-Clause License.
+ * See LICENSE file in the project root for full license text.
+*#
+
+#*
+ * conditionals_and_loops.ys.ys
+ * Usage of the conditionals and loops of the language
+*#
+
+fun main {
+	var a: i32 = 1;
+	var b: i32 = 3;
+
+	if a > b {
+		"A is greater than B\n";
+	} elif a < b {
+		"B is greater than A\n";
+	} else {
+		"A and B are equal\n";
+	}
+
+	"---------\n";
+	var x: i32 = 1;
+	while x <= 5 {
+		"%d\n", x;
+		inc x;
+	}
+
+	"---------\n";
+	for var i: i32 = 1; i <= 5; inc i {
+		"%d\n", i;
+	}
+
+	"---------\n";
+	x = 1;
+	loop {
+		if x > 5 {stop;}
+		if x == 3 {
+			inc x;
+			continue;
+		}
+
+		"%d\n", x;
+		inc x;
+	}
+}

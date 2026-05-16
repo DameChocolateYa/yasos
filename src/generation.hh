@@ -16,6 +16,7 @@
 #include <sstream>
 #include <stack>
 #include <string>
+#include <llvm/IR/Type.h>
 #include <unistd.h>
 #include <unordered_map>
 
@@ -99,6 +100,7 @@ public:
     bool is_globl;
     std::string struct_template = "";
     bool is_arg = false;
+    bool destroy_after_scoup = true;
 
     bool operator<(const Var &other) const {
       if (name != other.name)
@@ -113,6 +115,14 @@ public:
     int is_mutable;
     bool is_declared = true;
     std::string struct_template = "";
+  };
+
+  struct Func {
+    std::string name;
+    std::vector<std::pair<std::string, Type>> args;
+    Type ret_type;
+    bool in_line;
+    std::vector<NodeStmt> code_branch; // just in case it is an inline function
   };
 
   std::string filename;
@@ -143,6 +153,8 @@ public:
 
   std::map<std::string, std::vector<NodeExpr>> m_vars_in_structs;
   std::vector<NodeExpr> m_struct_temp_args; // shitty way
+
+  std::vector<Func> m_funcs;
 
   bool stack_aligned_in_call = false;
 

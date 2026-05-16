@@ -29,6 +29,22 @@ sys_open:
   syscall
   ret
 
+# Input: rdi = path
+# Output: rax = status
+.globl sys_unlink
+sys_unlink:
+  mov   %rdi, %r10        # guardar path
+
+  mov   $263, %rax        # syscall: unlinkat
+  mov   $-100, %rdi       # AT_FDCWD
+  mov   %r10, %rsi        # pathname
+  mov   $0, %rdx          # flags
+
+  syscall
+  ret
+
+# Maybe I should implementate Filesys::mkdir and Filesys::erase_dir_recursive in this (?)
+
 # Input: rdi = fd
 # Output: rax = status
 .globl sys_close

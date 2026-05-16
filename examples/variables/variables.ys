@@ -1,0 +1,23 @@
+#*
+ * yasos - a compiler for yasos language
+ * Copyright (c) 2025-2026 DameChocolateYa
+ * Licensed under the BSD 3-Clause License.
+ * See LICENSE file in the project root for full license text.
+*#
+
+#*
+ * variables.ys
+ * Example of creation and use of variables
+*#
+
+fun main {
+	var a: i32 = 3;
+	a = 2;
+
+	var b: str = "Hola";
+	var c: double = 3.141592;
+
+	cnst d: i32 = 3; #- Wont't change its value
+
+	"%d, %s, %.2f\n", a, b, c; #- Like C
+}

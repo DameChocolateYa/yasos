@@ -1,0 +1,50 @@
+#*
+ * yasos - a compiler for yasos language
+ * Copyright (c) 2025-2026 DameChocolateYa
+ * Licensed under the BSD 3-Clause License.
+ * See LICENSE file in the project root for full license text.
+*#
+
+#*
+ * dynamic_mem.ys
+ * Use of dynamic memory
+*#
+
+#*
+ * Static arrays does not exist
+ * However, you can use dynamic arrays or Vec struct class
+*#
+
+import mem;
+
+#- &type can refer to pointer or dynamic array
+fun interval(begin: i32, end: i32, size: &i32) -> &i32 {
+	var array: &i32 = mem::alloc((end - begin + 1) * $sizeof i32);
+	if array == nil {
+		"Error: could not allocate memory\n";
+		ret nil;
+	}
+
+	*size = 0;
+	for var i: i32 = begin; i <= end; inc i {
+		array[*size] = i;
+		inc *size;
+	}
+
+	ret array;
+}
+
+fun main {
+	var begin: i32 = 1;
+	var end: i32 = 10;
+	var size: i32 = 0;
+
+	var array: &i32 = interval(begin, end, &size);
+	if array == nil {ret 1;}
+
+	for var i: i32 = 0; i < size; inc i {
+		"%d\n", array[i];
+	}
+
+	mem::free(array);
+}

@@ -1,0 +1,26 @@
+#*
+ * yasos - a compiler for yasos language
+ * Copyright (c) 2025-2026 DameChocolateYa
+ * Licensed under the BSD 3-Clause License.
+ * See LICENSE file in the project root for full license text.
+*#
+
+#*
+ * functions.ys
+ * Usage of functions
+*#
+
+#- name, arg1,  arg2      ret_type
+fun sum(x: i32, y: i32) -> i32 {
+	ret x + y;
+}
+
+#- If there are not args, you can leave it without parenthesis
+fun print_hello {
+	"Hello\n";
+}
+
+fun main {
+	"%d\n", sum(2, 3);
+	print_hello;
+}

@@ -5,6 +5,24 @@
  * See LICENSE file in the project root for full license text.
 *#
 
+#---- FROM OTHER HEADERS ----#
+struct Vec {
+  data: &any;
+  size: int;
+  capacity: int;
+  elem_size: int;
+  is_membusy: int;
+};
+#----------------------------#
+
+declmod Filesys;
+fun touch(path: str) -> bool : "extern";
+fun erase(path: str) -> bool : "extern";
+
+fun erase_dir_recursive(path: str) -> bool : "extern";
+fun mkdir(path: str) -> bool : "extern";
+endmod;
+
 struct File {
   fd: int; #- Descriptor
   buffer: &str;
@@ -16,14 +34,33 @@ struct File {
 
 impl File {
   fun open(path: str, raw_flags: str) -> &File : "extern";
+  fun touch(self: &File) -> bool : "extern";
+  fun erase(self: &File) -> bool : "extern";
+
   fun close(f: &File) : "extern";
   fun is_open(f: File) -> int : "extern";
   fun write(f: &File, data: str) -> int : "extern";
   fun read(f: &File) -> str : "extern";
+  fun read_lines(self: &File) -> &Vec : "extern";
   fun seek(f: &File, pos: int, whence: int) : "extern";
 
   fun ssize() -> int : "extern";
 };
+
+struct Dir {
+  path: &String;
+  destroy_on_exit: bool;
+}
+
+impl Dir {
+  fun new(path: str, flags: str) -> &Dir : "extern";
+  fun exist(self: &Dir) -> bool : "extern";
+
+  fun mkdir(self: &Dir) -> bool : "extern";
+  fun erase_recursive(self: &Dir) -> bool : "extern";
+
+  fun destroy(self: &Dir) : "extern";
+}
 
 #- Fucking useless
 $if __LINUX__

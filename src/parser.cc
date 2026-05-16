@@ -473,9 +473,44 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
       add_error("Expected identifier after in 'new' declaration", line);
       return std::nullopt;
     }
-    Type type = get_type_from_tok(consume());
+    Token type_tok = consume();
+    Type type = get_type_from_tok(type_tok);
 
-    return NodeExpr(NodeExprNew{ .type = type, .line = line });
+    std::vector<NodeExpr> args;
+    bool has_args = false;
+
+    if (peek().has_value() && peek().value().type == TokenType::open_paren) {
+      consume();
+      has_args = true;
+      while (peek().has_value() && peek().value().type != TokenType::close_paren) {
+        auto arg = parse_expr();
+        if (!arg.has_value()) {
+          add_error("Invalid Expression in function call", line);
+        }
+        args.push_back(arg.value());
+
+        if (peek().has_value() && peek().value().type == TokenType::comma) {
+          consume();
+        }
+        else if (peek().has_value() && peek().value().type != TokenType::close_paren) {
+          add_error("Expected ',' or ')'", line);
+        }
+      }
+    }
+
+    if (has_args) {
+      if (peek().has_value() && peek().value().type == TokenType::close_paren) consume();
+      else {
+        add_error("Expected ')'", line);
+      }
+    }
+
+    std::vector<std::shared_ptr<NodeExpr>> wrapped_args;
+    for (auto &arg : args) {
+      wrapped_args.push_back(std::make_shared<NodeExpr>(std::move(arg)));
+    }
+
+    return NodeExpr(NodeExprNew{ "new$MOD" + type_tok.value.value(), wrapped_args, line });
   }
 
   else if (peek().has_value() && peek().value().type == TokenType::_list) {
@@ -2089,6 +2124,16 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     result = NodeStmt(NodeStmtCall{ name, wrapped_args, line });
 
     // return NodeStmt(.var = NodeStmtCall{name, args}};
+  } else if (peek().has_value() && peek().value().type == TokenType::_nmem) {
+    int line = consume().line;
+
+    if (!peek().has_value() || peek().value().type != TokenType::ident) {
+      add_error("Expected identifier", line);
+    }
+
+    Token ident = consume();
+    
+    result = NodeStmt{.var = NodeStmtNmem {ident, line}};
   }
   else {
     int line = peek()->line;

@@ -315,6 +315,10 @@ std::vector<Token> Lexer::tokenize() {
             {.type = TokenType::_goto, .value = "goto", .line = local_lines});
         buf.clear();
         continue;
+      } else if (buf == "nmem") {
+        tokens.push_back({.type = TokenType::_nmem, .line = local_lines});
+        buf.clear();
+        continue;
       } else if (buf == "$def") {
         tokens.push_back(
             {.type = TokenType::_def, .value = "$def", .line = local_lines});

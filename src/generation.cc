@@ -406,6 +406,15 @@ static bool is_valid_ret_type(Generator *gen, llvm::Type *type, int line) {
   return true;
 }
 
+static llvm::AllocaInst *CreateEntryBlockAlloca(llvm::Function *TheFunction,
+                                         llvm::Type *llvm_type,
+                                         const std::string &VarName) {
+  llvm::IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
+                         TheFunction->getEntryBlock().begin());
+
+  return TmpB.CreateAlloca(llvm_type, nullptr, VarName);
+}
+
 static std::optional<llvm::Value *> call_func(
     const std::string &fn, std::vector<NodeExprPtr> arg_values, Generator *gen,
     int line, bool direct_call = false, bool inexistent_error = true) {
@@ -416,6 +425,83 @@ static std::optional<llvm::Value *> call_func(
 
     values.push_back(gen->gen_expr(*arg_val, false));
   }
+
+  for (const auto& func : gen->m_funcs) {
+    if (func.name == fn && func.in_line) {
+      int var_size = gen->m_vars.size();
+
+      if (values.size() < func.args.size()) {
+        add_error("not enough arguments passed to inline function", line);
+      }
+
+      int i = 0;
+      for (const auto& arg : func.args) {
+        TypeMapping type = map_type_to_llvm(arg.second, gen);
+        llvm::Value *val = values.at(i++);
+        llvm::Function *TheFunction =
+          gen->Builder.GetInsertBlock()->getParent();
+
+        llvm::AllocaInst *var_ptr = CreateEntryBlockAlloca(TheFunction, type.type, arg.first);
+        llvm::Value *store_ptr = var_ptr;
+        gen->Builder.CreateStore(val, store_ptr);
+
+        gen->insert_var(arg.first, nullptr, type.type, type.base_type, var_ptr, true, false, arg.second.user_type, true);
+      }
+
+      for (const auto& stmt : func.code_branch) {
+        int return_count = 0;
+
+        if (std::holds_alternative<NodeStmtRet>(stmt.var)) {
+          NodeStmtRet stmt_ret = std::get<NodeStmtRet>(stmt.var);
+
+          if (return_count++ > 0) {
+            add_error("Only a return statment is allowed in an inline function", stmt_ret.line);
+            return std::nullopt;
+          }
+
+          auto e = gen->gen_expr(stmt_ret.value);
+          if (!e) {
+            add_error("Invalid expression", stmt_ret.line);
+            return std::nullopt;
+          }
+
+          for (; gen->m_vars.size() > var_size;) {
+            gen->m_vars.erase(std::prev(gen->m_vars.end()));
+          }
+
+          return e;
+        }
+        gen->gen_stmt(stmt);
+      }
+
+      for (; gen->m_vars.size() > var_size;) {
+        gen->m_vars.erase(std::prev(gen->m_vars.end()));
+      }
+
+      return std::nullopt;
+    }
+  }
+
+  llvm::Function *func = gen->ModModule->getFunction(fn);
+
+  if (!gen->declared_funcs.contains(fn) || func == nullptr) {
+    if (inexistent_error) add_error("Inexistent function (" + fn + ")", line);
+    return std::nullopt;
+  }
+
+  if (!func->getReturnType()->isVoidTy()) {
+    llvm::Value *call = gen->Builder.CreateCall(func, values, fn + "_ret");
+    return call;
+  } else {
+    llvm::Value *call = gen->Builder.CreateCall(func, values);
+  }
+
+  return std::nullopt;
+}
+
+static std::optional<llvm::Value *> call_func_raw_args(
+    const std::string &fn, std::vector<llvm::Value *> values, Generator *gen,
+    int line, bool direct_call = false, bool inexistent_error = true) {
 
   llvm::Function *func = gen->ModModule->getFunction(fn);
 
@@ -437,24 +523,30 @@ static std::optional<llvm::Value *> call_func(
 static void clean_after_scope(Generator *gen, int line) {
   // Call destroy functions of structs (if they have it)
   /*for (const auto &var : gen->m_vars) {
-    if (var.second.base_type->isStructTy() && !var.second.is_arg) {
+    if (!var.second.struct_template.empty() && !var.second.is_arg && var.second.destroy_after_scoup) {
       const std::string name = var.second.name;
-      const std::string mangled_struct = "destroy" + std::string("$MOD") +
-  var.second.base_type->getStructName().str(); call_func(mangled_struct,
-  std::vector<NodeExprPtr>{std::make_shared<NodeExpr>(NodeExprGetPtr{ .ident =
-  Token{.type = TokenType::ident, .value = name, .line = line}, .line = line
-  })}, gen, line, false, false);
+      const std::string func_name_mangled = "destroy" + std::string("$MOD") +
+      var.second.base_type->getStructName().str(); 
+    
+      llvm::Value *base = var.second.var_ptr;
+      llvm::Type *base_type = base->getType();
+
+      bool is_ptr = base_type->isPointerTy();
+      llvm::StructType *struct_type = gen->m_struct_templates.at(var.second.struct_template);
+
+      llvm::Value *base_ptr = nullptr;
+      base_ptr =
+      gen->Builder.CreateLoad(
+          struct_type->getPointerTo(),
+          base
+      );
+
+      std::vector<llvm::Value *> args;
+      args.push_back(base_ptr);
+
+      call_func_raw_args(func_name_mangled, args, gen, 0);
     }
   }*/
-}
-
-llvm::AllocaInst *CreateEntryBlockAlloca(llvm::Function *TheFunction,
-                                         llvm::Type *llvm_type,
-                                         const std::string &VarName) {
-  llvm::IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
-                         TheFunction->getEntryBlock().begin());
-
-  return TmpB.CreateAlloca(llvm_type, nullptr, VarName);
 }
 
 llvm::Value *ensure_pointer(Generator *gen, llvm::Value *v, bool is_pointer) {
@@ -993,8 +1085,7 @@ llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
     llvm::Value *operator()(const NodeExprStruct &expr_struct) const {}
 
     llvm::Value *operator()(const NodeExprNew &stmt_new) const {
-      return llvm::ConstantInt::get(llvm::PointerType::getInt8Ty(TheContext),
-                                    0);
+      // TODO: 
     }
 
     llvm::Value *operator()(const NodeExprIsDef &expr_is_def) const {
@@ -1766,10 +1857,22 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       std::string name = stmt_def_func.name.value.value();
       bool is_pub = stmt_def_func.is_pub;
       bool is_extern = stmt_def_func.is_extern;
+      bool is_inline = false;
 
       if (is_string_in_vec("main", stmt_def_func.flags)) name = "main";
       if (is_string_in_vec("pub", stmt_def_func.flags)) is_pub = true;
       if (is_string_in_vec("extern", stmt_def_func.flags)) is_extern = true;
+      if (is_string_in_vec("inline", stmt_def_func.flags)) is_inline = true;
+
+      if (is_inline) {
+        std::vector<std::pair<std::string, Type>> args;
+        for (const auto& arg : stmt_def_func.args) {
+          args.push_back({arg.name, arg.arg_type});
+        }
+
+        gen->m_funcs.push_back({name, args, stmt_def_func.ret_var.type, is_inline, stmt_def_func.code_branch});
+        return;
+      }
 
       for (const auto &mod : m_mod) {
         name.append("$MOD" + mod);
@@ -1893,7 +1996,7 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
         start = end + 1;
       }
 
-      if (destroy) clean_after_scope(gen, stmt_def_func.line);
+      /*if (destroy)*/ clean_after_scope(gen, stmt_def_func.line);
 
       if (ret_type->isVoidTy() && stmt_def_func.ret_var.line == -1) {
         gen->Builder.CreateRetVoid();
@@ -2273,6 +2376,17 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       }
 
       gen->stmt_orde.pop();
+    }
+
+    void operator()(const NodeStmtNmem &stmt_nmem) const {
+      const std::string& name = stmt_nmem.ident.value.value();
+
+      if (!gen->m_vars.contains(name)) {
+        add_error("Variable not existent\n", stmt_nmem.line);
+        return;
+      }
+
+      gen->m_vars.at(name).destroy_after_scoup = false;
     }
   };
 

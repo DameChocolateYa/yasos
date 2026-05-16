@@ -1,0 +1,45 @@
+#*
+ * yasos - a compiler for yasos language
+ * Copyright (c) 2025-2026 DameChocolateYa
+ * Licensed under the BSD 3-Clause License.
+ * See LICENSE file in the project root for full license text.
+*#
+
+#*
+ * string.ys
+ * The use of str it's barely recommended
+ * However, you can use &String (struct class)
+ * It manages the memory and all that weird stuff
+ * So you can use and edit Strings without complicated memory issues
+*#
+
+import string;
+
+fun main {
+	#*
+	 * IMPORTANT!
+	 * String is >= 16 bytes so it is obligatory to use it as reference
+	 
+	 * String::from creates a String struct class from a str
+	 * while String::new just create a String with no content
+	*#
+	
+	var s: &String = String::from("Hello");
+
+	#- String::cat to use with a str, String::merge with a String
+	s.cat(" world!");
+
+	"%s\n", s.to_str();
+
+	"-----\n";
+	for var i: i32 = 0; i < s.size; inc i {
+		"%c\n", s.ch(i);
+	}
+
+	#- Do not forget to destroy it or you could have memory issues!
+	s.destroy();
+}
+
+#*
+ * You can investigate by yourself the rest of the functions!
+*#
