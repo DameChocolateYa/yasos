@@ -6,6 +6,7 @@
 */
 
 #include "math.h"
+
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -20,6 +21,7 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <float.h> 
+#include "string.h"
 #include "vector.h"
 #include "cutype.h"
 
@@ -39,6 +41,11 @@ void sys_putchar(int, char) __attribute__((visibility("hidden")));
 unsigned int sys_sleep(double) __attribute__((visibility("hidden")));
 
 //long syscall(long number, ...); // prototype to avoid libc warning
+
+typedef struct {
+  int size;
+  Vec *internal_data;
+} EnvArgs;
 
 // Wrappers
 __attribute__((visibility("default")))
@@ -641,4 +648,56 @@ void free_args$MODstd(Vec *args) {
   }
 
   destroy$MODVec(args);
+}
+
+__attribute__((visibility("default")))
+EnvArgs *new$MODEnvArgs(int argc, char **argv) {
+  EnvArgs *self = (EnvArgs *)alloc$MODmem(sizeof(EnvArgs));
+  if (!self) {
+    fprintf(stderr, "Could not create EnvArgs instance\n");
+    return NULL;
+  }
+
+  Vec *internal_data = new$MODVec(sizeof(String *));
+  if (!internal_data) {
+    fprintf(stderr, "Could not allocate internal data in EnvArgs instance\n");
+    return NULL;
+  }
+
+  for (int i = 0; i < argc; i++) {
+    char *current_arg = argv[i];
+
+    String *arg = from$MODString(current_arg);
+    if (!arg) {
+      fprintf(stderr, "Error trying to allocate argument in EnvArgs instance, value omited\n");
+      continue;
+    }
+
+    push_string$MODVec(internal_data, arg);
+  }
+
+  self->internal_data = internal_data;
+  return self;
+}
+
+__attribute__((visibility("default")))
+String *get_arg$MODEnvArgs(EnvArgs *self, int index) {
+  if (index < 0 || index >= self->internal_data->size) {
+    fprintf(stderr, "EnvArgs::get_arg: index out of range\n");
+    return NULL;
+  }
+
+  String *string = get_string$MODVec(self->internal_data, index);
+
+  return string;
+}
+
+__attribute__((visibility("default")))
+void destroy$MODEnvArgs(EnvArgs *self) {
+  for (int i = 0; i < self->internal_data->size; i++) {
+    destroy$MODString(get_string$MODVec(self->internal_data, i));
+  }
+
+  free$MODmem(self);
+  printf("PRUEBA\n");
 }

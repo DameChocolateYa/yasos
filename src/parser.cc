@@ -120,10 +120,10 @@ static Type get_type_from_tok(Token tok) {
   case TokenType::none:
     return Type{ Type::Kind::None };
   case TokenType::ident:
-    return Type{ Type::Kind::UserDefined, false, tok.value.value() };
+    return Type{ Type::Kind::UserDefined, false, false, false, tok.value.value() };
     break;
   default:
-    return Type{ Type::Kind::UserDefined, false, tok.value.value() };
+    return Type{ Type::Kind::UserDefined, false, false, false, tok.value.value() };
     break;
   }
 }
@@ -132,6 +132,13 @@ Type Parser::parse_type() {
   Type type;
   std::shared_ptr<Type> pointee = nullptr;
   bool is_ref = false;
+  bool is_borrow = false;
+
+  if (peek().has_value() && peek().value().type == TokenType::_borrow) {
+    consume();
+    is_borrow = true;
+  }
+
   if (peek().has_value() && peek().value().type == TokenType::amp) {
     consume();
     pointee = std::make_shared<Type>(parse_type());
@@ -143,6 +150,7 @@ Type Parser::parse_type() {
 
   type.is_ref = is_ref;
   type.pointee = pointee;
+  type.is_borrowed = is_borrow;
 
   return type;
 }
@@ -510,7 +518,7 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
       wrapped_args.push_back(std::make_shared<NodeExpr>(std::move(arg)));
     }
 
-    return NodeExpr(NodeExprNew{ "new$MOD" + type_tok.value.value(), wrapped_args, line });
+    return NodeExpr(NodeExprNew{ "new$MOD" + type_tok.value.value(), wrapped_args, type_tok.value.value(), line });
   }
 
   else if (peek().has_value() && peek().value().type == TokenType::_list) {
@@ -952,6 +960,12 @@ std::optional<NodeStmt> Parser::parse_stmt() {
       consume();
       has_args = true;
       while (peek().has_value() && peek().value().type != TokenType::close_paren) {
+        bool is_borrowed = false;
+        if (peek().has_value() && peek().value().type == TokenType::_borrow) {
+          consume();
+          is_borrowed = true;
+        }
+
         if (peek().has_value() && peek().value().type == TokenType::ident) {
           std::string arg_name = consume().value.value();
           Type arg_type;
@@ -977,7 +991,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
             arg_type = parse_type();
             consume();
           }
-          args.push_back({ .name = arg_name, .arg_type = arg_type });
+          args.push_back({ .name = arg_name, .arg_type = arg_type, .is_ref = arg_type.is_ref, .is_borrowed = is_borrowed });
           absolute_type_name_args.push_back(arg_type_tok.value.value());
 
           if (peek().has_value() && peek().value().type == TokenType::comma) {
@@ -1844,7 +1858,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
       consume();
       fields.push_back({ field_name, type });
 
-      if (peek().has_value() && peek().value().type == TokenType::semi)
+      if (peek().has_value() && peek().value().type == TokenType::semi || peek().value().type == TokenType::comma)
         consume();
     }
 

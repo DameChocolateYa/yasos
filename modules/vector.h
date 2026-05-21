@@ -9,6 +9,7 @@
 #define VECTOR_H
 
 #include "string.h"
+#include <stdbool.h>
 
 typedef struct {
   void *data;

@@ -8,7 +8,6 @@
 use "headers/std.ys";
 
 #- Can not use PI due to the problem importing constants
-
 declmod math;
 fun pow(base: double, exponent: int) -> double {
   var result: double = 1.;

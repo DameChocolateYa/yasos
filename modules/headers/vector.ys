@@ -27,55 +27,55 @@ struct Vec {
 
 impl Vec {
   fun new(elem_size: int) -> &Vec : "extern";
-  fun push(self: &Vec, elem: &any) : "extern";
-  fun pop(self: &Vec) : "extern";
-  fun erase_at(self: &Vec, index: int) : "extern";
-  fun erase_all(self: &Vec) : "extern";
-  fun set(self: &Vec, index: int, val: &any) : "extern";
+  fun push(borrow self: &Vec, elem: &any) : "extern";
+  fun pop(borrow self: &Vec) : "extern";
+  fun erase_at(borrow self: &Vec, index: int) : "extern";
+  fun erase_all(borrow self: &Vec) : "extern";
+  fun set(borrow self: &Vec, index: int, val: &any) : "extern";
 
-  fun push_ptr(self: &Vec, val: &any) : "extern";
-  fun push_int(self: &Vec, val: int) : "extern";
-  fun push_string(self: &Vec, val: &String) : "extern";
-  fun push_double(self: &Vec, val: double) : "extern";
-  fun push_vec(self: &Vec, val: &Vec) : "extern";
+  fun push_ptr(borrow self: &Vec, val: &any) : "extern";
+  fun push_int(borrow self: &Vec, val: int) : "extern";
+  fun push_string(borrow self: &Vec, val: &String) : "extern";
+  fun push_double(borrow self: &Vec, val: double) : "extern";
+  fun push_vec(borrow self: &Vec, borrow val: &Vec) : "extern";
 
-  fun pushm(self: &Vec, n: int, undefan) : "extern";
-  fun pushm_int(self: &Vec, n: int, undefan) : "extern";
-  fun pushm_string(self: &Vec, n: int, undefan) : "extern";
-  fun pushm_float(self: &Vec, n: int, undefan) : "extern";
-  fun pushm_vec(self: &Vec, n: int, undefan) : "extern";
+  fun pushm(borrow self: &Vec, n: int, undefan) : "extern";
+  fun pushm_int(borrow self: &Vec, n: int, undefan) : "extern";
+  fun pushm_string(borrow self: &Vec, n: int, undefan) : "extern";
+  fun pushm_float(borrow self: &Vec, n: int, undefan) : "extern";
+  fun pushm_vec(borrow self: &Vec, n: int, undefan) : "extern";
 
-  fun get(self: &Vec, index: int) -> &any : "extern";
-  fun get_ptr(self: &Vec, index: i32) -> &any : "extern";
-  fun get_int(self: &Vec, index: int) -> int : "extern";
-  fun get_string(self: &Vec, index: int) -> &String : "extern";
-  fun get_double(self: &Vec, index: int) -> double : "extern";
-  fun get_vec(self: &Vec, index: int) -> Vec : "extern";
+  fun get(borrow self: &Vec, index: int) -> &any : "extern";
+  fun get_ptr(borrow self: &Vec, index: i32) -> &any : "extern";
+  fun get_int(borrow self: &Vec, index: int) -> int : "extern";
+  fun get_string(borrow self: &Vec, index: int) -> &String : "extern";
+  fun get_double(borrow self: &Vec, index: int) -> double : "extern";
+  fun get_vec(borrow self: &Vec, index: int) -> &Vec : "extern";
 
-  fun set_int(self: &Vec, index: int, val: int) : "extern";
-  fun set_string(self: &Vec, index: int, val: &String) : "extern";
-  fun set_double(self: &Vec, index: int, val: double) : "extern";
-  fun set_vec(self: &Vec, index: int, val: &Vec) : "extern";
+  fun set_int(borrow self: &Vec, index: int, val: int) : "extern";
+  fun set_string(borrow self: &Vec, index: int, val: &String) : "extern";
+  fun set_double(borrow self: &Vec, index: int, val: double) : "extern";
+  fun set_vec(borrow self: &Vec, index: int, borrow val: &Vec) : "extern";
 
-  fun setm_int(self: &Vec, n: int, undefan) : "extern";
-  fun setm_string(self: &Vec, n: int, undefan) : "extern";
-  fun setm_double(self: &Vec, n: int, undefan) : "extern";
-  fun setm_vec(self: &Vec, n: int, undefan) : "extern";
+  fun setm_int(borrow self: &Vec, n: int, undefan) : "extern";
+  fun setm_string(borrow self: &Vec, n: int, undefan) : "extern";
+  fun setm_double(borrow self: &Vec, n: int, undefan) : "extern";
+  fun setm_vec(borrow self: &Vec, n: int, undefan) : "extern";
 
   fun destroy(self: &Vec) : "extern";
   fun destroym(n: int, undefan) : "extern"; #- NOT USABLE BY OBJECT
 
-  fun disable(self: &Vec) : "extern";
-  fun enable(self: &Vec) : "extern";
+  fun disable(borrow self: &Vec) : "extern";
+  fun enable(borrow self: &Vec) : "extern";
 
-  fun cpy(dest: &Vec, src: &Vec) : "extern";
-  fun cpy_and_push(dest: &Vec, src: &Vec, index: int) : "extern";
-  fun cpy_and_pushm(dest: &Vec, src: &Vec, n: int, undefan) : "extern";
-  fun cpy_in(dest: &Vec, to: int, src: &Vec, from: int) : "extern";
-  fun cpy_xelem_in(dest: &Vec, src: &Vec, n_par: int, undefan) : "extern";
+  fun cpy(borrow dest: &Vec, borrow src: &Vec) : "extern";
+  fun cpy_and_push(borrow dest: &Vec, borrow src: &Vec, index: int) : "extern";
+  fun cpy_and_pushm(borrow dest: &Vec, borrow src: &Vec, n: int, undefan) : "extern";
+  fun cpy_in(borrow dest: &Vec, to: int, borrow src: &Vec, from: int) : "extern";
+  fun cpy_xelem_in(borrow dest: &Vec, borrow src: &Vec, n_par: int, undefan) : "extern";
 
-  fun clone(self: &Vec) -> &Vec : "extern";
-  fun size(self: &Vec) -> int : "extern";
+  fun clone(borrow self: &Vec) -> &Vec : "extern";
+  fun size(borrow self: &Vec) -> int : "extern";
 
   fun ssize() -> int : "extern";
 };

@@ -51,7 +51,9 @@ enum class PrintType : int { Int = 0, Float = 1, Str = 2, CR = 3 };
 enum class Mode {
   Global,
   Function,
+  Impl,
   Mod,
+  Loop,
 };
 
 extern std::vector<std::string> m_mod;
@@ -98,6 +100,11 @@ public:
     llvm::Value *var_ptr;
     bool is_mutable;
     bool is_globl;
+
+    bool is_owner = false;
+    bool is_borrowed = false;
+    bool moved = false;
+
     std::string struct_template = "";
     bool is_arg = false;
     bool destroy_after_scoup = true;
@@ -155,6 +162,9 @@ public:
   std::vector<NodeExpr> m_struct_temp_args; // shitty way
 
   std::vector<Func> m_funcs;
+  llvm::AllocaInst *return_slot;
+  bool returned = false;
+  llvm::BasicBlock *current_clean_block;
 
   bool stack_aligned_in_call = false;
 

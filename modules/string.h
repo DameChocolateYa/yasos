@@ -19,6 +19,7 @@ void cpy$MODstring(char *dest, const char *src);
 
 String *new$MODString();
 String *from$MODString(const char *src);
+String *clone$MODString(String *self);
 char *to_str$MODString(String *s);
 void destroy$MODString(String *s);
 

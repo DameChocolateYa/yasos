@@ -203,6 +203,19 @@ int main(int argc, char **argv) {
 
     Generator generator(program.value(), gen_name, std::move(TheModule));
     generator.gen_prog();
+    
+    bool found_main = false;
+    for (const auto &func : generator.declared_funcs) {
+      if (func.first == "main") {
+        found_main = true;
+        break;
+      }
+    }
+    if (!found_main && generate_executable) {
+      add_error("main function not found, needed for executable start point", -1);
+      exit(1);
+    }
+
     std::string ll_file = base_name + ".ll";
     std::error_code EC;
     llvm::raw_fd_ostream ll_out(ll_file, EC);

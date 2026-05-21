@@ -40,6 +40,8 @@ struct Type {
 
   Kind kind;
   bool is_ref = false; // if type has & before type ident
+  bool is_owner = false;
+  bool is_borrowed = false;
   std::string user_type = "";
 
   std::shared_ptr<Type> pointee = nullptr;
@@ -132,7 +134,9 @@ struct NodeExprCR {
 struct CustomFuncArgs {
   std::string name;
   Type arg_type;
-  int line;
+  bool is_ref = false;
+  bool is_borrowed = false;
+  int line = 0;
 };
 
 struct NodeExprBoolValue {
@@ -183,6 +187,7 @@ struct NodeExprStruct {
 struct NodeExprNew {
   std::string func_name;
   std::vector<std::shared_ptr<NodeExpr>> args;
+  std::string struct_name;
   int line;
 };
 
@@ -257,8 +262,8 @@ struct NodeStmtVar {
   Token ident;
   Type type = Type{Type::Kind::None};
   NodeExpr expr;
-  int has_initial_value = true;
-  int is_mutable;
+  bool has_initial_value = true;
+  bool is_mutable;
   int line;
 };
 
