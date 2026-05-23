@@ -6,5 +6,8 @@
     },
     "cmake.configureArgs": [
     "-DLLVM_DIR=/usr/lib64/cmake/llvm"
+  ],
+  "rust-analyzer.linkedProjects": [
+    "./src/rust/Cargo.toml"
   ]
 }

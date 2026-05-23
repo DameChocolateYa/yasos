@@ -677,6 +677,7 @@ EnvArgs *new$MODEnvArgs(int argc, char **argv) {
   }
 
   self->internal_data = internal_data;
+  self->size = argc;
   return self;
 }
 
@@ -699,5 +700,4 @@ void destroy$MODEnvArgs(EnvArgs *self) {
   }
 
   free$MODmem(self);
-  printf("PRUEBA\n");
 }

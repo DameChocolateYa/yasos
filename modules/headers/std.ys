@@ -18,6 +18,12 @@ struct EnvArgs {
   internal_data: &Vec;
 }
 
+struct String {
+	data: &char;
+	size: int;
+  mem_busy: bool;
+};
+
 declmod std;
 
 fun fmt(fmt: str, undefan) -> str : "extern";
@@ -73,7 +79,7 @@ cnst ZERO: int = 0;
 endmod;
 
 impl EnvArgs {
-  fun new(argc: i32, argv: &str) -> &Vec;
-  fun get_arg(borrow self: &Vec) -> &Vec;
-  fun destroy(self: &Vec);
+  fun new(argc: i32, argv: &str) -> &EnvArgs : "extern";
+  fun get_arg(borrow self: &EnvArgs) -> &String : "extern";
+  fun destroy(self: &EnvArgs) : "extern";
 }

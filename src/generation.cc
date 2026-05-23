@@ -14,6 +14,7 @@
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DataLayout.h>
 #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Function.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/Instructions.h>
@@ -475,7 +476,7 @@ static std::optional<llvm::Value *> call_func(
                     return std::nullopt;
                   }
                   gen->m_vars.at(ident.ident.value.value()).moved =
-                      arg.second.is_owner;
+                      arg.second.is_owner && !arg.second.is_borrowed;
                 }
                 j++;
               }
@@ -507,8 +508,9 @@ static std::optional<llvm::Value *> call_func(
         llvm::Value *store_ptr = var_ptr;
         gen->Builder.CreateStore(val, store_ptr);
 
-        gen->insert_var(arg.first, nullptr, type.type, type.base_type, var_ptr,
-                        true, false, arg.second.user_type, true);
+        gen->insert_var(arg.first, nullptr, type.type, type.base_type,
+                        arg.second, var_ptr, true, false, arg.second.user_type,
+                        true);
       }
 
       for (const auto &stmt : func.code_branch) {
@@ -583,6 +585,32 @@ static std::optional<llvm::Value *> call_func_raw_args(
   return std::nullopt;
 }
 
+static void call_destroy(Generator *gen, Generator::Var &var, bool return_as_not_moved = false) {
+  if (!var.struct_template.empty() && var.destroy_after_scoup && !var.moved &&
+      var.is_owner && !var.is_borrowed) {
+    const std::string name = var.name;
+    const std::string func_name_mangled =
+        "destroy" + std::string("$MOD") + var.base_type->getStructName().str();
+
+    llvm::Value *base = var.var_ptr;
+    llvm::Type *base_type = base->getType();
+
+    bool is_ptr = base_type->isPointerTy();
+    llvm::StructType *struct_type =
+        gen->m_struct_templates.at(var.struct_template);
+
+    llvm::Value *base_ptr = base;
+    base_ptr = gen->Builder.CreateLoad(struct_type->getPointerTo(), base,
+                                       gen->m_vars_order.back() + "_destroy");
+
+    std::vector<llvm::Value *> args;
+    args.push_back(base_ptr);
+
+    call_func_raw_args(func_name_mangled, args, gen, 0);
+    var.moved = !return_as_not_moved;
+  }
+}
+
 static void clean_after_scope(Generator *gen, int vars_before_scope, int line) {
   // Call destroy functions of structs (if they have it)
   if (m_preprocessor_bool.contains(
@@ -595,31 +623,9 @@ static void clean_after_scope(Generator *gen, int vars_before_scope, int line) {
       // std::cerr << var.name << !var.struct_template.empty() <<
       // var.destroy_after_scoup << !var.moved << var.is_owner <<
       // !var.is_borrowed << "\n";
-      if (!var.struct_template.empty() && var.destroy_after_scoup &&
-          !var.moved && var.is_owner && !var.is_borrowed) {
-        const std::string name = var.name;
-        const std::string func_name_mangled =
-            "destroy" + std::string("$MOD") +
-            var.base_type->getStructName().str();
 
-        llvm::Value *base = var.var_ptr;
-        llvm::Type *base_type = base->getType();
+      call_destroy(gen, var);
 
-        bool is_ptr = base_type->isPointerTy();
-        llvm::StructType *struct_type =
-            gen->m_struct_templates.at(var.struct_template);
-
-        llvm::Value *base_ptr = nullptr;
-        base_ptr =
-            gen->Builder.CreateLoad(struct_type->getPointerTo(), base,
-                                    gen->m_vars_order.back() + "_destroy");
-
-        std::vector<llvm::Value *> args;
-        args.push_back(base_ptr);
-
-        call_func_raw_args(func_name_mangled, args, gen, 0);
-        var.moved = true;
-      }
       gen->m_vars.erase(gen->m_vars_order.back());
       gen->m_vars_order.pop_back();
     }
@@ -952,6 +958,16 @@ llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
     llvm::Value *operator()(const NodeExprIdent &expr_ident) const {
       const std::string &name = expr_ident.ident.value.value();
 
+      if (gen->declared_funcs.contains(
+              name)) {  // Ident can also be a call function with no args and
+                        // with no parenthesis
+        std::optional<llvm::Value *> ret_val =
+            call_func(name, {}, gen, expr_ident.line, false);
+        if (!ret_val.has_value()) {
+        }
+        return *ret_val;
+      }
+
       if (gen->m_raw_var_exprs.contains(name)) {
         // gen->gen_expr(gen->m_raw_var_exprs.at(name), false, false, raw,
         // true);
@@ -984,16 +1000,6 @@ llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
         }
       } else {
         add_error("could not find '" + name + "'", expr_ident.line);
-      }
-
-      if (gen->declared_funcs.contains(
-              name)) {  // Ident can also be a call function with no args and
-                        // with no parenthesis
-        std::optional<llvm::Value *> ret_val =
-            call_func(name, {}, gen, expr_ident.line, false);
-        if (!ret_val.has_value()) {
-        }
-        return *ret_val;
       }
 
       return nullptr;
@@ -1127,6 +1133,9 @@ llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
           llvm::Value *var = gen->m_vars.at(name).var_ptr;
           return var;
         }
+      } else if (gen->declared_funcs.contains(name)) {
+        llvm::Function *func = gen->ModModule->getFunction(name);
+        return func;
       }
 
       return nullptr;
@@ -1559,6 +1568,7 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       llvm::Type *llvm_type = type_mapping.type;
       const std::string &name = stmt_var.ident.value.value();
       bool is_owner = false;
+      bool expr_retains_ownership = true;
       bool is_borrowed = false;
 
       if (m_preprocessor_bool.contains(
@@ -1566,6 +1576,7 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
         if (std::holds_alternative<NodeExprNew>(stmt_var.expr.var)) {
           const auto &val = std::get<NodeExprNew>(stmt_var.expr.var);
           is_owner = true;
+          expr_retains_ownership = false;
         } else if (std::holds_alternative<NodeExprCall>(stmt_var.expr.var)) {
           const auto &val = std::get<NodeExprCall>(stmt_var.expr.var);
           const std::string &name = val.name.value.value();
@@ -1574,6 +1585,7 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
             if (func.name == name) {
               is_owner = func.ret_type.is_ref && !func.ret_type.is_borrowed &&
                          !stmt_var.type.is_borrowed;
+              expr_retains_ownership = true;
             }
           }
         } else if (std::holds_alternative<NodeExprProperty>(
@@ -1602,6 +1614,7 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
             for (const auto &func : gen->m_funcs) {
               if (func.name == func_name_mangled) {
                 is_owner = func.ret_type.is_ref && !func.ret_type.is_borrowed;
+                expr_retains_ownership = true;
               }
             }
           } else {
@@ -1611,6 +1624,7 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
           const auto &expr_ident = std::get<NodeExprIdent>(stmt_var.expr.var);
           if (gen->m_vars.contains(expr_ident.ident.value.value())) {
             is_owner = gen->m_vars.at(expr_ident.ident.value.value()).is_owner;
+            expr_retains_ownership = is_owner;
           }
 
           if (!stmt_var.type.is_borrowed &&
@@ -1624,12 +1638,13 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
         if (stmt_var.type.is_borrowed) {
           is_borrowed = true;
           is_owner = false;
+          expr_retains_ownership = true;
         }
       }
 
       if (is_owner && gen->mod == Mode::Loop) {
-        add_error("move action is forbidden in loops, use borrows instead",
-                  stmt_var.line);
+        /*add_error("move action is forbidden in loops, use borrows instead",
+                  stmt_var.line);*/
       }
 
       llvm::Value *var_ptr = nullptr;
@@ -1690,19 +1705,6 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
             llvm::GlobalValue::ExternalLinkage, global_init_val,
             stmt_var.ident.value.value());
       } else {
-        /*var_ptr = gen->Builder.CreateAlloca(llvm_type, nullptr, name);
-
-        if (init_val) {
-          llvm::Value *store_ptr = var_ptr;
-
-          if (llvm_type->isPointerTy() && stmt_var.has_initial_value &&
-              init_val->getType() != llvm_type) {
-            store_ptr = gen->Builder.CreateBitCast(var_ptr,
-        llvm_type->getPointerTo());
-          }
-
-          gen->Builder.CreateStore(init_val, store_ptr);
-        }*/
         llvm::Function *TheFunction =
             gen->Builder.GetInsertBlock()->getParent();
 
@@ -1715,9 +1717,9 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       }
 
       Var var = gen->insert_var(
-          stmt_var.ident.value.value(), nullptr, llvm_type, base_type, var_ptr,
-          stmt_var.is_mutable, gen->current_mode == Mode::Global,
-          stmt_var.type.user_type);
+          stmt_var.ident.value.value(), nullptr, llvm_type, base_type,
+          stmt_var.type, var_ptr, stmt_var.is_mutable,
+          gen->current_mode == Mode::Global, stmt_var.type.user_type);
       gen->m_vars.at(var.name).is_owner = is_owner;
       gen->m_vars.at(var.name).is_borrowed = is_borrowed;
 
@@ -1734,6 +1736,98 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
 
     void operator()(
         const NodeStmtAssign &stmt) const {  // -> value, target, op_token
+      bool is_owner = false;
+      bool expr_retains_ownership = true;
+      bool is_borrowed = false;
+      Type type;
+
+      if (std::holds_alternative<NodeExprIdent>(stmt.target.var)) {
+        const auto &ident = std::get<NodeExprIdent>(stmt.target.var);
+        if (gen->m_vars.contains(ident.ident.value.value()))
+          type = gen->m_vars.at(ident.ident.value.value()).meta_type;
+        
+        call_destroy(gen, gen->m_vars.at(ident.ident.value.value()), true);
+      }
+
+      if (m_preprocessor_bool.contains(
+              "__YASOS_EXPERIMENTAL_MEMORY_MANAGEMENT__")) {
+        if (std::holds_alternative<NodeExprNew>(stmt.value.var)) {
+          const auto &val = std::get<NodeExprNew>(stmt.value.var);
+          is_owner = true;
+          expr_retains_ownership = false;
+        } else if (std::holds_alternative<NodeExprCall>(stmt.value.var)) {
+          const auto &val = std::get<NodeExprCall>(stmt.value.var);
+          const std::string &name = val.name.value.value();
+
+          for (const auto &func : gen->m_funcs) {
+            if (func.name == name) {
+              is_owner = func.ret_type.is_ref && !func.ret_type.is_borrowed &&
+                         !type.is_borrowed;
+              expr_retains_ownership = true;
+            }
+          }
+        } else if (std::holds_alternative<NodeExprProperty>(stmt.value.var)) {
+          const auto &expr_property =
+              std::get<NodeExprProperty>(stmt.value.var);
+          if (expr_property.is_func) {
+            // std::cerr << expr_property.property.value.value() << "\n";
+            const std::string &func_name = expr_property.property.value.value();
+            std::string struct_template;
+            std::string struct_name =
+                gen->m_vars.at(expr_property.base_tok.value.value())
+                    .struct_template;
+
+            for (const auto &var : gen->m_vars) {
+              if (var.second.base_type->isStructTy() &&
+                  expr_property.base_tok.value.value() == var.second.name) {
+                struct_name = var.second.name;
+                struct_template = var.second.base_type->getStructName().str();
+              }
+            }
+
+            const std::string &func_name_mangled =
+                func_name + std::string("$MOD") + struct_template;
+
+            for (const auto &func : gen->m_funcs) {
+              if (func.name == func_name_mangled) {
+                is_owner = func.ret_type.is_ref && !func.ret_type.is_borrowed;
+                expr_retains_ownership = true;
+              }
+            }
+          } else {
+            is_owner = false;
+          }
+        } else if (std::holds_alternative<NodeExprIdent>(stmt.value.var)) {
+          const auto &expr_ident = std::get<NodeExprIdent>(stmt.value.var);
+          if (gen->m_vars.contains(expr_ident.ident.value.value())) {
+            is_owner = gen->m_vars.at(expr_ident.ident.value.value()).is_owner;
+            expr_retains_ownership = is_owner;
+          }
+
+          if (!type.is_borrowed &&
+              gen->m_vars.at(expr_ident.ident.value.value()).is_borrowed) {
+            add_error("can not transfer ownership from a borrow\n", stmt.line);
+            return;
+          }
+
+          if (!type.is_borrowed &&
+              gen->m_vars.at(expr_ident.ident.value.value()).is_owner) {
+            gen->m_vars.at(expr_ident.ident.value.value()).moved = true;
+          }
+
+          /*if (std::holds_alternative<NodeExprIdent>(stmt.target.var)) {
+            const auto &var_ident = std::get<NodeExprIdent>(stmt.target.var);
+            gen->m_vars.at(var_ident.ident.value.value()).is_borrowed =
+          }*/
+        }
+
+        if (type.is_borrowed) {
+          is_borrowed = true;
+          is_owner = false;
+          expr_retains_ownership = true;
+        }
+      }
+
       llvm::Value *target_ptr = nullptr;
 
       if (std::holds_alternative<NodeExprIdent>(stmt.target.var)) {
@@ -1796,16 +1890,16 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
         value = gen->gen_expr(expr_bin);
       }
       llvm::Value *store_ptr = target_ptr;
-      llvm::Type *type = target_ptr->getType();
+      llvm::Type *target_type = target_ptr->getType();
 
-      if (type->isPointerTy() && value->getType() != type) {
+      if (target_type->isPointerTy() && value->getType() != target_type) {
         store_ptr = gen->Builder.CreateBitCast(
             target_ptr, value->getType()->getPointerTo());
       }
 
       gen->Builder.CreateStore(value, store_ptr);
 
-      if (m_preprocessor_bool.contains(
+      /*if (m_preprocessor_bool.contains(
               "__YASOS_EXPERIMENTAL_MEMORY_MANAGEMENT__") &&
           std::holds_alternative<NodeExprIdent>(stmt.value.var)) {
         const auto &val = std::get<NodeExprIdent>(stmt.value.var);
@@ -1813,7 +1907,7 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
         if (var.is_owner) {
           gen->m_vars.at(val.ident.value.value()).moved = true;
         }
-      }
+      }*/
     }
 
     void operator()(const NodeStmtVarRe &stmt_var) const {
@@ -1846,16 +1940,21 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       llvm::Value *condVal = gen->gen_expr(stmt_if.condition);
       llvm::Value *condBool = gen->Builder.CreateICmpNE(
           condVal, llvm::ConstantInt::get(condVal->getType(), 0), "if_cond");
-      
+
       std::optional<bool> constant_val = is_constant_value(gen, condBool);
       bool always_if = false;
       if (constant_val.has_value()) {
         if (constant_val.value()) {
-          add_warning("constant expression as 'true' in if, erase the conditional o build a scope or the compiler will never reach elif and else", stmt_if.line);
+          add_warning(
+              "constant expression as 'true' in if, erase the conditional o "
+              "build a scope or the compiler will never reach elif and else",
+              stmt_if.line);
           always_if = true;
-        }
-        else
-          add_warning("constant expression as 'false' in if, compiler will never be able to reach it", stmt_if.line);
+        } else
+          add_warning(
+              "constant expression as 'false' in if, compiler will never be "
+              "able to reach it",
+              stmt_if.line);
       }
 
       if (!stmt_if.elif_conditions.empty()) {
@@ -1881,9 +1980,15 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
         std::optional<bool> constant_val = is_constant_value(gen, elifBool);
         if (constant_val.has_value()) {
           if (constant_val.value() && !always_if)
-            add_warning("constant expression as 'true' in elif, compiler will always ignore 'if' and other 'elif'", stmt_if.line);
+            add_warning(
+                "constant expression as 'true' in elif, compiler will always "
+                "ignore 'if' and other 'elif'",
+                stmt_if.line);
           else if (!always_if)
-            add_warning("constant expression as 'false' in elif, compiler will never be able to reach it", stmt_if.line);
+            add_warning(
+                "constant expression as 'false' in elif, compiler will never "
+                "be able to reach it",
+                stmt_if.line);
         }
 
         llvm::BasicBlock *nextBlock = (i + 1 < stmt_if.elif_conditions.size())
@@ -1945,9 +2050,14 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       std::optional<bool> constant_val = is_constant_value(gen, condBool);
       if (constant_val.has_value()) {
         if (constant_val.value())
-          add_warning("constant expression as 'true' in while, use loop instead", stmt_while.line);
+          add_warning(
+              "constant expression as 'true' in while, use loop instead",
+              stmt_while.line);
         else
-          add_warning("constant expression as 'false' in while, compiler will never be able to reach it", stmt_while.line);
+          add_warning(
+              "constant expression as 'false' in while, compiler will never be "
+              "able to reach it",
+              stmt_while.line);
       }
 
       size_t var_n = gen->m_vars.size();
@@ -2027,9 +2137,13 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       std::optional<bool> constant_val = is_constant_value(gen, cond_bool);
       if (constant_val.has_value()) {
         if (constant_val.value())
-          add_warning("constant expression as 'true' in for, use loop instead", stmt_for.line);
+          add_warning("constant expression as 'true' in for, use loop instead",
+                      stmt_for.line);
         else
-          add_warning("constant expression as 'false' in for, compiler will never be able to reach it", stmt_for.line);
+          add_warning(
+              "constant expression as 'false' in for, compiler will never be "
+              "able to reach it",
+              stmt_for.line);
       }
 
       size_t var_n_before_iteration = gen->m_vars.size();
@@ -2089,8 +2203,12 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       bool is_pub = stmt_def_func.is_pub;
       bool is_extern = stmt_def_func.is_extern;
       bool is_inline = false;
+      bool is_super_main = false;
 
-      if (is_string_in_vec("main", stmt_def_func.flags)) name = "main";
+      if (is_string_in_vec("main", stmt_def_func.flags)) {
+        name = "main";
+        is_super_main = true;
+      }
       if (is_string_in_vec("pub", stmt_def_func.flags)) is_pub = true;
       if (is_string_in_vec("extern", stmt_def_func.flags)) is_extern = true;
       if (is_string_in_vec("inline", stmt_def_func.flags)) is_inline = true;
@@ -2149,18 +2267,19 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
 
       if (name == "main") linkage = llvm::Function::ExternalLinkage;
 
-      llvm::Function *func = gen->ModModule->getFunction(name);
+      llvm::Function *func;
+      if (is_super_main) {
+        llvm::FunctionType *func_type_main = llvm::FunctionType::get(
+            llvm::Type::getInt32Ty(TheContext),
+            {llvm::Type::getInt32Ty(TheContext),
+             llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(TheContext))},
+            false);
 
-      if (!func) {
-        func = llvm::Function::Create(func_type, linkage, name,
-                                      gen->ModModule.get());
+        func = llvm::Function::Create(func_type_main, linkage, "main",
+                                      *gen->ModModule);
       } else {
-        if (func->arg_size() != param_types.size() ||
-            func->getReturnType() != ret_type) {
-          add_error("Conflicting declaration of function " + name,
-                    stmt_def_func.line);
-          return;
-        }
+        func =
+            llvm::Function::Create(func_type, linkage, name, *gen->ModModule);
       }
 
       func->addFnAttr("stackrealign");
@@ -2194,8 +2313,39 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
             gen->Builder.CreateAlloca(llvm_type, nullptr, name);
 
         Var var = gen->insert_var(stmt_def_func.ret_var.ident.value.value(),
-                                  nullptr, llvm_type, base_type, var_ptr, true,
+                                  nullptr, llvm_type, base_type,
+                                  stmt_def_func.ret_var.type, var_ptr, true,
                                   gen->current_mode == Mode::Global, "", true);
+      }
+
+      if (is_super_main) {
+        llvm::StructType *struct_ty = gen->m_struct_templates.at("EnvArgs");
+
+        llvm::Value *env_args =
+            *call_func_raw_args("new$MODEnvArgs",
+                                {
+                                    func->getArg(0),  // argc
+                                    func->getArg(1)   // argv
+                                },
+                                gen, stmt_def_func.line, false, true);
+
+        Type built_type = Type{
+            Type::Kind::UserDefined,
+            true,
+            true,
+            false,
+            "EnvArgs",
+            std::make_shared<Type>(Type{Type::Kind::UserDefined, false, false,
+                                        false, "EnvArgs", nullptr})};
+        llvm::AllocaInst *alloca =
+            gen->Builder.CreateAlloca(struct_ty, nullptr, "envargs_alloca");
+        gen->Builder.CreateStore(env_args, alloca);
+        gen->insert_var("args", nullptr,
+                        llvm::PointerType::getUnqual(struct_ty), struct_ty,
+                        built_type, alloca, false, false, "EnvArgs", true);
+        gen->m_vars.at("args").is_owner =
+            true;  // I dunno why, but it always will be passed as an double
+                   // pointer
       }
 
       auto argIt = func->arg_begin();
@@ -2212,8 +2362,9 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
 
         gen->Builder.CreateStore(&*argIt, alloca_inst);
 
-        gen->insert_var(c_arg.name, nullptr, type, base_type, alloca_inst, true,
-                        false, c_arg.arg_type.user_type, true);
+        gen->insert_var(c_arg.name, nullptr, type, base_type, c_arg.arg_type,
+                        alloca_inst, true, false, c_arg.arg_type.user_type,
+                        true);
         if (c_arg.is_ref && !c_arg.is_borrowed)
           gen->m_vars.at(c_arg.name).is_owner = true;
         if (c_arg.is_borrowed) gen->m_vars.at(c_arg.name).is_borrowed = true;

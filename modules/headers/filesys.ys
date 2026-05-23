@@ -37,7 +37,7 @@ impl File {
   fun touch(borrow self: &File) -> bool : "extern";
   fun erase(borrow self: &File) -> bool : "extern";
 
-  fun close(f: &File) : "extern";
+  fun close(borrow f: &File) : "extern";
   fun is_open(borrow f: File) -> int : "extern";
   fun write(borrow f: &File, data: str) -> int : "extern";
   fun read(borrow f: &File) -> str : "extern";
@@ -46,7 +46,7 @@ impl File {
 
   fun ssize() -> int : "extern";
 
-  fun destroy(self: &File) {} #- Just to avoid compiler error
+  fun destroy(self: &File) : "extern"; #- Just to avoid compiler error
 };
 
 struct Dir {

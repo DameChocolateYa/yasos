@@ -17,12 +17,13 @@ impl String {
   fun from(src: str) -> &String : "extern";
 
   fun set(borrow self: &String, src: str) : "extern";
-  fun clone(og: &String) -> &String : "extern";
+  fun clone(borrow og: &String) -> &String : "extern";
   fun clear(borrow self: &String) : "extern";
 
   fun find(borrow s1: &String, s2: str) -> int : "extern";
 
   fun cat(borrow self: &String, s2: str) : "extern";
+  fun cat_char(borrow self: &String, c: char) : "extern";
   fun merge(borrow s1: &String, borrow s2: &String) : "extern";
 
   fun cut_pos(borrow self: &String) : "extern";
@@ -120,6 +121,7 @@ endmod;
 
 declmod integer;
 fun to_str(n: int) -> str : "extern";
+fun to_char(n: i32) -> char : "extern";
 endmod;
 
 declmod decimal;
@@ -130,4 +132,5 @@ declmod character;
 fun cmp(ch1: char, ch2: char) -> int : "extern";
 fun cmp_int(c: char, i: i32) -> i32 : "extern";
 fun to_str(c: char) -> str : "extern";
+fun to_int(c: char) -> i32 : "extern";
 endmod;

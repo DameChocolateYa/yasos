@@ -215,6 +215,11 @@ char *to_str$MODinteger(const int n) {
 }
 
 __attribute__((visibility("default")))
+char to_char$MODinteger(int n) {
+  return (char)n;
+}
+
+__attribute__((visibility("default")))
 char *to_str$MODdecimal(double n, int decimals) {
   char buf[64];
   int len = 0;
@@ -289,11 +294,16 @@ int cmp_int$MODcharacter(const char c, const int i) { return c == i; }
 
 __attribute__((visibility("default")))
 char *to_str$MODcharacter(char c) {
-  char *s = alloc$MODmem(2);
+  char *s = (char *)alloc$MODmem(2);
   s[0] = c;
   s[1] = '\0';
 
   return s;
+}
+
+__attribute__((visibility("default")))
+int to_int$MODcharacter(char c) {
+  return (int)c;
 }
 
 __attribute__((visibility("default")))
@@ -616,7 +626,7 @@ void cat$MODString(String *string, const char *s2) {
   int new_size = string->size + strlen(s2);
   new_size = new_size == 0 ? 1 : new_size;
 
-  string->data = realloc$MODmem(string->data, new_size);
+  string->data = (char *)realloc$MODmem(string->data, new_size);
   if (!string->data) {
     fprintf(stderr, "Could not realloc$MODmemate memory for string concatenation\n");
     return;
@@ -627,10 +637,28 @@ void cat$MODString(String *string, const char *s2) {
 }
 
 __attribute__((visibility("default")))
+void cat_char$MODString(String *self, const char c) {
+  if (!self->data || !self->mem_busy || !c) return;
+
+  int new_size = self->size + 1;
+  new_size = new_size == 0 ? 1 : new_size;
+
+  self->data = (char *)realloc$MODmem(self->data, new_size);
+  if (!self->data) {
+    fprintf(stderr, "Could not realloc$MODmemate memory for string concatenation\n");
+    return;
+  }
+
+  self->data[self->size] = c;
+  self->data[self->size + 1] = '\0';
+  self->size += 1;
+}
+
+__attribute__((visibility("default")))
 void merge$MODString(String *s1, String *s2) {
   if (!s1->data || !s1->mem_busy || !s2->data || !s2->mem_busy) return;
 
-  s1->data = realloc$MODmem(s1->data, s1->size + s2->size);
+  s1->data = (char *)realloc$MODmem(s1->data, s1->size + s2->size);
   if (!s1->data) {
     fprintf(stderr, "Could not realloc$MODmemate memory for string concatenation\n");
     return;

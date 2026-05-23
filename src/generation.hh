@@ -3,31 +3,32 @@
  * Copyright (c) 2025-2026 DameChocolateYa
  * Licensed under the BSD 3-Clause License.
  * See LICENSE file in the project root for full license text.
-*/
+ */
 
 #pragma once
 
-#include <any>
-#include <cstdlib>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Type.h>
+#include <unistd.h>
+
+#include <any>
+#include <cctype>
+#include <cstdlib>
 #include <map>
 #include <set>
 #include <sstream>
 #include <stack>
 #include <string>
-#include <llvm/IR/Type.h>
-#include <unistd.h>
 #include <unordered_map>
 
 #include "error.hh"
 #include "global.hh"
-#include "parser.hh"
-
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
+#include "parser.hh"
 
 static std::string escape_string(const std::string &raw);
 
@@ -81,8 +82,8 @@ extern std::unique_ptr<llvm::Module> TheModule;
 extern llvm::LLVMContext TheContext;
 
 class Generator {
-private:
-public:
+ private:
+ public:
   Mode current_mode = Mode::Global;
   std::string current_func = "";
   Mode mod;
@@ -94,8 +95,10 @@ public:
 
   struct Var {
     Var *parent = nullptr;
-    llvm::Type *type;      // This can be a pointer to i32 for example
-    llvm::Type *base_type; // And this the base, for example i32 (primitive data)
+    llvm::Type *type;  // This can be a pointer to i32 for example
+    llvm::Type
+        *base_type;  // And this the base, for example i32 (primitive data)
+    Type meta_type;  // just compiler's type
     std::string name;
     llvm::Value *var_ptr;
     bool is_mutable;
@@ -110,8 +113,7 @@ public:
     bool destroy_after_scoup = true;
 
     bool operator<(const Var &other) const {
-      if (name != other.name)
-        return name < other.name;
+      if (name != other.name) return name < other.name;
       return parent < other.parent;
     }
   };
@@ -129,7 +131,7 @@ public:
     std::vector<std::pair<std::string, Type>> args;
     Type ret_type;
     bool in_line;
-    std::vector<NodeStmt> code_branch; // just in case it is an inline function
+    std::vector<NodeStmt> code_branch;  // just in case it is an inline function
   };
 
   std::string filename;
@@ -137,21 +139,22 @@ public:
   const NodeProg m_prog;
   std::stringstream m_output;
   size_t m_stack_size = 0;
-  size_t m_stack_size_rel = 0; // Used only for rsp (NOT RBP)
+  size_t m_stack_size_rel = 0;  // Used only for rsp (NOT RBP)
   std::map<std::string, Var> m_vars;
   std::map<std::string, NodeExpr> m_raw_var_exprs;
   std::map<std::string, std::pair<int, int>> m_lists;
   std::unordered_map<std::string, GlobVar> m_glob_vars;
   std::vector<std::string> m_vars_order;
-  std::unordered_map<std::string, std::pair<llvm::Type *, std::vector<llvm::Type *>>>
+  std::unordered_map<std::string,
+                     std::pair<llvm::Type *, std::vector<llvm::Type *>>>
       declared_funcs;
   std::unordered_map<std::string, std::vector<Var>> m_fnc_args;
   std::unordered_map<std::string, Type> m_fnc_custom_ret;
   std::vector<std::string> m_string_literals;
   std::vector<float> m_float_literals;
-  std::stack<
-      std::pair<llvm::BasicBlock *, std::pair<llvm::BasicBlock *, llvm::BasicBlock *>>>
-      stmt_orde; // 1 - start | 2- end | 3- update (for)
+  std::stack<std::pair<llvm::BasicBlock *,
+                       std::pair<llvm::BasicBlock *, llvm::BasicBlock *>>>
+      stmt_orde;  // 1 - start | 2- end | 3- update (for)
   std::unordered_map<std::string, llvm::BasicBlock *> m_declared_blocks;
 
   std::map<std::string, llvm::StructType *> m_struct_templates;
@@ -159,7 +162,7 @@ public:
       m_struct_arg_templates;
 
   std::map<std::string, std::vector<NodeExpr>> m_vars_in_structs;
-  std::vector<NodeExpr> m_struct_temp_args; // shitty way
+  std::vector<NodeExpr> m_struct_temp_args;  // shitty way
 
   std::vector<Func> m_funcs;
   llvm::AllocaInst *return_slot;
@@ -177,20 +180,20 @@ public:
 
   static size_t size_of(Type::Kind type, Generator *gen) {
     switch (type) {
-    case Type::Kind::Int:
-      return 4;
-    case Type::Kind::Str:
-      return 8;
-    case Type::Kind::Float:
-      return 8;
-    case Type::Kind::Any:
-      return 8;
-    case Type::Kind::None:
-      return 1;
-    case Type::Kind::UserDefined:
-      break;
-    default:
-      return 8;
+      case Type::Kind::Int:
+        return 4;
+      case Type::Kind::Str:
+        return 8;
+      case Type::Kind::Float:
+        return 8;
+      case Type::Kind::Any:
+        return 8;
+      case Type::Kind::None:
+        return 1;
+      case Type::Kind::UserDefined:
+        break;
+      default:
+        return 8;
     }
 
     return 8;
@@ -211,26 +214,29 @@ public:
   }
 
   inline Var insert_var(const std::string &name, Var *parent, llvm::Type *type,
-                        llvm::Type *base_type, llvm::Value *var_ptr,
-                        bool is_mutable = true, bool is_globl = false,
-                        std::string struct_template = "", bool is_arg = false) {
-
+                        llvm::Type *base_type, Type meta_type,
+                        llvm::Value *var_ptr, bool is_mutable = true,
+                        bool is_globl = false, std::string struct_template = "",
+                        bool is_arg = false) {
     m_vars.insert({name, Var{.parent = parent,
                              .type = type,
                              .base_type = base_type,
+                             .meta_type = meta_type,
                              .name = name,
                              .var_ptr = var_ptr,
                              .is_mutable = is_mutable,
                              .is_globl = is_globl,
                              .struct_template = struct_template,
-                            .is_arg = is_arg}});
+                             .is_arg = is_arg}});
     m_vars_order.push_back(name);
     return m_vars.at(name);
   }
 
   inline explicit Generator(NodeProg root, std::string filename,
                             std::unique_ptr<llvm::Module> module)
-      : m_prog(std::move(root)), filename(filename), Builder(TheContext),
+      : m_prog(std::move(root)),
+        filename(filename),
+        Builder(TheContext),
         ModModule(std::move(module)) {}
 
   std::vector<std::string> libraries;
@@ -254,9 +260,19 @@ std::string escape_string(const std::string &s) {
       } else if (next == 't') {
         result += '\t';
         ++i;
-      } else if (next == '0') {
-        result += '\0';
-        ++i;
+      } else if (next >= '0' && next <= '7') {
+        int value = 0;
+        size_t j = i + 1;
+        int count = 0;
+
+        while (j < s.size() && count < 3 && s[j] >= '0' && s[j] <= '7') {
+          value = (value << 3) + (s[j] - '0');
+          ++j;
+          ++count;
+        }
+
+        result += static_cast<char>(value);
+        i = j - 1;
       } else if (next == '\\') {
         result += '\\';
         ++i;

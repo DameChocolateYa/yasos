@@ -274,6 +274,11 @@ void seek$MODFile(File *self, int pos, int whence) {
 }
 
 __attribute__((visibility("default")))
+void destroy$MODFile(File *self) {
+  // nothing... Programmer must destroy File throught File::close manually
+}
+
+__attribute__((visibility("default")))
 int ssize$MODFile() {
   return sizeof(File);
 }
