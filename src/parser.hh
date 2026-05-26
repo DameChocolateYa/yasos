@@ -263,7 +263,8 @@ struct NodeStmtVar {
   Type type = Type{Type::Kind::None};
   NodeExpr expr;
   bool has_initial_value = true;
-  bool is_mutable;
+  bool is_mutable = true;
+  bool is_inline = false;
   int line;
 };
 

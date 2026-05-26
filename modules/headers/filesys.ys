@@ -5,6 +5,8 @@
  * See LICENSE file in the project root for full license text.
 *#
 
+$def __YASOS_HEADER__;
+
 #---- FROM OTHER HEADERS ----#
 struct Vec {
   data: &any;
@@ -66,25 +68,27 @@ impl Dir {
 
 #- Fucking useless
 $if __LINUX__
-  cnst F_RDONLY: int = 0;
-  cnst F_WRONLY: int = 1;
-  cnst F_RDWR: int = 2;
-  cnst F_CREAT: int = 64;
-  cnst F_EXCL: int = 128;
-  cnst F_TRUNC: int = 512;
-  cnst F_APPEND: int = 1024;
-  cnst SEEK_SET: int = 0;
-  cnst SEEK_CUR: int = 1;
-  cnst SEEK_END: int = 2;
+  inline cnst F_RDONLY: int = 0;
+  inline cnst F_WRONLY: int = 1;
+  inline cnst F_RDWR: int = 2;
+  inline cnst F_CREAT: int = 64;
+  inline cnst F_EXCL: int = 128;
+  inline cnst F_TRUNC: int = 512;
+  inline cnst F_APPEND: int = 1024;
+  inline cnst SEEK_SET: int = 0;
+  inline cnst SEEK_CUR: int = 1;
+  inline cnst SEEK_END: int = 2;
 $else #- Define anyways
-  cnst F_RDONLY: int = 0;
-  cnst F_WRONLY: int = 0;
-  cnst F_RDWR: int = 0;
-  cnst F_CREAT: int = 0;
-  cnst F_EXCL: int = 0;
-  cnst F_TRUNC: int = 0;
-  cnst F_APPEND: int = 0;
-  cnst SEEK_SET: int = 0;
-  cnst SEEK_CUR: int = 1;
-  cnst SEEK_END: int = 2;
+  inline cnst F_RDONLY: int = 0;
+  inline cnst F_WRONLY: int = 0;
+  inline cnst F_RDWR: int = 0;
+  inline cnst F_CREAT: int = 0;
+  inline cnst F_EXCL: int = 0;
+  inline cnst F_TRUNC: int = 0;
+  inline cnst F_APPEND: int = 0;
+  inline cnst SEEK_SET: int = 0;
+  inline cnst SEEK_CUR: int = 1;
+  inline cnst SEEK_END: int = 2;
 $endif
+
+$undef __YASOS_HEADER__;

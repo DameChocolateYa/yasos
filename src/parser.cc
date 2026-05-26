@@ -857,17 +857,31 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     result = NodeStmt{ .var = NodeStmtLabel{.ident = ident, .line = line} };
   }
   else if (peek().has_value() &&
+    (peek().value().type == TokenType::_inline && peek(1).has_value()
+  && (peek(1).value().type == TokenType::var ||
+      peek(1).value().type == TokenType::cnst)) ||
     (peek().value().type == TokenType::var ||
-      peek().value().type == TokenType::cnst) &&
-    peek(1).has_value() && peek(1).value().type == TokenType::ident) {
+      peek().value().type == TokenType::cnst)) {
+
+    bool is_inline = false;
+    if (peek().value().type == TokenType::_inline) {
+      is_inline = true;
+      consume();
+    }
     int mut = peek().value().type == TokenType::var ? true : false;
     consume();
+
+    if (!peek().has_value() || peek().value().type != TokenType::ident) {
+      add_error("expected ident in variable declaration", line);
+    }
     Token ident = consume();
+
     Token type = Token{ .type = TokenType::null_tok, .value = "", .line = line };
     NodeStmtVar stmt_var;
     stmt_var.ident = ident;
     stmt_var.is_mutable = mut;
     stmt_var.line = line;
+    stmt_var.is_inline = is_inline;
 
     if (peek().has_value() && peek().value().type == TokenType::dp) {
       consume();

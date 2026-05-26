@@ -290,6 +290,10 @@ std::vector<Token> Lexer::tokenize() {
         tokens.push_back({.type = TokenType::_extern, .line = local_lines});
         buf.clear();
         continue;
+      } else if (buf == "inline" || buf == "inl") {
+        tokens.push_back({.type = TokenType::_inline, .line = local_lines});
+        buf.clear();
+        continue;
       } else if (buf == "list") {
         tokens.push_back({.type = TokenType::_list, .line = local_lines});
         buf.clear();

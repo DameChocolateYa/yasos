@@ -13,6 +13,7 @@
 #include "cutype.h"
 #include "mem.h"
 #include <stdarg.h>
+#include <sys/cdefs.h>
 #include "vector.h"
 
 __attribute__((visibility("default")))
@@ -692,8 +693,27 @@ Vec *ABC$MODVec() {
   return abc;
 }
 
+
 __attribute__((visibility("default")))
 Vec *abcABC$MODVec() {
   Vec *abc = new_char$MODVec(52, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z');
+  return abc;
+}
+
+__attribute__((visibility("default")))
+Vec *ABCabc$MODVec() {
+  Vec *abc = new_char$MODVec(52, 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z');
+  return abc;
+}
+
+__attribute__((visibility("default")))
+Vec *AaBbCc$MODVec() {
+  Vec *abc = new_char$MODVec(52, 'A', 'a', 'B', 'b', 'C', 'c', 'D', 'd', 'E', 'e', 'F', 'f', 'G', 'g', 'H', 'h', 'I', 'i', 'J', 'j', 'K', 'k', 'L', 'l', 'M', 'm', 'N', 'n', 'O', 'o', 'P', 'p', 'Q', 'q', 'R', 'r', 'S', 's', 'T', 't', 'U', 'u', 'V', 'v', 'W', 'w', 'X', 'x', 'Y', 'y', 'Z', 'z');
+  return abc;
+}
+
+__attribute__((visibility("default")))
+Vec *aAbBcC$MODVec() {
+  Vec *abc = new_char$MODVec(52, 'a', 'A', 'b', 'B', 'c', 'C', 'd', 'D', 'e', 'E', 'f', 'F', 'g', 'G', 'h', 'H', 'i', 'I', 'j', 'J', 'k', 'K', 'l', 'L', 'm', 'M', 'n', 'N', 'o', 'O', 'p', 'P', 'q', 'Q', 'r', 'R', 's', 'S', 't', 'T', 'u', 'U', 'v', 'V', 'w', 'W', 'x', 'X', 'y', 'Y', 'z', 'Z');
   return abc;
 }

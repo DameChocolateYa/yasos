@@ -51,6 +51,8 @@ impl String {
   fun lower(borrow self: &String) : "extern";
   fun upper(borrow self: &String) : "extern";
   fun trim(borrow self: &String) : "extern";
+  fun reverse(borrow self: &String) : "extern";
+  fun is_palindrome(borrow self: &String) -> bool : "extern";
 
   fun ch(borrow self: &String) -> char : "extern";
   fun is_whitespace(borrow self: &String) -> int : "extern";
@@ -113,9 +115,9 @@ fun get_splited(string: str, delimiter: str, bufsize: &int) -> &str : "extern";
 
 fun cpy(dest: &str, src: str) : "extern";
 
-cnst STR_EMPTY: str = "";
-cnst STR_WHITE: str = " ";
-cnst STR_NULLT: str = "\0";
+inline cnst STR_EMPTY: str = "";
+inline cnst STR_WHITE: str = " ";
+inline cnst STR_NULLT: str = "\0";
 
 endmod;
 

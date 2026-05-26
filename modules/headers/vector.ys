@@ -91,7 +91,10 @@ impl Vec {
 
   fun ssize() -> int : "extern";
 
-  fun abc() -> &Vec;
-  fun ABC() -> &Vec;
-  fun abcAbc() -> &Vec;
+  fun abc() -> &Vec : "extern";
+  fun ABC() -> &Vec : "extern";
+  fun abcABC() -> &Vec : "extern";
+  fun ABCabc() -> &Vec : "extern";
+  fun AaBbCc() -> &Vec : "extern";
+  fun aAbBcC() -> &Vec : "extern";
 };

@@ -110,6 +110,7 @@ enum class TokenType {
   _leave,
   _pub,
   _extern,
+  _inline,
   _list,
   _struct,
   _impl,

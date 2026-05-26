@@ -8,10 +8,13 @@
 #- sin, cos and tan functions wont work properly by the moment, their use is not recommended
 #- It is recommended to use their equivalent in LIBC
 
+inline cnst PI = 3.141592;
+inline cnst E = 2.718281;
+
 declmod math;
 
-fun PI() -> double : "extern";
-fun e() -> double : "extern";
+#-fun PI() -> double : "extern";
+#-fun e() -> double : "extern";
 
 fun sqrt(x: double) -> double : "extern";
 fun pow(base: double, exponent: int) -> double : "extern";

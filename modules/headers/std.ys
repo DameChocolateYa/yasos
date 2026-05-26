@@ -69,12 +69,12 @@ fun exit(status: int) -> none;
 #- Constant are filled with no important values
 #- Because their declaration is al
 
-cnst OK: int = 0;
-cnst FAIL: int = 1;
-cnst ERR: int = -1;
-cnst NOT_FOUND: int = 127;
+inline cnst OK: int = 0;
+inline cnst FAIL: int = 1;
+inline cnst ERR: int = -1;
+inline cnst NOT_FOUND: int = 127;
 
-cnst ZERO: int = 0;
+inline cnst ZERO: int = 0;
 
 endmod;
 

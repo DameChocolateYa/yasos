@@ -156,7 +156,7 @@ void bufcut$MODstring(char **str_ptr, const char *sub) {
   *str_ptr = nuevo;
 }
 
-extern char *sub$MODstring(const char *string, int begin, int end);
+char *sub$MODstring(const char *string, int begin, int end) {return "";}
 
 void bufsub$MODstring(const char **s1, int begin, int end) {
   if (!s1)
@@ -924,6 +924,41 @@ void trim$MODString(String *self) {
     memmove(self->data, start, (end - start + 2));
 
   self->size = strlen(self->data);
+}
+
+__attribute__((visibility("default")))
+void reverse$MODString(String *self) {
+  if (!self || !self->data) return;
+
+  char *start = self->data;
+  char *end = self->data + self->size - 1;
+  char temp;
+
+  while (start < end) {
+    temp = *start;
+    *start = *end;
+    *end = temp;
+    start++;
+    end--;
+  }
+}
+
+__attribute__((visibility("default")))
+bool is_palindrome$MODString(String *self) {
+  if (!self || !self->data) return false;
+
+  int left = 0;
+  int right = self->size - 1;
+
+  while (left < right) {
+    if (self->data[left] != self->data[right])
+      return false;
+    
+    left++;
+    right--;
+  }
+
+  return true;
 }
 
 __attribute__((visibility("default")))

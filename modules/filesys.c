@@ -18,6 +18,8 @@
 #include "string.h"
 #include <string.h>
 
+#define YSEXPORT __attribute__((visibility("default")))
+
 typedef struct {
   char *path;
   int fd;

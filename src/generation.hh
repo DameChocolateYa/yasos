@@ -80,6 +80,7 @@ typedef struct {
 
 extern std::unique_ptr<llvm::Module> TheModule;
 extern llvm::LLVMContext TheContext;
+extern bool global_init_block_existence;
 
 class Generator {
  private:
@@ -106,11 +107,14 @@ class Generator {
 
     bool is_owner = false;
     bool is_borrowed = false;
-    bool moved = false;
+    bool moved = true; // true by default beacause then we can give error if programmer tries to use an uninitialized variable
 
     std::string struct_template = "";
     bool is_arg = false;
     bool destroy_after_scoup = true;
+
+    bool is_inline;
+    std::optional<NodeExpr> inline_expr;
 
     bool operator<(const Var &other) const {
       if (name != other.name) return name < other.name;
@@ -168,6 +172,7 @@ class Generator {
   llvm::AllocaInst *return_slot;
   bool returned = false;
   llvm::BasicBlock *current_clean_block;
+  llvm::BasicBlock *global_init_block;
 
   bool stack_aligned_in_call = false;
 
@@ -226,6 +231,8 @@ class Generator {
                              .var_ptr = var_ptr,
                              .is_mutable = is_mutable,
                              .is_globl = is_globl,
+                             .is_owner = false,
+                             .is_borrowed = false,
                              .struct_template = struct_template,
                              .is_arg = is_arg}});
     m_vars_order.push_back(name);
