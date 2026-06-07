@@ -21,8 +21,8 @@ enum WarnType {
 };
 
 extern std::unordered_map<ErrType, std::string> error_types;
-extern std::unordered_map<ErrType, std::string> warning_types;
+extern std::unordered_map<std::string, int> warning_types;
 
 void add_error(const std::string &msg, int line = -1, ErrType type = ErrType::DefErr);
 void add_warning(const std::string &msg, int line = -1,
-                 WarnType type = WarnType::DefWarn);
+                 bool repeat = true);

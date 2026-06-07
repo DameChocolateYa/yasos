@@ -1,0 +1,106 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "YASOS",
+	"patterns": [
+		{
+			"include": "#specials"
+		},
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#types"
+		},
+		{
+			"include": "#userTypes"
+		},
+		{
+			"include": "#functions"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#numbers"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [
+				{
+					"name": "keyword.control.yasos",
+					"match": "\\b(if|while|loop|for|foreach|in|ret|elif|else|fun|var|const|let|cnst|struct|goto|nmem|declmod|endmod|import|use|impl|inc|dec|borrow|aloc|stop|continue|extern|pub|inline)\\b|\\$def|\\$undef|\\$if|\\$elif|\\$else|\\$endif"
+				}
+			]
+		},
+
+		"types": {
+			"patterns": [
+				{
+					"name": "storage.type.yasos",
+					"match": "\\b(i8|i16|i32|i64|u8|u16|u32|u64|f32|f64|bool|char|str|none|any)\\b"
+				}
+			]
+		},
+
+		"userTypes": {
+			"patterns": [
+				{
+					"name": "entity.name.type.struct.yasos",
+					"match": "\\b(?<=struct\\s)([A-Z][A-Za-z0-9_]*)\\b"
+				},
+				{
+					"name": "support.type.yasos",
+					"match": "\\b[A-Z][A-Za-z0-9_]*\\b"
+				}
+			]
+		},
+
+		"functions": {
+			"patterns": [
+				{
+					"name": "entity.name.function.yasos",
+					"match": "\\b(?<=fun\\s)([a-zA-Z_][A-Za-z0-9_]*)\\b"
+				},
+				{
+					"name": "support.function.call.yasos",
+					"match": "\\b([a-zA-Z_][A-Za-z0-9_]*)\\s*(?=\\()"
+				}
+			]
+		},
+		"strings": {
+			"name": "string.quoted.double.yasos",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.yasos",
+					"match": "\\\\."
+				}
+			]
+		},
+
+		"numbers": {
+			"patterns": [
+				{
+					"name": "constant.numeric.float.yasos",
+					"match": "\\b-?[0-9]+\\.[0-9]+\\b"
+				},
+				{
+					"name": "constant.numeric.integer.yasos",
+					"match": "\\b-?[0-9]+\\b"
+				}
+			]
+		},
+
+		"specials": {
+			"patterns": [
+				{
+					"name": "constant.language.null.yasos",
+					"match": "\\b(nil|true|false)\\b"
+				}
+			]
+		}
+	},
+	"scopeName": "source.ys"
+}

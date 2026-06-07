@@ -24,6 +24,6 @@ set(CMAKE_CXX_STANDARD 23)
 
 set(CMAKE_CXX_FLAGS "-no-pie -g -O2")
 
-add_executable(yasos src/error.cc src/lexer.cc src/parser.cc src/generation.cc src/main.cc src/builtin_functions.cc)
+add_executable(yasos src/error.cc src/lexer.cc src/parser.cc src/filesys.cc src/generation.cc src/main.cc src/builtin_functions.cc)
 target_include_directories(yasos PRIVATE ${LLVM_INCLUDE_DIRS})
 target_link_libraries(yasos PRIVATE LLVM)

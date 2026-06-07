@@ -20,8 +20,12 @@ typedef struct {
 } Vec;
 
 Vec *new$MODVec(int elem_size);
+void push_int$MODVec(Vec *self, int n);
 void push_string$MODVec(Vec *vec, String *val);
+void push_vec$MODVec(Vec *self, Vec *vec);
+int get_int$MODVec(Vec *self, int index);
 String *get_string$MODVec(Vec *vec, int index);
+void erase_all$MODVec(Vec *self);
 void destroy$MODVec(Vec *vec);
 
 #endif

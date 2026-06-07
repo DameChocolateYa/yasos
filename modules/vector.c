@@ -179,11 +179,6 @@ void erase_at$MODVec(Vec *vec, int index) {
 
 __attribute__((visibility("default")))
 void erase_all$MODVec(Vec *vec) {
-  if (!vec->data || !vec->is_membusy) {
-    return;
-  }
-
-  memset((char *)vec->data, 0xDD, (vec->size - 1) * vec->elem_size);
   vec->size = 0;
 }
 
@@ -223,6 +218,11 @@ void push_double$MODVec(Vec *vec, double val) {
 __attribute__((visibility("default")))
 void push_char$MODVec(Vec *vec, char val) {
   push$MODVec(vec, &val);
+}
+
+__attribute__((visibility("default")))
+void push_vec$MODVec(Vec *self, Vec *val) {
+  push_ptr$MODVec(self, val);
 }
 
 __attribute__((visibility("default")))
@@ -669,6 +669,16 @@ Vec *clone$MODVec(Vec *og) {
   cloned->is_membusy = true;
 
   return cloned;
+}
+
+__attribute__((visibility("default")))
+void *iterate$MODVec(Vec *self, int *i) {
+  if (*i >= self->size) {
+    *i = -1;
+    return NULL;
+  }
+
+  return get$MODVec(self, *i);
 }
 
 __attribute__((visibility("default")))

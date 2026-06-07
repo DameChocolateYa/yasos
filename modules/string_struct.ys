@@ -51,8 +51,8 @@ struct Vec {
 
 impl String {
   fun cmp(self: &String, string: &String) -> int {
-    var s1: String = *self;
-    var s2: String = *string;
+    let s1: String = *self;
+    let s2: String = *string;
 
     ret s1.data == s2.data and s1.mem_busy == s2.mem_busy and s1.size == s2.size;
   } pub;

@@ -68,27 +68,27 @@ impl Dir {
 
 #- Fucking useless
 $if __LINUX__
-  inline cnst F_RDONLY: int = 0;
-  inline cnst F_WRONLY: int = 1;
-  inline cnst F_RDWR: int = 2;
-  inline cnst F_CREAT: int = 64;
-  inline cnst F_EXCL: int = 128;
-  inline cnst F_TRUNC: int = 512;
-  inline cnst F_APPEND: int = 1024;
-  inline cnst SEEK_SET: int = 0;
-  inline cnst SEEK_CUR: int = 1;
-  inline cnst SEEK_END: int = 2;
+  inline const F_RDONLY: int = 0;
+  inline const F_WRONLY: int = 1;
+  inline const F_RDWR: int = 2;
+  inline const F_CREAT: int = 64;
+  inline const F_EXCL: int = 128;
+  inline const F_TRUNC: int = 512;
+  inline const F_APPEND: int = 1024;
+  inline const SEEK_SET: int = 0;
+  inline const SEEK_CUR: int = 1;
+  inline const SEEK_END: int = 2;
 $else #- Define anyways
-  inline cnst F_RDONLY: int = 0;
-  inline cnst F_WRONLY: int = 0;
-  inline cnst F_RDWR: int = 0;
-  inline cnst F_CREAT: int = 0;
-  inline cnst F_EXCL: int = 0;
-  inline cnst F_TRUNC: int = 0;
-  inline cnst F_APPEND: int = 0;
-  inline cnst SEEK_SET: int = 0;
-  inline cnst SEEK_CUR: int = 1;
-  inline cnst SEEK_END: int = 2;
+  inline const F_RDONLY: int = 0;
+  inline const F_WRONLY: int = 0;
+  inline const F_RDWR: int = 0;
+  inline const F_CREAT: int = 0;
+  inline const F_EXCL: int = 0;
+  inline const F_TRUNC: int = 0;
+  inline const F_APPEND: int = 0;
+  inline const SEEK_SET: int = 0;
+  inline const SEEK_CUR: int = 1;
+  inline const SEEK_END: int = 2;
 $endif
 
 $undef __YASOS_HEADER__;

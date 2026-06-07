@@ -11,7 +11,7 @@
 *#
 
 fun main {
-	var x: i32 = 1;
+	let x: i32 = 1;
 	
 conditional:
 	if x > 5 {goto end;}

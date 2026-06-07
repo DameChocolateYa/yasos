@@ -1435,7 +1435,7 @@ std::optional<NodeStmt> Parser::parse_stmt() {
     while (peek().has_value() && peek().value().type != TokenType::l_key) {
       if (index_status != 2) {
         auto e = parse_expr();
-        if (e.has_value() && index_status != 2) {
+        if (e.has_value() && index_status != 2 && peek().has_value()) {
           condition = *e;
           if ((index_status != 2) && !peek().has_value() ||
             peek().value().type != TokenType::semi) {
@@ -1521,9 +1521,83 @@ std::optional<NodeStmt> Parser::parse_stmt() {
                                          .update = update,
                                          .code_branch = code_branch,
                                          .line = line} };
-  }
+  } else if (peek().has_value() && peek().value().type == TokenType::_foreach) {
+    need_semi = false;
+    NodeStmtForeach stmt;
+    stmt.line = peek().value().line;
 
-  else if (peek().has_value() && peek().value().type == TokenType::use &&
+    consume();
+
+    if (!peek().has_value() || peek().value().type != TokenType::ident) {
+      add_error("expected identifier in foreach", line);
+      result = NodeStmt{.var = stmt, .line = line};
+      goto parse_stmt_error;
+    }
+
+    Token ident = consume();
+    stmt.ident = ident;
+    if (!peek().has_value() || peek().value().type != TokenType::dp || !peek(1).has_value()) {
+      add_error("expected type in assignation variable in foreach", line);
+      result = NodeStmt{.var = stmt, .line = line};
+      goto parse_stmt_error;
+    }
+    consume();
+
+    stmt.type = parse_type();
+    consume();
+
+    if (!peek().has_value() || peek().value().type != TokenType::_in) {
+      add_error("expected 'in' in foreach", line);
+      result = NodeStmt{.var = stmt, .line = line};
+      goto parse_stmt_error;
+    }
+
+    consume();
+
+    auto expr = parse_expr();
+    if (!expr.has_value()) {
+      add_error("invalid Expression in foreach", line);
+      result = NodeStmt{.var = stmt, .line = line};
+      goto parse_stmt_error;
+    }
+    stmt.value = expr.value();
+
+    std::vector<NodeStmt> code_branch;
+    if (!peek().has_value()) {
+      add_error("Expected code block or ';'", line);
+      result = NodeStmt{.var = stmt, .line = line};
+      goto parse_stmt_error;
+    }
+
+    need_semi = true;
+    if (peek().value().type == TokenType::l_key) {
+      consume(); // {
+      while (peek().has_value() && peek().value().type != TokenType::r_key) {
+        auto stmt_ins = parse_stmt();
+        if (!stmt_ins.has_value()) {
+          add_error("malformed stmt in foreach", line);
+          result = NodeStmt{.var = stmt, .line = line};
+          goto parse_stmt_error;
+        }
+        code_branch.push_back(*stmt_ins);
+      }
+      if (!peek().has_value() || peek().value().type != TokenType::r_key) {
+        add_error("expected '}' to end loop block", line);
+        result = NodeStmt{.var = stmt, .line = line};
+        goto parse_stmt_error;
+      }
+      consume();
+    }
+    else if (peek().value().type != TokenType::semi) {
+      add_error("expected code block or ';'", line);
+      result = NodeStmt{.var = stmt, .line = line};
+      goto parse_stmt_error;
+    }
+
+    stmt.code_branch = code_branch;
+    need_semi = false;
+    result = NodeStmt{.var = stmt, .line = line};
+  } else if (peek().has_value() && peek().value().type == TokenType::use &&
     peek(1).has_value() && peek(1).value().type == TokenType::str_lit) {
     int line = peek().value().line;
     consume();
@@ -2198,6 +2272,10 @@ std::optional<NodeStmt> Parser::parse_stmt() {
   }
   need_semi = true;
   return result;
+
+parse_stmt_error:
+  // Error parsing stmt
+  return std::nullopt;
 }
 
 std::optional<NodeProg> Parser::parse_prog(bool parse_only_one_expr) {

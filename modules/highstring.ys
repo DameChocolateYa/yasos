@@ -59,10 +59,10 @@ fun new_union(dest: str, s1: str, s2: str) -> none {
 } pub;
 
 fun get_cat(s1: str, s2: str) -> str {
-  var len1: int = string::len(s1);
-  var len2: int = string::len(s2);
+  let len1: int = string::len(s1);
+  let len2: int = string::len(s2);
 
-  var res: &str = mem::alloc(len1 + len2 + 1);
+  let res: &str = mem::alloc(len1 + len2 + 1);
   *res = "";
 
   memcpy(res, s1, len1);
@@ -73,10 +73,10 @@ fun get_cat(s1: str, s2: str) -> str {
 } pub;
 
 fun cat(s1: &str, s2: str) {
-  var len1: int = string::len(s1);
-  var len2: int = string::len(s2);
+  let len1: int = string::len(s1);
+  let len2: int = string::len(s2);
 
-  var new: &str = mem::alloc(len1 + len2 + 1);
+  let new: &str = mem::alloc(len1 + len2 + 1);
   string::cpy(new, "");
 
   memcpy(new, s1, len1);
@@ -87,14 +87,14 @@ fun cat(s1: &str, s2: str) {
 } pub;
 
 fun find(string: str, substring: str) -> int {
-  var n: int = string::len(string);
-  var m: int = string::len(substring);
+  let n: int = string::len(string);
+  let m: int = string::len(substring);
 
   if m > n { ret -1; }
 
-  for var i: int = 0; i <= n - m; inc i {  #- Only go where substring can fit
-    var matched: int = true;
-    for var j: int = 0; j < m; inc j {
+  for let i: int = 0; i <= n - m; inc i {  #- Only go where substring can fit
+    let matched: int = true;
+    for let j: int = 0; j < m; inc j {
       if !character::cmp(string[i + j], substring[j]) {
         matched = false;
         stop;
@@ -107,10 +107,10 @@ fun find(string: str, substring: str) -> int {
 } pub;
 
 fun cut(buf: str, begin: int, end: int) -> none {
-  var lenght: int = string::len(buf);
+  let lenght: int = string::len(buf);
   if begin > lenght or end - 1 > lenght {leave;}
 
-  for var i: int = begin; i < end; inc i {
+  for let i: int = begin; i < end; inc i {
     buf[i] = '';
   }
 
@@ -118,22 +118,22 @@ fun cut(buf: str, begin: int, end: int) -> none {
 } pub;
 
 fun cut_substring(string: str, substr: str) -> none {
-  var loc: int = string::find(string, substr);
+  let loc: int = string::find(string, substr);
   if loc == -1 {leave;}
 
-  for var i: int = loc; i < loc + string::len(substr); inc i {
+  for let i: int = loc; i < loc + string::len(substr); inc i {
     string[i] = '';
   }
 } pub;
 
 fun sub(string: str, begin: int, end: int) -> str {
-  var lenght: int = string::len(string);
+  let lenght: int = string::len(string);
   if begin > lenght or end > lenght {ret "(null)";}
 
-  var res: str = "aaaaaaaaaaaaaaaaaaaaaaaaaa";
+  let res: str = "aaaaaaaaaaaaaaaaaaaaaaaaaa";
   res = "";
 
-  for var i: int = begin - 1; i < end; inc i {
+  for let i: int = begin - 1; i < end; inc i {
     *res = string[i];
     inc res;
   }
@@ -145,10 +145,10 @@ fun sub(string: str, begin: int, end: int) -> str {
 
 fun to_upper(string: str) -> str {
   cnst len: int = string::len(string);
-  var result: str = "";
+  let result: str = "";
 
-  for var i: int = 0; i < len; i += 1 {
-    var c: str = string::sub(string, i, i + 1);
+  for let i: int = 0; i < len; i += 1 {
+    let c: str = string::sub(string, i, i + 1);
 
     if string::cmp(c, "a") {result = string::get_cat(result, "A");}
     elif string::cmp(c, "b") {result = string::get_cat(result, "B");}
@@ -185,10 +185,10 @@ fun to_upper(string: str) -> str {
 
 fun to_lower(string: str) -> str {
   cnst len: int = string::len(string);
-  var result: str = "";
+  let result: str = "";
 
-  for var i: int = 0; i < len; i += 1 {
-    var c: str = string::sub(string, i, i + 1);
+  for let i: int = 0; i < len; i += 1 {
+    let c: str = string::sub(string, i, i + 1);
 
     if string::cmp(c, "A") {result = string::get_cat(result, "a");}
     elif string::cmp(c, "B") {result = string::get_cat(result, "b");}
@@ -224,11 +224,11 @@ fun to_lower(string: str) -> str {
 } pub;
 
 fun is_whitespace(s: str) -> int {
-  var len: int = string::len(s);
-  var is_whitespace: int = true;
+  let len: int = string::len(s);
+  let is_whitespace: int = true;
 
-  for var i: int = 0; i < len; i += 1 {
-    var c: str = string::sub(s, i, i + 1);
+  for let i: int = 0; i < len; i += 1 {
+    let c: str = string::sub(s, i, i + 1);
     if (!string::cmp(c, " ")) {is_whitespace = false;}
   }
 

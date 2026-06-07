@@ -87,6 +87,7 @@ impl Vec {
   fun cpy_xelem_in(borrow dest: &Vec, borrow src: &Vec, n_par: int, undefan) : "extern";
 
   fun clone(borrow self: &Vec) -> &Vec : "extern";
+  fun iterate(borrow self: &Vec, i: &i32) -> &any : "extern";
   fun size(borrow self: &Vec) -> int : "extern";
 
   fun ssize() -> int : "extern";

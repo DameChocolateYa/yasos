@@ -15,8 +15,8 @@ fun example(x: &i32, y: i32) {
 }
 
 fun main {
-	var x: i32 = 3;
-	var y: &i32 = &x;
+	let x: i32 = 3;
+	let y: &i32 = &x;
 
 	"%p\n", y;
 	"%d\n", *y;

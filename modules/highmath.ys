@@ -9,19 +9,22 @@ use "headers/std.ys";
 
 #- Can not use PI due to the problem importing constants
 declmod math;
+
+fun sqrt(x: double) -> double : "extern"; #- defined in C
+
 fun pow(base: double, exponent: int) -> double {
-  var result: double = 1.;
+  let result: double = 1.;
   
   if (exponent == 0) {
     ret .0;
   }
 
   if exponent > 0 {
-    for var i: int = 0; i < exponent; inc i {
+    for let i: int = 0; i < exponent; inc i {
       result *= base;
     }
   } else {
-    for var i: int = 0; i < -exponent; inc i {
+    for let i: int = 0; i < -exponent; inc i {
       result *= base;
     }
     result = 1. / result;
@@ -36,10 +39,10 @@ fun ln(x: double) -> double {
     ret .0;
   }
 
-  var LN2: double = 0.6931471805599453;
+  let LN2: double = 0.6931471805599453;
 
-  var n: int = 0;
-  var a: double = x;
+  let n: int = 0;
+  let a: double = x;
 
   while a > 1.5 {
     a /= 2.;
@@ -50,12 +53,12 @@ fun ln(x: double) -> double {
     dec n;
   }
 
-  var y: double = (a - 1.) / (a + 1.);
-  var y2: double = y * y;
-  var result: double = .0;
-  var term: double = y;
+  let y: double = (a - 1.) / (a + 1.);
+  let y2: double = y * y;
+  let result: double = .0;
+  let term: double = y;
 
-  for var k: int = 1; k <= 50; inc k {
+  for let k: int = 1; k <= 50; inc k {
     result += term / (2. * k - 1.);
     term *= y2;
   }
@@ -72,8 +75,8 @@ fun log10(x: double) -> double {
 } pub;
 
 fun fact(x: int) -> int {
-  var result: int = 1;
-  for var i: int = x; i >= 1; dec i {
+  let result: int = 1;
+  for let i: int = x; i >= 1; dec i {
     result *= i;
   }
 
@@ -81,21 +84,21 @@ fun fact(x: int) -> int {
 } pub;
 
 fun factd(x: int) -> double {
-  var result: double = 1.0;
-  for var i: int = x; i >= 1; dec i {
+  let result: double = 1.0;
+  for let i: int = x; i >= 1; dec i {
     result *= i;
   }
   ret result;
 } pub;
 
 fun sin(angle: double) -> double {
-  var result: double = 0.;
-  var term: double = angle;
+  let result: double = 0.;
+  let term: double = angle;
 
-  var n: double = 0.;
+  let n: double = 0.;
   while n < 15 {
     result += term;
-	var denom: double = (2.*n + 2.) * (2.*n + 3.);
+	let denom: double = (2.*n + 2.) * (2.*n + 3.);
 	term *= (-1. * angle * angle) / denom;
     n += 1.;
   }
@@ -104,14 +107,14 @@ fun sin(angle: double) -> double {
 } pub;
 
 fun cos(angle: double) -> double {
-  var result: double = 0.0;
-  var term: double = 1.0;
+  let result: double = 0.0;
+  let term: double = 1.0;
 
-  var n: double = 0.0;
+  let n: double = 0.0;
   while n < 15 {
   	result += term;
-  	var denom: double = (2.*n + 1.) * (2.*n + 2.);
-  	var frac: double = (-1.0 * angle * angle) / denom;
+  	let denom: double = (2.*n + 1.) * (2.*n + 2.);
+  	let frac: double = (-1.0 * angle * angle) / denom;
   	term *= frac;
   	n += 1.;
   }
@@ -120,8 +123,8 @@ fun cos(angle: double) -> double {
 } pub;
 
 fun tan(angle: double) -> double {
-  var s: double = math::sin(angle);
-  var c: double = math::cos(angle);
+  let s: double = math::sin(angle);
+  let c: double = math::cos(angle);
 
   if c == 0. {
     std::perror("ERROR: undefined tan\n");
@@ -132,7 +135,7 @@ fun tan(angle: double) -> double {
 } pub;
 
 fun cosec(angle: double) -> double {
-  var s: double = math::sin(angle);
+  let s: double = math::sin(angle);
 
   if s == 0. {
   	std::perror("ERROR: undefined sin\n");
@@ -143,7 +146,7 @@ fun cosec(angle: double) -> double {
 } pub;
 
 fun sec(angle: double) -> double {
-  var c: double = math::cos(angle);
+  let c: double = math::cos(angle);
 
   if c == 0. {
   	std::perror("ERROR: undefined cos\n");
@@ -154,7 +157,7 @@ fun sec(angle: double) -> double {
 } pub;
 
 fun cotan(angle: double) -> double {
-  var t: double = math::tan(angle);
+  let t: double = math::tan(angle);
 
   if t == 0.0 {
   	std::perror("ERROR: undefined tan\n");
@@ -171,4 +174,17 @@ fun deg2rad(deg: double) -> double {
 fun rad2deg(rad: double) -> double {
   ret 180. * rad / 3.141592;
 } pub;
+
+
+fun ec_cuad(a: double, b: double, c: double, return_first: bool) -> double {
+  let x1: double = (-(b) + math::sqrt(math::pow(b, 2) - 4. * a * c)) / (2. * a);
+  let x2: double = (-(b) - math::sqrt(math::pow(b, 2) - 4. * a * c)) / (2. * a);
+
+  if return_first {
+      ret x1;
+  }
+
+  ret x2;
+} pub;
+
 endmod;

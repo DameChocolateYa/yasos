@@ -24,7 +24,7 @@ fun main {
 	 * while String::new just create a String with no content
 	*#
 	
-	var s: &String = String::from("Hello");
+	let s: &String = String::from("Hello");
 
 	#- String::cat to use with a str, String::merge with a String
 	s.cat(" world!");
@@ -32,7 +32,7 @@ fun main {
 	"%s\n", s.to_str();
 
 	"-----\n";
-	for var i: i32 = 0; i < s.size; inc i {
+	for let i: i32 = 0; i < s.size; inc i {
 		"%c\n", s.ch(i);
 	}
 

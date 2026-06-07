@@ -8,11 +8,11 @@
 use "headers/string.ys";
 
 fun bytostr(s: str, size: int) -> str {
-  var result: str = "";
+  let result: str = "";
 
-  for var i: int = 0; i < size; inc i {
+  for let i: int = 0; i < size; inc i {
     result = string::get_cat(result, string::sub(s, i, i + 1));
   }
 
   ret result;
-} pub;
+} : "pub";

@@ -10,6 +10,7 @@
 #include "global.hh"
 #include "lexer.hh"
 #include "parser.hh"
+#include "filesys.hh"
 
 #include <cctype>
 #include <cstdlib>
@@ -17,6 +18,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <llvm/IR/LLVMContext.h>
 #include <llvm/Support/raw_ostream.h>
 #include <memory>
 #include <optional>
@@ -121,7 +123,11 @@ int main(int argc, char **argv) {
   std::string output_file = "out"; // -o
   bool generate_executable = false;
   bool print_link_command = false;
+  bool force_output = false;
   std::vector<std::string> input_files;
+  std::vector<std::string> include_directories = {get_current_path(), "/usr/include", "/usr/include/ysinclude/"};
+  std::vector<std::string> libraries; // libc included in g++ and libys included at linking time
+  std::vector<std::string> lib_paths;
 
   init_debug();
 
@@ -143,6 +149,14 @@ int main(int argc, char **argv) {
       keep_ll = true;
     } else if (arg == "--print-link-command") {
       print_link_command = true;
+    } else if (arg == "--force-output") {
+      force_output = true;
+    } else if (arg.rfind("-I", 0) == 0) {
+      include_directories.push_back(arg.substr(2, arg.size()));
+    } else if (arg.rfind("-l", 0) == 0) {
+      libraries.push_back(arg); // -l stills there so there's not need to add it later at linking time
+    } else if (arg.rfind("-L", 0) == 0) {
+      lib_paths.push_back(arg);
     } else {
       input_files.emplace_back(arg);
     }
@@ -160,11 +174,12 @@ int main(int argc, char **argv) {
   std::unordered_set<std::string> seen_libraries;
   std::unordered_set<std::string> seen_libpaths;
 
+  bool found_main = false;
   for (size_t index = 0; index < input_files.size(); ++index) {
     const auto &filename = input_files[index];
 
     if (!filename.ends_with(".ys")) {
-      std::cerr << "Skipping non-.bp file: " << filename << "\n";
+      std::cerr << "Skipping non-.ys file: " << filename << "\n";
       continue;
     }
 
@@ -201,19 +216,17 @@ int main(int argc, char **argv) {
     // std::string gen_name = (index == 0) ? "main" : base_name;
     std::string gen_name = base_name;
 
+    std::unique_ptr<llvm::Module> TheModule =
+    std::make_unique<llvm::Module>(filename, TheContext);
     Generator generator(program.value(), gen_name, std::move(TheModule));
+    generator.include_directories = include_directories;
     generator.gen_prog();
     
-    bool found_main = false;
     for (const auto &func : generator.declared_funcs) {
       if (func.first == "main") {
         found_main = true;
         break;
       }
-    }
-    if (!found_main && generate_executable) {
-      add_error("main function not found, needed for executable start point", -1);
-      exit(1);
     }
 
     std::string ll_file = base_name + ".ll";
@@ -273,6 +286,15 @@ int main(int argc, char **argv) {
     current_line = 1;
   }
 
+  if (!found_main && generate_executable && !generate_shared) {
+    add_error("main function not found, needed for executable start point", -1);
+    exit(1);
+  }
+
+  if (m_preprocessor_bool.contains("__YASOS_EXPERIMENTAL_MEMORY_MANAGEMENT__")) {
+    add_warning("compiled with experimental memory management option, undefined behaviour could take place, its use it's only recommended in small codes/projects", -1);
+  }
+
   if (generate_asm_only || compile_only) {
     LOG(__FILE__, "Compilation finished without linking.");
     return EXIT_SUCCESS;
@@ -306,10 +328,18 @@ int main(int argc, char **argv) {
     link_command += "-l" + lib + " ";
   }
 
+  for (const auto &path : lib_paths) {
+    link_command += path + " ";
+  }
+  
+  for (const auto &lib : libraries) {
+    link_command += lib + " ";
+  }
+
   link_command += "-L/usr/lib/yslib -lys -O2 -Wl,-rpath=" + func_dir;
   if (print_link_command) std::cerr << "LINK COMMAND: " << link_command << "\n";
 
-  if (!compiled_successfully) {
+  if (!compiled_successfully && !force_output) {
     std::cerr << "\nErrors in compilation\n";
     return EXIT_FAILURE;
   }

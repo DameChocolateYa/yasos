@@ -10,6 +10,7 @@
 #include <llvm/Analysis/InstructionSimplify.h>
 #include <llvm/Analysis/SimplifyQuery.h>
 #include <llvm/Analysis/TargetLibraryInfo.h>
+#include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Constant.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DataLayout.h>
@@ -49,6 +50,7 @@
 #include <variant>
 
 #include "error.hh"
+#include "filesys.hh"
 #include "global.hh"
 #include "lexer.hh"
 #include "parser.hh"
@@ -69,9 +71,6 @@ std::unordered_map<std::string, std::vector<Token>> m_preprocessor;
 std::map<std::string, NodeExpr> m_raw_var_exprs;
 
 llvm::LLVMContext TheContext;
-std::unique_ptr<llvm::Module> TheModule =
-    std::make_unique<llvm::Module>("MainModule", TheContext);
-
 
 struct Func {
   std::string name;
@@ -92,7 +91,7 @@ std::unordered_map<std::string, std::function<void(const NodeExprProperty &,
 std::unordered_map<std::string, std::function<void(const NodeStmtProperty &,
                                                    Generator *, int)>>
     str_property;
-  
+
 bool global_init_block_existence = false;
 
 static bool is_int(const NodeExpr &expr) {
@@ -121,7 +120,7 @@ static std::optional<bool> is_constant_value(Generator *gen,
 
   if (!ins) return std::nullopt;
 
-  llvm::SimplifyQuery query(TheModule->getDataLayout());
+  llvm::SimplifyQuery query(gen->ModModule->getDataLayout());
 
   llvm::Value *simplified =
       llvm::simplifyInstruction(const_cast<llvm::Instruction *>(ins), query);
@@ -544,7 +543,7 @@ static std::optional<llvm::Value *> call_func(
             gen->m_vars.erase(std::prev(gen->m_vars.end()));
           }*/
           if (m_preprocessor_bool.contains(
-              "__YASOS_EXPERIMENTAL_MEMORY_MANAGEMENT__")) {
+                  "__YASOS_EXPERIMENTAL_MEMORY_MANAGEMENT__")) {
             if (std::holds_alternative<NodeExprIdent>(stmt_ret.value.var)) {
               const auto &val = std::get<NodeExprIdent>(stmt_ret.value.var);
               bool is_func_borrowed_type = false;
@@ -577,7 +576,13 @@ static std::optional<llvm::Value *> call_func(
     }
   }
 
-  llvm::Function *func = gen->ModModule->getFunction(fn);
+  // llvm::Function *func = gen->ModModule->getFunction(fn);
+  llvm::Function *func = nullptr;
+  for (const auto &f : gen->m_funcs) {
+    if (f.name == fn) {
+      func = gen->ModModule->getFunction(fn);
+    }
+  }
 
   if (!gen->declared_funcs.contains(fn) || func == nullptr) {
     if (inexistent_error) add_error("Inexistent function (" + fn + ")", line);
@@ -597,7 +602,13 @@ static std::optional<llvm::Value *> call_func(
 static std::optional<llvm::Value *> call_func_raw_args(
     const std::string &fn, std::vector<llvm::Value *> values, Generator *gen,
     int line, bool direct_call = false, bool inexistent_error = true) {
-  llvm::Function *func = gen->ModModule->getFunction(fn);
+  // llvm::Function *func = gen->ModModule->getFunction(fn);
+  llvm::Function *func;
+  for (const auto &f : gen->m_funcs) {
+    if (f.name == fn) {
+      func = f.llvm_func;
+    }
+  }
 
   if (!gen->declared_funcs.contains(fn) || func == nullptr) {
     if (inexistent_error) add_error("Inexistent function (" + fn + ")", line);
@@ -614,7 +625,8 @@ static std::optional<llvm::Value *> call_func_raw_args(
   return std::nullopt;
 }
 
-static void call_destroy(Generator *gen, Generator::Var &var, bool return_as_not_moved = false) {
+static void call_destroy(Generator *gen, Generator::Var &var,
+                         bool return_as_not_moved = false) {
   if (!var.struct_template.empty() && var.destroy_after_scoup && !var.moved &&
       var.is_owner && !var.is_borrowed) {
     const std::string name = var.name;
@@ -640,7 +652,8 @@ static void call_destroy(Generator *gen, Generator::Var &var, bool return_as_not
   }
 }
 
-// GLOBAL variables will never be destroyed beacause modern OS manages to free the memory when the processes finish
+// GLOBAL variables will never be destroyed beacause modern OS manages to free
+// the memory when the processes finish
 static void clean_after_scope(Generator *gen, int vars_before_scope, int line) {
   // Call destroy functions of structs (if they have it)
   if (m_preprocessor_bool.contains(
@@ -649,6 +662,8 @@ static void clean_after_scope(Generator *gen, int vars_before_scope, int line) {
                           ? gen->m_vars.size() - vars_before_scope
                           : 0;
     while (to_erase-- > 0) {
+      // std::cerr << gen->m_vars_order.back() << ", " <<
+      // gen->m_vars.contains(gen->m_vars_order.back()) << "\n";
       Generator::Var &var = gen->m_vars.at(gen->m_vars_order.back());
       // std::cerr << var.name << !var.struct_template.empty() <<
       // var.destroy_after_scoup << !var.moved << var.is_owner <<
@@ -1013,7 +1028,7 @@ llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
       }
 
       if (gen->m_vars.contains(name)) {
-        if (gen->m_vars.at(name).is_globl) {
+        if (gen->m_vars.at(name).is_globl || gen->m_vars.at(name).is_inline) {
           if (gen->m_vars.at(name).is_inline) {
             llvm::Value *val = gen->gen_expr(*gen->m_vars.at(name).inline_expr);
             return val;
@@ -1025,7 +1040,8 @@ llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
           if (m_preprocessor_bool.contains(
                   "__YASOS_EXPERIMENTAL_MEMORY_MANAGEMENT__") &&
               gen->m_vars.at(name).is_owner && gen->m_vars.at(name).moved) {
-            add_error("'" + name + "' is a moved value or is uninitalized\n");
+            add_error("'" + name + "' is a moved value or is uninitalized",
+                      expr_ident.line);
             return nullptr;
           }
 
@@ -1095,8 +1111,12 @@ llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
         return nullptr;
       }
 
-      if (gen->m_vars.at(expr_property.base_tok.value.value()).moved && m_preprocessor_bool.contains("__YASOS_EXPERIMENTAL_MEMORY_MANAGEMENT__")) {
-        add_error("'" + expr_property.base_tok.value.value() + "' value is moved or variable not initialized\n", expr_property.line);
+      if (gen->m_vars.at(expr_property.base_tok.value.value()).moved &&
+          m_preprocessor_bool.contains(
+              "__YASOS_EXPERIMENTAL_MEMORY_MANAGEMENT__")) {
+        add_error("'" + expr_property.base_tok.value.value() +
+                      "' value is moved or variable not initialized\n",
+                  expr_property.line);
         return nullptr;
       }
 
@@ -1349,9 +1369,10 @@ llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
   return value;
 }
 
-void Generator::gen_stmt(const NodeStmt &stmt) {
+void Generator::gen_stmt(const NodeStmt &stmt, bool avoid_code_generation) {
   struct StmtVisitor {
     Generator *gen;
+    bool avoid_code_generation = false;
 
     void operator()(const NodeStmtAsmUserWrite &stmt_asm) const {}
 
@@ -1384,90 +1405,75 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       }
 
       std::string base_name = fs::path(path).stem().string();
-      // std::string gen_name = (index == 0) ? "main" : base_name;
       std::string gen_name = base_name;
 
       auto temp_module = std::make_unique<llvm::Module>("temp", TheContext);
       Generator generator(program.value(), name,
                           std::move(temp_module));  // temporal module
-      generator.gen_prog();
+      generator.gen_prog(true);
 
       llvm::SmallVector<llvm::ReturnInst *, 8> Returns;
 
-      for (auto &fn_name : stmt_import.to_import) {
-        if (auto *f = generator.ModModule->getFunction(fn_name)) {
-          llvm::ValueToValueMapTy VMap;
-          llvm::Function *new_f = llvm::Function::Create(
-              f->getFunctionType(), llvm::GlobalValue::ExternalLinkage,
-              f->getName(),
-              gen->ModModule.get()  // destination module
-          );
+      for (auto &f : generator.ModModule->functions()) {
+        llvm::ValueToValueMapTy VMap;
+        llvm::Function *new_f = llvm::Function::Create(
+            f.getFunctionType(), llvm::GlobalValue::ExternalLinkage,
+            f.getName(), gen->ModModule.get());
 
-          auto new_arg_it = new_f->arg_begin();
-          for (auto &Arg : f->args()) {
-            VMap[&Arg] = &*new_arg_it;
-            ++new_arg_it;
-          }
-
-          llvm::CloneFunctionInto(
-              new_f, f, VMap, llvm::CloneFunctionChangeType::LocalChangesOnly,
-              Returns);
-          new_f->copyAttributesFrom(f);
+        auto new_arg_it = new_f->arg_begin();
+        for (auto &Arg : f.args()) {
+          VMap[&Arg] = &*new_arg_it;
+          ++new_arg_it;
         }
+
+        llvm::CloneFunctionInto(new_f, &f, VMap,
+                                llvm::CloneFunctionChangeType::LocalChangesOnly,
+                                Returns);
+        new_f->copyAttributesFrom(&f);
       }
 
-      llvm::ValueToValueMapTy VMap;
-      for (auto &var_name : stmt_import.to_import) {
-        if (auto *g = generator.ModModule->getGlobalVariable(var_name)) {
-          llvm::GlobalVariable *new_g = new llvm::GlobalVariable(
-              *gen->ModModule, g->getValueType(), g->isConstant(),
-              g->getLinkage(), nullptr, g->getName());
-
-          VMap[g] = new_g;
-
-          if (g->hasInitializer()) {
-            llvm::Constant *new_init =
-                llvm::MapValue(g->getInitializer(), VMap);
-            new_g->setInitializer(new_init);
-          }
-
-          new_g->setAlignment(g->getAlign());
-          new_g->setThreadLocalMode(g->getThreadLocalMode());
-          new_g->setExternallyInitialized(g->isExternallyInitialized());
-        }
-      }
-
-      std::vector<std::string> to_import = stmt_import.to_import;
       for (const auto &glob_var : generator.m_vars) {
-        if (std::find(to_import.begin(), to_import.end(), glob_var.first) ==
-            to_import.end())
-          continue;
-        auto modified_var = glob_var;
-        // modified_var.second.is_declared = false;
-        gen->m_vars.insert(modified_var);
+        if (glob_var.second.is_globl) gen->m_vars.insert(glob_var);
+        llvm::GlobalVariable *g = new llvm::GlobalVariable(
+            *gen->ModModule, glob_var.second.type, false,
+            llvm::GlobalValue::ExternalLinkage, nullptr, glob_var.first);
       }
+
+      /*llvm::ValueToValueMapTy VMap;
+      for (auto &g : generator.ModModule->globals()) {
+        llvm::GlobalVariable *new_g = new llvm::GlobalVariable(
+            *gen->ModModule, g.getValueType(), g.isConstant(), g.getLinkage(),
+            nullptr, g.getName());
+
+        VMap[&g] = new_g;
+
+        if (g.hasInitializer()) {
+          llvm::Constant *new_init = llvm::MapValue(g.getInitializer(), VMap);
+          new_g->setInitializer(new_init);
+        }
+
+        new_g->setAlignment(g.getAlign());
+        new_g->setThreadLocalMode(g.getThreadLocalMode());
+        new_g->setExternallyInitialized(g.isExternallyInitialized());
+      }*/
+
       for (const auto &declared_func : generator.declared_funcs) {
-        if (std::find(to_import.begin(), to_import.end(),
-                      declared_func.first) == to_import.end())
-          continue;
         gen->declared_funcs.insert(declared_func);
       }
+
+      for (const auto &declared_func : generator.m_funcs) {
+        gen->m_funcs.push_back(declared_func);
+      }
+
       for (const auto &fnc_custom_ret : generator.m_fnc_custom_ret) {
-        if (std::find(to_import.begin(), to_import.end(),
-                      fnc_custom_ret.first) == to_import.end())
-          continue;
         gen->m_fnc_custom_ret.insert(fnc_custom_ret);
       }
+
       for (const auto &struct_template : generator.m_struct_templates) {
-        if (std::find(to_import.begin(), to_import.end(),
-                      struct_template.first) == to_import.end())
-          continue;
         gen->m_struct_templates.insert(struct_template);
       }
+
       for (const auto &struct_arg_template : generator.m_struct_arg_templates) {
-        if (std::find(to_import.begin(), to_import.end(),
-                      struct_arg_template.first) == to_import.end())
-          continue;
         gen->m_struct_arg_templates.insert(struct_arg_template);
       }
     }
@@ -1506,11 +1512,12 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       auto temp_module = std::make_unique<llvm::Module>("temp", TheContext);
       Generator generator(program.value(), name,
                           std::move(temp_module));  // temporal module
-      generator.gen_prog();
+      generator.gen_prog(true);
 
       llvm::SmallVector<llvm::ReturnInst *, 8> Returns;
 
-      for (auto &f : generator.ModModule->functions()) {
+      /*for (auto &f : generator.ModModule->functions()) {
+        if (gen->declared_funcs.contains(f.getName().str())) continue;
         llvm::ValueToValueMapTy VMap;
         llvm::Function *new_f = llvm::Function::Create(
             f.getFunctionType(), llvm::GlobalValue::ExternalLinkage,
@@ -1526,20 +1533,7 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
                                 llvm::CloneFunctionChangeType::LocalChangesOnly,
                                 Returns);
         new_f->copyAttributesFrom(&f);
-      }
-
-      for (const auto &glob_var : generator.m_vars) {
-        if (glob_var.second.is_globl)
-          gen->m_vars.insert(glob_var);
-        llvm::GlobalVariable *g =
-          new llvm::GlobalVariable(
-              *gen->ModModule,
-              glob_var.second.type,
-              false,
-              llvm::GlobalValue::ExternalLinkage,
-              nullptr,
-              glob_var.first);
-      }
+      }*/
 
       /*llvm::ValueToValueMapTy VMap;
       for (auto &g : generator.ModModule->globals()) {
@@ -1559,23 +1553,36 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
         new_g->setExternallyInitialized(g.isExternallyInitialized());
       }*/
 
+      for (const auto &declared_func : generator.m_funcs) {
+        if (gen->ModModule->getFunction(declared_func.name)) continue;
+
+        llvm::Function *fn = llvm::Function::Create(
+            declared_func.llvm_functype, llvm::Function::ExternalLinkage,
+            declared_func.name, *gen->ModModule);
+        gen->m_funcs.push_back({declared_func.name, declared_func.args,
+                                declared_func.ret_type, declared_func.in_line,
+                                fn, declared_func.llvm_functype,
+                                declared_func.code_branch});        
+      }
+
       for (const auto &declared_func : generator.declared_funcs) {
+        if (gen->declared_funcs.contains(declared_func.first)) continue;
         gen->declared_funcs.insert(declared_func);
       }
 
-      for (const auto &declared_func : generator.m_funcs) {
-        gen->m_funcs.push_back(declared_func);
-      }
-
       for (const auto &fnc_custom_ret : generator.m_fnc_custom_ret) {
+        if (gen->m_fnc_custom_ret.contains(fnc_custom_ret.first)) continue;
         gen->m_fnc_custom_ret.insert(fnc_custom_ret);
       }
 
       for (const auto &struct_template : generator.m_struct_templates) {
+        if (gen->m_struct_templates.contains(struct_template.first)) continue;
         gen->m_struct_templates.insert(struct_template);
       }
 
       for (const auto &struct_arg_template : generator.m_struct_arg_templates) {
+        if (gen->m_struct_arg_templates.contains(struct_arg_template.first))
+          continue;
         gen->m_struct_arg_templates.insert(struct_arg_template);
       }
     }
@@ -1742,6 +1749,32 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
         }
       }
 
+      if (stmt_var.is_inline) {
+        Var var = gen->insert_var(
+        stmt_var.ident.value.value(), nullptr, llvm_type, base_type,
+        stmt_var.type, var_ptr, stmt_var.is_mutable,
+        gen->current_mode == Mode::Global, stmt_var.type.user_type);
+        gen->m_vars.at(var.name).is_inline = true;
+        gen->m_vars.at(var.name).inline_expr =
+          std::make_optional<NodeExpr>(stmt_var.expr);
+
+        gen->m_vars.at(var.name).is_owner = is_owner;
+        gen->m_vars.at(var.name).is_borrowed = is_borrowed;
+        gen->m_vars.at(var.name).moved = (init_val == nullptr);
+
+        if (m_preprocessor_bool.contains(
+            "__YASOS_EXPERIMENTAL_MEMORY_MANAGEMENT__") &&
+          std::holds_alternative<NodeExprIdent>(stmt_var.expr.var)) {
+          const auto &val = std::get<NodeExprIdent>(stmt_var.expr.var);
+          const auto &var = gen->m_vars.at(val.ident.value.value());
+          if (var.is_owner && !is_borrowed) {
+            gen->m_vars.at(val.ident.value.value()).moved = true;
+          }
+        }
+
+        return;
+      } 
+
       if (gen->current_mode == Mode::Global) {
         llvm::Constant *global_init_val;
 
@@ -1757,34 +1790,30 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
           initializer = nullptr;
         }
 
-        if (stmt_var.is_inline) {
-          Var var = gen->insert_var(
-          stmt_var.ident.value.value(), nullptr, llvm_type, base_type,
-          stmt_var.type, var_ptr, stmt_var.is_mutable,
-          gen->current_mode == Mode::Global, stmt_var.type.user_type);
-          gen->m_vars.at(var.name).is_inline = true;
-          gen->m_vars.at(var.name).inline_expr = std::make_optional<NodeExpr>(stmt_var.expr);
-        } else if (m_preprocessor_bool.contains("__YASOS_HEADER__") && !stmt_var.has_initial_value) {
+        if (m_preprocessor_bool.contains("__YASOS_HEADER__") &&
+                   !stmt_var.has_initial_value) {
           var_ptr = new llvm::GlobalVariable(
-            *gen->ModModule, llvm_type, !stmt_var.is_mutable,
-            llvm::GlobalValue::ExternalLinkage, initializer,
-            stmt_var.ident.value.value()
-          );
-        } else if (init_val != nullptr && (global_init_val = dyn_cast<llvm::Constant>(init_val))) {
+              *gen->ModModule, llvm_type, !stmt_var.is_mutable,
+              llvm::GlobalValue::ExternalLinkage, initializer,
+              stmt_var.ident.value.value());
+        } else if (init_val != nullptr &&
+                   (global_init_val = dyn_cast<llvm::Constant>(init_val))) {
           var_ptr = new llvm::GlobalVariable(
-            *gen->ModModule, llvm_type, !stmt_var.is_mutable,
-            llvm::GlobalValue::ExternalLinkage, global_init_val,
-            stmt_var.ident.value.value());          
+              *gen->ModModule, llvm_type, !stmt_var.is_mutable,
+              llvm::GlobalValue::ExternalLinkage, global_init_val,
+              stmt_var.ident.value.value());
         } else {
           if (m_preprocessor_bool.contains("__YASOS_HEADER__")) {
-            add_error("headers files must only have constant values as global variables initializers", stmt_var.line);
+            add_error(
+                "headers files must only have constant values as global "
+                "variables initializers",
+                stmt_var.line);
             return;
           }
           var_ptr = new llvm::GlobalVariable(
-            *gen->ModModule, llvm_type, !stmt_var.is_mutable,
-            llvm::GlobalValue::ExternalLinkage, initializer,
-            stmt_var.ident.value.value()
-          );
+              *gen->ModModule, llvm_type, !stmt_var.is_mutable,
+              llvm::GlobalValue::ExternalLinkage, initializer,
+              stmt_var.ident.value.value());
           gen->Builder.SetInsertPoint(gen->global_init_block);
           init_val = gen->gen_expr(stmt_var.expr);
           gen->Builder.CreateStore(init_val, var_ptr);
@@ -1831,7 +1860,7 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
         const auto &ident = std::get<NodeExprIdent>(stmt.target.var);
         if (gen->m_vars.contains(ident.ident.value.value()))
           type = gen->m_vars.at(ident.ident.value.value()).meta_type;
-        
+
         call_destroy(gen, gen->m_vars.at(ident.ident.value.value()), true);
       }
 
@@ -1898,7 +1927,8 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
 
           if (!type.is_borrowed &&
               gen->m_vars.at(expr_ident.ident.value.value()).is_owner) {
-            gen->m_vars.at(expr_ident.ident.value.value()).moved = true;
+            // gen->m_vars.at(expr_ident.ident.value.value()).moved = true;
+            expr_retains_ownership = false;
           }
 
           /*if (std::holds_alternative<NodeExprIdent>(stmt.target.var)) {
@@ -1995,6 +2025,12 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
           gen->m_vars.at(val.ident.value.value()).moved = true;
         }
       }*/
+
+      if (std::holds_alternative<NodeExprIdent>(stmt.value.var)) {
+        gen->m_vars
+            .at(std::get<NodeExprIdent>(stmt.value.var).ident.value.value())
+            .moved = !expr_retains_ownership;
+      }
     }
 
     void operator()(const NodeStmtVarRe &stmt_var) const {
@@ -2252,6 +2288,93 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
 
       gen->stmt_orde.pop();
     }
+
+    void operator()(const NodeStmtForeach &stmt) const {
+      size_t var_n = gen->m_vars.size();
+      static int counter = 0;
+
+      llvm::Function *func = gen->Builder.GetInsertBlock()->getParent();
+      llvm::BasicBlock *init_block =
+          llvm::BasicBlock::Create(TheContext, "foreach_init", func);
+      llvm::BasicBlock *body_block =
+          llvm::BasicBlock::Create(TheContext, "foreach_body", func);
+      llvm::BasicBlock *update_block =
+          llvm::BasicBlock::Create(TheContext, "foreach_update", func);
+      llvm::BasicBlock *end_block =
+          llvm::BasicBlock::Create(TheContext, "foreach_end", func);
+
+      TypeMapping type = map_type_to_llvm(stmt.type, gen);
+      llvm::Value *val_foreach =
+          gen->Builder.CreateAlloca(type.type, nullptr, "val_foreach");
+
+      gen->insert_var(stmt.ident.value.value(), nullptr, type.type,
+                      type.base_type, stmt.type, val_foreach);
+
+      llvm::Type *integer_type = llvm::Type::getInt32Ty(TheContext);
+      llvm::Value *zero =
+          llvm::ConstantInt::get(llvm::Type::getInt32Ty(TheContext), 0);
+      llvm::Value *i_foreach =
+          gen->Builder.CreateAlloca(integer_type, nullptr, "i_foreach");
+      gen->Builder.CreateStore(zero, i_foreach);
+      gen->insert_var("__foreach_i__" + std::to_string(counter++), nullptr,
+                      integer_type, integer_type,
+                      Type{Type::Kind::Int, false, true, false, "", nullptr},
+                      i_foreach, true, false, "", false);
+
+      gen->stmt_orde.push({init_block, {end_block, update_block}});
+      gen->Builder.CreateBr(init_block);
+      gen->Builder.SetInsertPoint(init_block);
+      llvm::Value *i_value =
+          gen->Builder.CreateLoad(integer_type, i_foreach, "i_value_foreach");
+
+      if (std::holds_alternative<NodeExprIdent>(stmt.value.var)) {
+        const auto &ident = std::get<NodeExprIdent>(stmt.value.var);
+        const auto &var = gen->m_vars.at(ident.ident.value.value());
+
+        if (var.meta_type.user_type == "") return;
+
+        const std::string &func_name = "iterate";
+        std::string struct_template = var.base_type->getStructName().str();
+        ;
+
+        const std::string &func_name_mangled =
+            func_name + std::string("$MOD") + struct_template;
+
+        std::vector<llvm::Value *> args;
+        auto va = gen->Builder.CreateLoad(var.type, var.var_ptr, "a");
+        args.push_back(va);
+        args.push_back(i_foreach);
+
+        gen->Builder.CreateStore(
+            *call_func_raw_args(func_name_mangled, args, gen, stmt.line),
+            val_foreach);
+      }
+      i_value = gen->Builder.CreateLoad(integer_type, i_foreach, "i_load");
+      llvm::Value *condition = gen->Builder.CreateICmpNE(
+          i_value,
+          llvm::ConstantInt::get(llvm::Type::getInt32Ty(TheContext), -1),
+          "foreach_condition");
+      gen->Builder.CreateCondBr(condition, body_block, end_block);
+
+      size_t var_n_before_iteration = gen->m_vars.size();
+      gen->Builder.SetInsertPoint(body_block);
+      for (const auto &stmt : stmt.code_branch) {
+        gen->gen_stmt(stmt);
+      }
+      clean_after_scope(gen, var_n_before_iteration, stmt.line);
+      gen->Builder.CreateBr(update_block);
+
+      gen->Builder.SetInsertPoint(update_block);
+      llvm::Value *new_i_val = gen->Builder.CreateAdd(
+          i_value, llvm::ConstantInt::get(integer_type, 1), "foreach_inc");
+      gen->Builder.CreateStore(new_i_val, i_foreach);
+      gen->Builder.CreateBr(init_block);
+
+      gen->Builder.SetInsertPoint(end_block);
+      clean_after_scope(gen, var_n, stmt.line);
+      gen->stmt_orde.pop();
+    }
+
     void operator()(const NodeStmtStop &stmt_stop) const {
       if (gen->stmt_orde.empty()) {
         add_error("Can not stop an inexistent loop", stmt_stop.line);
@@ -2313,9 +2436,6 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
         args.back().second.is_owner = !arg.is_borrowed && arg.is_ref;
       }
 
-      gen->m_funcs.push_back({name, args, stmt_def_func.return_type, is_inline,
-                              stmt_def_func.code_branch});
-
       size_t var_n = gen->m_vars.size();
 
       llvm::Type *ret_type =
@@ -2346,13 +2466,19 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
           stmt_def_func.ret_var.line == -1 ? ret_type : ret_type_c, param_types,
           stmt_def_func.is_vargs);
 
+      Func f = {name,    args,      stmt_def_func.return_type, is_inline,
+                nullptr, func_type, stmt_def_func.code_branch};
+
       llvm::GlobalValue::LinkageTypes linkage =
           is_extern ? llvm::Function::ExternalLinkage
                     : llvm::Function::InternalLinkage;
 
       linkage = is_pub ? llvm::Function::ExternalLinkage : linkage;
 
-      if (is_inline) return;
+      if (is_inline) {
+        gen->m_funcs.push_back(f);
+        return;
+      };
 
       if (name == "main") {
         linkage = llvm::Function::ExternalLinkage;
@@ -2372,6 +2498,9 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
         func =
             llvm::Function::Create(func_type, linkage, name, *gen->ModModule);
       }
+
+      f.llvm_func = func;
+      gen->m_funcs.push_back(f);
 
       func->addFnAttr("stackrealign");
       func->setCallingConv(llvm::CallingConv::C);
@@ -2489,8 +2618,9 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
         start = end + 1;
       }
 
-      if (ret_type->isVoidTy() && stmt_def_func.ret_var.line == -1 && name != "__yshidden_global_init_block__") {
-        gen->Builder.CreateRetVoid();
+      if (ret_type->isVoidTy() && stmt_def_func.ret_var.line == -1 &&
+          name != "__yshidden_global_init_block__") {
+        gen->Builder.CreateBr(gen->current_clean_block);
       } else if (name == "main" && !gen->returned) {
         llvm::Value *val =
             llvm::ConstantInt::get(llvm::Type::getInt32Ty(TheContext), 0);
@@ -2510,8 +2640,7 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       }
 
       gen->Builder.ClearInsertionPoint();
-      if (name == "__yshidden_global_init_block__")
-        goto stmt_def_end;
+      if (name == "__yshidden_global_init_block__") goto stmt_def_end;
 
       func->insert(func->end(), clean);
       gen->Builder.SetInsertPoint(clean);
@@ -2524,13 +2653,15 @@ void Generator::gen_stmt(const NodeStmt &stmt) {
       } else
         gen->Builder.CreateRetVoid();
 
-stmt_def_end:
+    stmt_def_end:
       gen->current_mode = last_mode;
       gen->returned = false;
       if (name == "__yshidden_global_init_block__") {
         gen->global_init_block = entry;
         llvm::appendToGlobalCtors(*gen->ModModule, func, 65535);
+        return;
       }
+      gen->Builder.ClearInsertionPoint();
     }
 
     void operator()(const NodeStmtEndfn &stmt_end_fn)
@@ -2638,12 +2769,16 @@ stmt_def_end:
     void operator()(const NodeStmtHeader &stmt_header) const {
       gen->is_header = true;
     }
+
     void operator()(const NodeStmtUhead &stmt_import) const {
       const std::string &name = stmt_import.mod_name.value.value();
       const std::string &path = name;
-      std::ifstream input_file(path);
+
+      const auto &real_path = seek_for_file(gen, path);
+      std::ifstream input_file(real_path.string());
+
       if (!input_file.is_open()) {
-        std::cerr << "Error: Could not open " << name << "\n";
+        std::cerr << "Error: Could not open " << path << "\n";
       }
 
       std::stringstream full_source;
@@ -2672,44 +2807,71 @@ stmt_def_end:
       auto temp_module = std::make_unique<llvm::Module>("temp", TheContext);
       Generator generator(program.value(), name,
                           std::move(temp_module));  // temporal module
-      generator.gen_prog();
+      generator.include_directories = gen->include_directories;
+      generator.include_directories.push_back(real_path.parent_path().string());
+      generator.gen_prog(true);
 
       llvm::SmallVector<llvm::ReturnInst *, 8> Returns;
 
-      for (auto &f : generator.ModModule->functions()) {
-        llvm::ValueToValueMapTy VMap;
-        llvm::Function *new_f = llvm::Function::Create(
-            f.getFunctionType(), llvm::GlobalValue::ExternalLinkage,
-            f.getName(), gen->ModModule.get());
+      for (const auto &glob_var : generator.m_vars) {
+        if (glob_var.second.is_globl) gen->m_vars.insert(glob_var);
+        llvm::GlobalVariable *g = new llvm::GlobalVariable(
+            *gen->ModModule, glob_var.second.type, false,
+            llvm::GlobalValue::ExternalLinkage, nullptr, glob_var.first);
+      }
 
-        auto new_arg_it = new_f->arg_begin();
-        for (auto &Arg : f.args()) {
-          VMap[&Arg] = &*new_arg_it;
-          ++new_arg_it;
+      /*llvm::ValueToValueMapTy VMap;
+      for (auto &g : generator.ModModule->globals()) {
+        llvm::GlobalVariable *new_g = new llvm::GlobalVariable(
+            *gen->ModModule, g.getValueType(), g.isConstant(), g.getLinkage(),
+            nullptr, g.getName());
+
+        VMap[&g] = new_g;
+
+        if (g.hasInitializer()) {
+          llvm::Constant *new_init = llvm::MapValue(g.getInitializer(), VMap);
+          new_g->setInitializer(new_init);
         }
 
-        llvm::CloneFunctionInto(new_f, &f, VMap,
-                                llvm::CloneFunctionChangeType::LocalChangesOnly,
-                                Returns);
-        new_f->copyAttributesFrom(&f);
+        new_g->setAlignment(g.getAlign());
+        new_g->setThreadLocalMode(g.getThreadLocalMode());
+        new_g->setExternallyInitialized(g.isExternallyInitialized());
+      }*/
+
+      for (const auto &declared_func : generator.m_funcs) {
+        if (gen->declared_funcs.contains(declared_func.name)) continue;
+
+        llvm::Function *fn = llvm::Function::Create(
+            declared_func.llvm_functype, llvm::Function::ExternalLinkage,
+            declared_func.name, *gen->ModModule);
+        gen->m_funcs.push_back({declared_func.name, declared_func.args,
+                                declared_func.ret_type, declared_func.in_line,
+                                fn, declared_func.llvm_functype,
+                                declared_func.code_branch});
       }
 
       for (const auto &declared_func : generator.declared_funcs) {
+        if (gen->declared_funcs.contains(declared_func.first)) continue;
         gen->declared_funcs.insert(declared_func);
       }
 
       for (const auto &fnc_custom_ret : generator.m_fnc_custom_ret) {
+        if (gen->m_fnc_custom_ret.contains(fnc_custom_ret.first)) continue;
         gen->m_fnc_custom_ret.insert(fnc_custom_ret);
       }
 
       for (const auto &struct_template : generator.m_struct_templates) {
+        if (gen->m_struct_templates.contains(struct_template.first)) continue;
         gen->m_struct_templates.insert(struct_template);
       }
 
       for (const auto &struct_arg_template : generator.m_struct_arg_templates) {
+        if (gen->m_struct_arg_templates.contains(struct_arg_template.first))
+          continue;
         gen->m_struct_arg_templates.insert(struct_arg_template);
       }
     }
+
     void operator()(const NodeStmtLeave &stmt_leave) const {
       gen->Builder.CreateRetVoid();
     }
@@ -2718,8 +2880,14 @@ stmt_def_end:
 
     void operator()(const NodeStmtStruct &stmt_struct) const {
       std::string name = stmt_struct.name.value.value();
+      if (gen->m_struct_templates.contains(name)) return;
 
-      llvm::StructType *the_struct = llvm::StructType::create(TheContext, name);
+      llvm::StructType *the_struct =
+          llvm::StructType::getTypeByName(TheContext, name);
+
+      if (!the_struct)
+        the_struct = llvm::StructType::create(TheContext, name);
+
       gen->m_struct_templates.insert({name, the_struct});
       std::vector<llvm::Type *> parsed_fields;
       std::map<std::string, Type> raw_types;
@@ -2758,7 +2926,9 @@ stmt_def_end:
 
     void operator()(const NodeStmtDefine &stmt_def) const {
       if (m_preprocessor_bool.contains(stmt_def.name.value.value())) {
-        add_warning("Preprocessor already defined", stmt_def.line);
+        add_warning("Preprocessor '" + stmt_def.name.value.value() +
+                        "'  already defined",
+                    stmt_def.line);
         return;
       }
 
@@ -2914,43 +3084,50 @@ stmt_def_end:
     }
   };
 
-  StmtVisitor visitor{.gen = this};
+  StmtVisitor visitor{.gen = this,
+                      .avoid_code_generation = avoid_code_generation};
   std::visit(visitor, stmt.var);
 }
 
-void Generator::gen_prog() {
+void Generator::gen_prog(bool avoid_code_generation) {
   declared_funcs.clear();
   bool new_init_block = false;
 
-  if (!global_init_block_existence && !m_preprocessor_bool.contains("__YASOS_HEADER__")) {
-    NodeStmt stmt_global_init = NodeStmt{.var = NodeStmtDefFunc{
-      .name = Token{.type = TokenType::ident, .value = std::make_optional<std::string>("__yshidden_global_init_block__"), .line = -1},
-      .args = {},
-      .return_type = Type{Type::Kind::None, false, false, false, "", nullptr},
-      .is_defined = true,
-      .code_branch = {},
-      .is_pub = false,
-      .is_extern = false,
-      .absolute_type_name_args = {},
-      .is_vargs = false,
-      .ret_var = {.line = -1},
-      .flags = {},
-      .line = -1,
-    }};
+  if (!global_init_block_existence &&
+      !m_preprocessor_bool.contains("__YASOS_HEADER__")) {
+    NodeStmt stmt_global_init =
+        NodeStmt{.var = NodeStmtDefFunc{
+                     .name = Token{.type = TokenType::ident,
+                                   .value = std::make_optional<std::string>(
+                                       "__yshidden_global_init_block__"),
+                                   .line = -1},
+                     .args = {},
+                     .return_type = Type{Type::Kind::None, false, false, false,
+                                         "", nullptr},
+                     .is_defined = true,
+                     .code_branch = {},
+                     .is_pub = false,
+                     .is_extern = false,
+                     .absolute_type_name_args = {},
+                     .is_vargs = false,
+                     .ret_var = {.line = -1},
+                     .flags = {},
+                     .line = -1,
+                 }};
 
-    gen_stmt(stmt_global_init);
+    gen_stmt(stmt_global_init, avoid_code_generation);
     new_init_block = true;
     global_init_block_existence = true;
   }
 
   for (const NodeStmt &stmt : m_prog.stmts) {
-    gen_stmt(stmt);
+    gen_stmt(stmt, avoid_code_generation);
   }
 
   if (new_init_block && !m_preprocessor_bool.contains("__YASOS_HEADER__")) {
-    //auto saved_ip = Builder.saveIP();
+    // auto saved_ip = Builder.saveIP();
     Builder.SetInsertPoint(global_init_block);
     Builder.CreateRetVoid();
-    //Builder.restoreIP(saved_ip);
+    // Builder.restoreIP(saved_ip);
   }
 }

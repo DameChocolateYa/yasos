@@ -18,6 +18,7 @@ impl String {
 
   fun set(borrow self: &String, src: str) : "extern";
   fun clone(borrow og: &String) -> &String : "extern";
+  fun iterate(borrow self: &String, i: &i32) -> char : "extern";
   fun clear(borrow self: &String) : "extern";
 
   fun find(borrow s1: &String, s2: str) -> int : "extern";
@@ -115,9 +116,9 @@ fun get_splited(string: str, delimiter: str, bufsize: &int) -> &str : "extern";
 
 fun cpy(dest: &str, src: str) : "extern";
 
-inline cnst STR_EMPTY: str = "";
-inline cnst STR_WHITE: str = " ";
-inline cnst STR_NULLT: str = "\0";
+inline const STR_EMPTY: str = "";
+inline const STR_WHITE: str = " ";
+inline const STR_NULLT: str = "\0";
 
 endmod;
 

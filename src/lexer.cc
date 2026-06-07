@@ -23,11 +23,17 @@ std::vector<Token> Lexer::tokenize() {
              (std::isalnum(peek().value()) || peek().value() == '_')) {
         buf.push_back(consume());
       }
-      if (buf == "var") {
+      if (buf == "var" || buf == "let") {
+        if (buf == "var") {
+          add_warning("var is allowed, but obsolete, use 'let' instead", local_lines, false);
+        }
         tokens.push_back({.type = TokenType::var, .line = local_lines});
         buf.clear();
         continue;
-      } else if (buf == "cnst") {
+      } else if (buf == "cnst" || buf == "const") {
+        if (buf == "cnst") {
+          add_warning("var is allowed, but obsolete, use 'let' instead", local_lines, false);
+        }
         tokens.push_back({.type = TokenType::cnst, .line = local_lines});
         buf.clear();
         continue;
@@ -211,7 +217,7 @@ std::vector<Token> Lexer::tokenize() {
         buf.clear();
         continue;
       } else if (buf == "foreach") {
-        tokens.push_back({.type = TokenType::_foreach, .line = local_lines});
+        tokens.push_back({.type = TokenType::_foreach, .value = "foreach", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "stop") {
@@ -327,6 +333,10 @@ std::vector<Token> Lexer::tokenize() {
         tokens.push_back({.type = TokenType::_borrow, .line = local_lines});
         buf.clear();
         continue;
+      } else if (buf == "in") {
+        tokens.push_back({.type = TokenType::_in, .value = "in", .line = local_lines});
+        buf.clear();
+        continue;
       } else if (buf == "$def") {
         tokens.push_back(
             {.type = TokenType::_def, .value = "$def", .line = local_lines});
@@ -367,7 +377,7 @@ std::vector<Token> Lexer::tokenize() {
             {.type = TokenType::_pre_endif, .value = "$endif", .line = local_lines});
         buf.clear();
         continue;
-      } else if (buf == "$error") {
+      } else if (buf == "$err") {
         tokens.push_back(
             {.type = TokenType::_pre_error, .value = "$error", .line = local_lines});
         buf.clear();

@@ -19,14 +19,14 @@ import mem;
 
 #- &type can refer to pointer or dynamic array
 fun interval(begin: i32, end: i32, size: &i32) -> &i32 {
-	var array: &i32 = mem::alloc((end - begin + 1) * $sizeof i32);
+	let array: &i32 = mem::alloc((end - begin + 1) * $sizeof i32);
 	if array == nil {
 		"Error: could not allocate memory\n";
 		ret nil;
 	}
 
 	*size = 0;
-	for var i: i32 = begin; i <= end; inc i {
+	for let i: i32 = begin; i <= end; inc i {
 		array[*size] = i;
 		inc *size;
 	}
@@ -35,14 +35,14 @@ fun interval(begin: i32, end: i32, size: &i32) -> &i32 {
 }
 
 fun main {
-	var begin: i32 = 1;
-	var end: i32 = 10;
-	var size: i32 = 0;
+	let begin: i32 = 1;
+	let end: i32 = 10;
+	let size: i32 = 0;
 
-	var array: &i32 = interval(begin, end, &size);
+	let array: &i32 = interval(begin, end, &size);
 	if array == nil {ret 1;}
 
-	for var i: i32 = 0; i < size; inc i {
+	for let i: i32 = 0; i < size; inc i {
 		"%d\n", array[i];
 	}
 

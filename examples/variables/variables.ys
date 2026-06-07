@@ -11,11 +11,11 @@
 *#
 
 fun main {
-	var a: i32 = 3;
+	let a: i32 = 3;
 	a = 2;
 
-	var b: str = "Hola";
-	var c: double = 3.141592;
+	let b: str = "Hola";
+	let c: double = 3.141592;
 
 	cnst d: i32 = 3; #- Wont't change its value
 

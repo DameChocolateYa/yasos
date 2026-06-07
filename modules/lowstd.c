@@ -5,6 +5,8 @@
  * See LICENSE file in the project root for full license text.
 */
 
+#define ITERATION_END -1
+
 #include "math.h"
 
 #include <stdarg.h>
@@ -691,6 +693,16 @@ String *get_arg$MODEnvArgs(EnvArgs *self, int index) {
   String *string = get_string$MODVec(self->internal_data, index);
 
   return string;
+}
+
+__attribute__((visibility("default")))
+String *iterate$MODEnvArgs(EnvArgs *self, int *i) {
+  if (*i >= self->size) {
+    *i = ITERATION_END;
+    return NULL;
+  }
+
+  return get_arg$MODEnvArgs(self, *i);
 }
 
 __attribute__((visibility("default")))

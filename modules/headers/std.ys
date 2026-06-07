@@ -69,17 +69,20 @@ fun exit(status: int) -> none;
 #- Constant are filled with no important values
 #- Because their declaration is al
 
-inline cnst OK: int = 0;
-inline cnst FAIL: int = 1;
-inline cnst ERR: int = -1;
-inline cnst NOT_FOUND: int = 127;
+inline const OK: int = 0;
+inline const FAIL: int = 1;
+inline const ERR: int = -1;
+inline const NOT_FOUND: int = 127;
 
-inline cnst ZERO: int = 0;
+inline const ZERO: int = 0;
+
+inline const ITERATION_END: i32 = -1;
 
 endmod;
 
 impl EnvArgs {
   fun new(argc: i32, argv: &str) -> &EnvArgs : "extern";
   fun get_arg(borrow self: &EnvArgs) -> &String : "extern";
+  fun iterate(borrow self: &EnvArgs, i: &i32) -> &String : "extern";
   fun destroy(self: &EnvArgs) : "extern";
 }

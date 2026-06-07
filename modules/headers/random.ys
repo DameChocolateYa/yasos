@@ -1,0 +1,28 @@
+#-
+struct Vec {
+  data: &any;
+  size: int;
+  capacity: int;
+  elem_size: int;
+  is_membusy: int;
+};
+#-
+
+struct GeneratorInt {
+    min: i32,
+    max: i32,
+    internal_data: &Vec,
+    copies: &Vec
+}
+
+impl GeneratorInt {
+    fun new() -> &GeneratorInt;
+    fun gen(borrow self: &GeneratorInt, n: i32, min: i32, max: i32);
+    fun gen_new(borrow self: &GeneratorInt, n: i32, min: i32, max: i32);
+    fun get_data(borrow self: &GeneratorInt) -> borrow &Vec;
+    fun gen_and_get(borrow self: &GeneratorInt, n: i32, min: i32, max: i32) -> &Vec;
+    fun gen_and_get_new(borrow self: &GeneratorInt, n: i32, min: i32, max: i32) -> &Vec;
+    fun get_at(borrow self: &GeneratorInt, i: i32) -> i32;
+    fun iterate(borrow self: &GeneratorInt, i: &i32) -> i32;
+    fun destroy(self: &GeneratorInt);
+}

@@ -127,7 +127,7 @@ void free$MODmem(void *ptr) {
     return;
   }
   if (b->free) {
-    fprintf(stderr, "myfree: double free detected\n");
+    fprintf(stderr, "mem::free: double free detected\n");
     pthread_mutex_unlock(&global_lock);
     return;
   }

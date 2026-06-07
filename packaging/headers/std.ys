@@ -1,0 +1,85 @@
+#*
+ * yasos - a compiler for yasos language
+ * Copyright (c) 2025-2026 DameChocolateYa
+ * Licensed under the BSD 3-Clause License.
+ * See LICENSE file in the project root for full license text.
+*#
+
+struct Vec {
+  data: &any;
+  size: int;
+  capacity: int;
+  elem_size: int;
+  is_membusy: int;
+};
+
+struct EnvArgs {
+  size: i32;
+  internal_data: &Vec;
+}
+
+struct String {
+	data: &char;
+	size: int;
+  mem_busy: bool;
+};
+
+declmod std;
+
+fun fmt(fmt: str, undefan) -> str : "extern";
+fun print(first_arg: str, undefan) : "extern";
+fun println(first_arg: str, undefan) : "extern";
+fun printf(first_arg: str, undefan) : "extern";
+fun scani() -> str : "extern";
+fun ask(msg_format: str, undefan) -> str : "extern";
+fun is_int(s: str) -> int : "extern";
+fun is_decimal(s: str) -> int : "extern";
+fun is_num(s: str) -> int : "extern";
+fun waitk() : "extern";
+fun cls() : "extern";
+fun system(command: str) -> int : "extern";
+fun termc(color: int) : "extern";
+fun randi(min: int, max: int) -> int : "extern";
+fun randf(min: double, max: double, decimals: int) -> double : "extern";
+fun sleep(seconds: double) -> int : "extern";
+
+fun write(channel: int, msg: str, len: int) : "extern";
+fun putchar(c: str) : "extern";
+fun perror(fmt: str, undefan) : "extern";
+
+fun panic(msg: str) : "extern";
+fun cuspanic(msg: str, status: int) : "extern";
+
+fun args(argc: int, argv: &str) -> &Vec : "extern";
+fun free_args(args: &Vec) : "extern";
+
+#- LIBC FUNCTIONS
+fun malloc(size: int) -> &any;
+fun calloc(amount: int, size: int) -> &any;
+fun free(pointer: ptr) -> none;
+fun realloc(pointer: ptr, size: int) -> &any;
+fun sprintf(buffer: &str, format: str, undefan) -> &any;
+fun snprintf(buffer: &str, size: int, format: str, undefan) -> &any;
+fun asprintf(buffer, &str, format: str, undefan) -> &any;
+fun format(format: str, undefan) -> str;
+fun bufformat(buf_and_format: &str, undefan) -> &any;
+
+fun exit(status: int) -> none;
+
+#- Constant are filled with no important values
+#- Because their declaration is al
+
+inline cnst OK: int = 0;
+inline cnst FAIL: int = 1;
+inline cnst ERR: int = -1;
+inline cnst NOT_FOUND: int = 127;
+
+inline cnst ZERO: int = 0;
+
+endmod;
+
+impl EnvArgs {
+  fun new(argc: i32, argv: &str) -> &EnvArgs : "extern";
+  fun get_arg(borrow self: &EnvArgs) -> &String : "extern";
+  fun destroy(self: &EnvArgs) : "extern";
+}

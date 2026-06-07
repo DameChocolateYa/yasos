@@ -10,7 +10,7 @@
 #include <string>
 
 std::unordered_map<ErrType, std::string> error_types;
-std::unordered_map<ErrType, std::string> warning_types;
+std::unordered_map<std::string, int> warning_types;
 
 void add_error(const std::string &msg, int line, ErrType type) {
   static std::string last_msg = "";
@@ -34,6 +34,8 @@ void add_error(const std::string &msg, int line, ErrType type) {
   error_types.insert({type, msg});
 }
 
-void add_warning(const std::string &msg, int line, WarnType type) {
-  std::cerr << "\033[1;35mWarning\033[0m in file " << current_source_file << " at line " << std::to_string(line) << ": " << msg << "\n";
+void add_warning(const std::string &msg, int line, bool repeat) {
+  if (warning_types.contains(msg) && !repeat) return;
+  std::cerr << "\033[1;35mWarning\033[0m in file " << current_source_file << (line >= 0 ? (" at line " + std::to_string(line)) : "") << ": " << msg << "\n";
+  warning_types.insert({msg, 0});
 }

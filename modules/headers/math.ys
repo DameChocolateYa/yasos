@@ -8,13 +8,10 @@
 #- sin, cos and tan functions wont work properly by the moment, their use is not recommended
 #- It is recommended to use their equivalent in LIBC
 
-inline cnst PI = 3.141592;
-inline cnst E = 2.718281;
+inline const PI = 3.141592;
+inline const E = 2.718281;
 
 declmod math;
-
-#-fun PI() -> double : "extern";
-#-fun e() -> double : "extern";
 
 fun sqrt(x: double) -> double : "extern";
 fun pow(base: double, exponent: int) -> double : "extern";
@@ -44,6 +41,6 @@ fun arcsin(x: double) -> double : "extern";
 fun deg2rad(deg: double) -> double : "extern";
 fun rad2deg(rad: double) -> double : "extern";
 
-cnst PI: double = 3.141592;
+fun ec_cuad(a: double, b: double, c: double, return_first: bool) -> double : "extern";
 
 endmod;

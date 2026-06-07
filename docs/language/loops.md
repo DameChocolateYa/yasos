@@ -14,7 +14,7 @@ Used for normal conditions:
 
 Used when we declare the variable in the loop:
 `
-for var x: int = 3; x < 10; inc x {
+for let x: int = 3; x < 10; inc x {
     code...
 }
 `

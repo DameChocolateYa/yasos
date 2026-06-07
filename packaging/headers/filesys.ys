@@ -1,0 +1,94 @@
+#*
+ * yasos - a compiler for yasos language
+ * Copyright (c) 2025-2026 DameChocolateYa
+ * Licensed under the BSD 3-Clause License.
+ * See LICENSE file in the project root for full license text.
+*#
+
+$def __YASOS_HEADER__;
+
+#---- FROM OTHER HEADERS ----#
+struct Vec {
+  data: &any;
+  size: int;
+  capacity: int;
+  elem_size: int;
+  is_membusy: int;
+};
+#----------------------------#
+
+declmod Filesys;
+fun touch(path: str) -> bool : "extern";
+fun erase(path: str) -> bool : "extern";
+
+fun erase_dir_recursive(path: str) -> bool : "extern";
+fun mkdir(path: str) -> bool : "extern";
+endmod;
+
+struct File {
+  fd: int; #- Descriptor
+  buffer: &str;
+  bufsize: int;
+  pos: int;
+  flags: int;
+  is_open: bool;
+};
+
+impl File {
+  fun open(path: str, raw_flags: str) -> &File : "extern";
+  fun touch(borrow self: &File) -> bool : "extern";
+  fun erase(borrow self: &File) -> bool : "extern";
+
+  fun close(borrow f: &File) : "extern";
+  fun is_open(borrow f: File) -> int : "extern";
+  fun write(borrow f: &File, data: str) -> int : "extern";
+  fun read(borrow f: &File) -> str : "extern";
+  fun read_lines(borrow self: &File) -> &Vec : "extern";
+  fun seek(borrow f: &File, pos: int, whence: int) : "extern";
+
+  fun ssize() -> int : "extern";
+
+  fun destroy(self: &File) : "extern"; #- Just to avoid compiler error
+};
+
+struct Dir {
+  path: &String;
+  destroy_on_exit: bool;
+}
+
+impl Dir {
+  fun new(path: str, flags: str) -> &Dir : "extern";
+  fun exist(borrow self: &Dir) -> bool : "extern";
+
+  fun mkdir(borrow self: &Dir) -> bool : "extern";
+  fun erase_recursive(borrow self: &Dir) -> bool : "extern";
+
+  fun destroy(self: &Dir) : "extern";
+}
+
+#- Fucking useless
+$if __LINUX__
+  inline cnst F_RDONLY: int = 0;
+  inline cnst F_WRONLY: int = 1;
+  inline cnst F_RDWR: int = 2;
+  inline cnst F_CREAT: int = 64;
+  inline cnst F_EXCL: int = 128;
+  inline cnst F_TRUNC: int = 512;
+  inline cnst F_APPEND: int = 1024;
+  inline cnst SEEK_SET: int = 0;
+  inline cnst SEEK_CUR: int = 1;
+  inline cnst SEEK_END: int = 2;
+$else #- Define anyways
+  inline cnst F_RDONLY: int = 0;
+  inline cnst F_WRONLY: int = 0;
+  inline cnst F_RDWR: int = 0;
+  inline cnst F_CREAT: int = 0;
+  inline cnst F_EXCL: int = 0;
+  inline cnst F_TRUNC: int = 0;
+  inline cnst F_APPEND: int = 0;
+  inline cnst SEEK_SET: int = 0;
+  inline cnst SEEK_CUR: int = 1;
+  inline cnst SEEK_END: int = 2;
+$endif
+
+$undef __YASOS_HEADER__;

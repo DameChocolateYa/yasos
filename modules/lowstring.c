@@ -523,7 +523,7 @@ void cpy$MODstring(char *dest, const char *src) {
 
 __attribute__((visibility("default")))
 void nnew$MODString(String *string) {
-  string->data = alloc$MODmem(1);
+  string->data = (char *)alloc$MODmem(1);
   string->size = 0;
 
   if (!string->data) {
@@ -591,6 +591,16 @@ String *clone$MODString(String *string) {
   }
 
   return from$MODString(string->data);
+}
+
+__attribute__((visibility("default")))
+char iterate$MODString(String *self, int *i) {
+  if (*i >= self->size) {
+    *i = -1;
+    return '\0';
+  }
+
+  return self->data[*i];
 }
 
 __attribute__((visibility("default")))

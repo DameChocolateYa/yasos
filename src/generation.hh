@@ -9,6 +9,7 @@
 
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Function.h>
 #include <llvm/IR/Type.h>
 #include <unistd.h>
 
@@ -78,7 +79,6 @@ typedef struct {
   } value;
 } AnyValue;
 
-extern std::unique_ptr<llvm::Module> TheModule;
 extern llvm::LLVMContext TheContext;
 extern bool global_init_block_existence;
 
@@ -90,6 +90,7 @@ class Generator {
   Mode mod;
   std::string current_mod = "";
   std::stringstream function_buffer, main_buffer;
+  std::unique_ptr<llvm::Module> TheModule;
 
   llvm::IRBuilder<> Builder;
   std::unique_ptr<llvm::Module> ModModule;
@@ -107,7 +108,7 @@ class Generator {
 
     bool is_owner = false;
     bool is_borrowed = false;
-    bool moved = true; // true by default beacause then we can give error if programmer tries to use an uninitialized variable
+    bool moved = false; // true by default beacause then we can give error if programmer tries to use an uninitialized variable
 
     std::string struct_template = "";
     bool is_arg = false;
@@ -135,6 +136,8 @@ class Generator {
     std::vector<std::pair<std::string, Type>> args;
     Type ret_type;
     bool in_line;
+    llvm::Function *llvm_func;
+    llvm::FunctionType *llvm_functype;
     std::vector<NodeStmt> code_branch;  // just in case it is an inline function
   };
 
@@ -248,11 +251,12 @@ class Generator {
 
   std::vector<std::string> libraries;
   std::vector<std::string> libpaths;
+  std::vector<std::string> include_directories;
 
   llvm::Value *gen_expr(const NodeExpr &expr, bool as_lvalue = false,
                         bool get_pointer = false, bool no_val = false);
-  void gen_stmt(const NodeStmt &stmt);
-  void gen_prog();
+  void gen_stmt(const NodeStmt &stmt, bool avoid_code_generation = false);
+  void gen_prog(bool avoid_code_generation = false);
 };
 
 std::string escape_string(const std::string &s) {

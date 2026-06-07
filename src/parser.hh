@@ -349,6 +349,14 @@ struct NodeStmtFor {
   int line;
 };
 
+struct NodeStmtForeach {
+  Token ident;
+  Type type;
+  NodeExpr value;
+  std::vector<NodeStmt> code_branch;
+  int line;
+};
+
 struct NodeStmtDefFunc {
   Token name;
   std::vector<CustomFuncArgs> args;
@@ -512,7 +520,7 @@ struct NodeStmtNmem {
 struct NodeStmt {
   std::variant<NodeStmtAsmUserWrite, NodeStmtAssign, NodeStmtVar, NodeStmtVarRe,
     NodeStmtCall, NodeStmtImport, NodeStmtUse, NodeStmtIf, NodeStmtWhile,
-    NodeStmtLoop, NodeStmtFor, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet,
+    NodeStmtLoop, NodeStmtFor, NodeStmtForeach, NodeStmtDefFunc, NodeStmtEndfn, NodeStmtRet,
     NodeStmtMkpub, NodeStmtUnload, NodeStmtStop, NodeStmtContinue,
     NodeStmtProperty, NodeStmtDeclmod, NodeStmtEndmod, NodeStmtUmod,
     NodeStmtUbeepmod, NodeStmtLlibrary, NodeStmtLibpath, NodeStmtSetPtr,

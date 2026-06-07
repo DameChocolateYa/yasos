@@ -29,6 +29,6 @@ If we not need args we can use:
 `function;`
 
 We can also integrate the call in an expression if the call returns a value:
-`var x: int = sum(2, 3);`
+`let x: int = sum(2, 3);`
 
 > By the moment and undefined use of arguments is now allowed, but you can declare a external function wich use undefined parameter os this way: `extern fun name(undefan);`
