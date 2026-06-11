@@ -617,7 +617,8 @@ std::optional<NodeExpr> Parser::parse_primary_expr() {
                           .line = line });
   }
   else if (peek().has_value() && peek().value().type == TokenType::int_lit) {
-    return NodeExpr(NodeExprIntLit{ consume() });
+    int line = peek().value().line;
+    return NodeExpr(NodeExprIntLit{ consume(), IntType::I32, line});
   }
   else if (peek().has_value() && peek().value().type == TokenType::ident) {
     last_token = peek().value();

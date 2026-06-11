@@ -40,7 +40,7 @@ install() {
 	
 	cd modules/headers
 	mkdir -p /usr/include/ysinclude
-	cp *.ys /usr/include/ysinclude
+	cp * /usr/include/ysinclude
 	
 	cd ../
 	make

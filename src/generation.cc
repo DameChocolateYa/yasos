@@ -450,6 +450,17 @@ static llvm::AllocaInst *CreateEntryBlockAlloca(llvm::Function *TheFunction,
   return TmpB.CreateAlloca(llvm_type, nullptr, VarName);
 }
 
+static llvm::Value *get_default_value(const Type type, Generator *gen) {
+  switch (type.kind) {
+    case Type::Kind::Int: {
+      llvm::Type *i32_type = llvm::IntegerType::getInt32Ty(TheContext);
+      return llvm::ConstantInt::get(i32_type, 0, true);
+    }
+    default:
+      return nullptr;
+  }
+}
+
 static void clean_after_scope(Generator *gen, int vars_before_scope, int line);
 static std::optional<llvm::Value *> call_func(
     const std::string &fn, std::vector<NodeExprPtr> arg_values, Generator *gen,
@@ -647,7 +658,7 @@ static void call_destroy(Generator *gen, Generator::Var &var,
     std::vector<llvm::Value *> args;
     args.push_back(base_ptr);
 
-    call_func_raw_args(func_name_mangled, args, gen, 0);
+    call_func_raw_args(func_name_mangled, args, gen, 0, false, false);
     var.moved = !return_as_not_moved;
   }
 }
@@ -708,6 +719,9 @@ llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
         return llvm::ConstantInt::get(llvm::Type::getInt1Ty(TheContext),
                                       valueStr == "0" ? 0 : 1);
       }
+
+      if (valueStr.empty())
+        valueStr = "255"; // Debug
 
       long long value = std::stoll(valueStr);
 
@@ -1100,7 +1114,7 @@ llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
       return *ret_val;
     }
 
-    llvm::Value *operator()(const NodeExprProperty &expr_property) const {
+    /*llvm::Value *operator()(const NodeExprProperty &expr_property) const {
       llvm::Value *base = gen->gen_expr(*expr_property.base, false, false);
       llvm::Type *base_type = base->getType();
 
@@ -1180,7 +1194,69 @@ llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
       }
 
       return property_ptr;
+    }*/
+
+    llvm::Value *operator()(const NodeExprProperty &expr_property) const {
+    auto &var = gen->m_vars.at(expr_property.base_tok.value.value());
+    llvm::Value *base = gen->gen_expr(*expr_property.base, false, !var.type->isPointerTy());
+    std::string struct_name = var.struct_template;
+    llvm::StructType *struct_type = gen->m_struct_templates.at(struct_name);
+
+    llvm::Value *base_ptr = base;
+    llvm::Type *base_type = base->getType();
+
+    if (!base->getType()->isPointerTy()) {
+        llvm::Value *tmp =
+            gen->Builder.CreateAlloca(base_type, nullptr, "struct_tmp");
+        gen->Builder.CreateStore(base, tmp);
+        base_ptr = tmp;
     }
+
+    // ================= FUNC CALL =================
+    if (expr_property.is_func) {
+        const std::string &func_name = expr_property.property.value.value();
+
+        std::string struct_template;
+        for (auto &v : gen->m_vars) {
+            if (v.second.base_type->isStructTy() &&
+                expr_property.base_tok.value.value() == v.second.name) {
+                struct_template = v.second.base_type->getStructName().str();
+            }
+        }
+
+        std::string mangled = func_name + "$MOD" + struct_template;
+
+        NodeExpr var_expr = NodeExpr(NodeExprIdent{
+            .ident = expr_property.base_tok,
+            .line = expr_property.line
+        });
+
+        std::vector<NodeExprPtr> args;
+        args.push_back(std::make_shared<NodeExpr>(var_expr));
+        for (auto &a : expr_property.args) args.push_back(a);
+
+        return *call_func(mangled, args, gen, expr_property.line);
+    }
+
+    // ================= PROPERTY ACCESS =================
+
+    int index = gen->m_struct_arg_templates.at(struct_name)
+                    .at(expr_property.property.value.value())
+                    .first;
+
+    llvm::Type *prop_type = gen->m_struct_arg_templates.at(struct_name)
+                                .at(expr_property.property.value.value())
+                                .second;
+
+    llvm::Value *property_ptr =
+        gen->Builder.CreateStructGEP(struct_type, base_ptr, index);
+
+    if (!as_lvalue) {
+        return gen->Builder.CreateLoad(prop_type, property_ptr, "prop_val");
+    }
+
+    return property_ptr;
+}
 
     llvm::Value *operator()(const NodeExprGetPtr &expr_ptr) const {
       const std::string &name = expr_ptr.ident.value.value();
@@ -1706,7 +1782,7 @@ void Generator::gen_stmt(const NodeStmt &stmt, bool avoid_code_generation) {
 
       llvm::Value *var_ptr = nullptr;
       llvm::Value *init_val = nullptr;
-      if (stmt_var.has_initial_value && !stmt_var.is_inline) {
+      if (stmt_var.has_initial_value && !stmt_var.is_inline && gen->current_mode != Mode::Global) {
         init_val = gen->gen_expr(stmt_var.expr);
         gen->m_raw_var_exprs.insert({name, stmt_var.expr});
       }
@@ -1726,7 +1802,7 @@ void Generator::gen_stmt(const NodeStmt &stmt, bool avoid_code_generation) {
             initializer = llvm::ConstantFP::get(llvm_type, 0.0);
           } else if (llvm_type->isStructTy() &&
                      !llvm::cast<llvm::StructType>(llvm_type)->isOpaque()) {
-            initializer = llvm::Constant::getNullValue(llvm_type);
+            initializer = llvm::ConstantAggregateZero::get(llvm_type);
           } else {
             initializer = nullptr;
             add_error("Cannot create null initializer for this type",
@@ -1785,7 +1861,7 @@ void Generator::gen_stmt(const NodeStmt &stmt, bool avoid_code_generation) {
         } else if (llvm_type->isFloatingPointTy()) {
           initializer = llvm::ConstantFP::get(llvm_type, 0.0);
         } else if (llvm_type->isStructTy()) {
-          initializer = llvm::Constant::getNullValue(llvm_type);
+          initializer = llvm::ConstantAggregateZero::get(llvm_type);
         } else {
           initializer = nullptr;
         }
@@ -1810,6 +1886,7 @@ void Generator::gen_stmt(const NodeStmt &stmt, bool avoid_code_generation) {
                 stmt_var.line);
             return;
           }
+
           var_ptr = new llvm::GlobalVariable(
               *gen->ModModule, llvm_type, !stmt_var.is_mutable,
               llvm::GlobalValue::ExternalLinkage, initializer,
