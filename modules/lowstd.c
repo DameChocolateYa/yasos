@@ -46,7 +46,7 @@ unsigned int sys_sleep(double) __attribute__((visibility("hidden")));
 
 typedef struct {
   int size;
-  Vec *internal_data;
+  Vec internal_data;
 } EnvArgs;
 
 // Wrappers
@@ -318,6 +318,19 @@ char *strbuf$MODstd(const char *fmt, int *len_r, va_list args) {
         out = (char *)realloc$MODmem(out, capacity);
       }
       out[pos++] = c;
+      break;
+    }
+    case 'b': {
+      bool b = (bool)va_arg(args, int);
+      const char *bs = b ? "true" : "false";
+
+      for (int i = 0; i < len$MODstring(bs); i++) {
+        if (pos >= capacity) {
+          capacity *= 2;
+          out = (char *)realloc$MODmem(out, capacity);
+        }
+        out[pos++] = bs[i];
+      }
       break;
     }
     case '%': {
@@ -626,12 +639,13 @@ int is_valid_double$MODstd(const char* str) {
 }
 
 __attribute__((visibility("default")))
-Vec *args$MODstd(int argc, char **argv) {
-  Vec *args = new$MODVec(sizeof(String*));
+Vec args$MODstd(int argc, char **argv) {
+  Vec args = new$MODVec(sizeof(String *));
 
   for (int i = 0; i < argc; i++) {
-    String *arg = from$MODString(argv[i]);
-    push_string$MODVec(args, arg);
+    String arg = from$MODString(argv[i]);
+    push_string$MODVec(&args, arg);
+    destroy$MODString(&arg);
   }
 
   return args;
@@ -645,61 +659,54 @@ void free_args$MODstd(Vec *args) {
   }
 
   for (int i = 0; i < args->size; i++) {
-    String *s = get_string$MODVec(args, i);
-    destroy$MODString(s);
+    String s = get_string$MODVec(args, i);
+    destroy$MODString(&s);
   }
 
   destroy$MODVec(args);
 }
 
 __attribute__((visibility("default")))
-EnvArgs *new$MODEnvArgs(int argc, char **argv) {
-  EnvArgs *self = (EnvArgs *)alloc$MODmem(sizeof(EnvArgs));
-  if (!self) {
-    fprintf(stderr, "Could not create EnvArgs instance\n");
-    return NULL;
-  }
+EnvArgs new$MODEnvArgs(int argc, char **argv) {
+  EnvArgs self;
 
-  Vec *internal_data = new$MODVec(sizeof(String *));
-  if (!internal_data) {
-    fprintf(stderr, "Could not allocate internal data in EnvArgs instance\n");
-    return NULL;
-  }
+  Vec internal_data = new$MODVec(sizeof(String *));
 
   for (int i = 0; i < argc; i++) {
     char *current_arg = argv[i];
 
-    String *arg = from$MODString(current_arg);
-    if (!arg) {
+    String arg = from$MODString(current_arg);
+    if (!arg.data) {
       fprintf(stderr, "Error trying to allocate argument in EnvArgs instance, value omited\n");
       continue;
     }
 
-    push_string$MODVec(internal_data, arg);
+    push_string$MODVec(&internal_data, arg);
+    destroy$MODString(&arg);
   }
 
-  self->internal_data = internal_data;
-  self->size = argc;
+  self.internal_data = internal_data;
+  self.size = argc;
   return self;
 }
 
 __attribute__((visibility("default")))
-String *get_arg$MODEnvArgs(EnvArgs *self, int index) {
-  if (index < 0 || index >= self->internal_data->size) {
+String get_arg$MODEnvArgs(EnvArgs *self, int index) {
+  if (index < 0 || index >= self->internal_data.size) {
     fprintf(stderr, "EnvArgs::get_arg: index out of range\n");
-    return NULL;
+    return (String){0};
   }
 
-  String *string = get_string$MODVec(self->internal_data, index);
+  String string = get_string$MODVec(&self->internal_data, index);
 
   return string;
 }
 
 __attribute__((visibility("default")))
-String *iterate$MODEnvArgs(EnvArgs *self, int *i) {
+String iterate$MODEnvArgs(EnvArgs *self, int *i) {
   if (*i >= self->size) {
     *i = ITERATION_END;
-    return NULL;
+    return (String){0};
   }
 
   return get_arg$MODEnvArgs(self, *i);
@@ -707,9 +714,8 @@ String *iterate$MODEnvArgs(EnvArgs *self, int *i) {
 
 __attribute__((visibility("default")))
 void destroy$MODEnvArgs(EnvArgs *self) {
-  for (int i = 0; i < self->internal_data->size; i++) {
-    destroy$MODString(get_string$MODVec(self->internal_data, i));
+  for (int i = 0; i < self->internal_data.size; i++) {
+    String s = get_string$MODVec(&self->internal_data, i);
+    destroy$MODString(&s);
   }
-
-  free$MODmem(self);
 }

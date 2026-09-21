@@ -23,50 +23,51 @@ std::vector<Token> Lexer::tokenize() {
              (std::isalnum(peek().value()) || peek().value() == '_')) {
         buf.push_back(consume());
       }
+
       if (buf == "var" || buf == "let") {
         if (buf == "var") {
           add_warning("var is allowed, but obsolete, use 'let' instead", local_lines, false);
         }
-        tokens.push_back({.type = TokenType::var, .line = local_lines});
+        tokens.push_back({.type = TokenType::var, .value = "let", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "cnst" || buf == "const") {
         if (buf == "cnst") {
           add_warning("var is allowed, but obsolete, use 'let' instead", local_lines, false);
         }
-        tokens.push_back({.type = TokenType::cnst, .line = local_lines});
+        tokens.push_back({.type = TokenType::cnst, .value = "const", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "str") {
-        tokens.push_back({.type = TokenType::str_type, .line = local_lines});
+        tokens.push_back({.type = TokenType::str_type, .value = "str", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "char") {
-        tokens.push_back({.type = TokenType::char_type, .line = local_lines});
+        tokens.push_back({.type = TokenType::char_type, .value = "char", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "int" || buf == "i32") { // i32 is literally int, let the suffer begin with i64, i128...
-        tokens.push_back({.type = TokenType::int_type, .value = "int_type", .line = local_lines});
+        tokens.push_back({.type = TokenType::int_type, .value = "i32", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "i64") {
-        tokens.push_back({.type = TokenType::i64_type, .value = "i64_type", .line = local_lines});
+        tokens.push_back({.type = TokenType::i64_type, .value = "i64", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "double") {
-        tokens.push_back({.type = TokenType::double_type, .line = local_lines});
+        tokens.push_back({.type = TokenType::double_type, .value = "double", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "boolean" || buf == "bool") {
-        tokens.push_back({.type = TokenType::boolean_type, .line = local_lines});
+        tokens.push_back({.type = TokenType::boolean_type, .value = "bool", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "any") {
-        tokens.push_back({.type = TokenType::any_type, .line = local_lines});
+        tokens.push_back({.type = TokenType::any_type, .value = "any", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "ptr") {
-        tokens.push_back({.type = TokenType::ptr_type, .line = local_lines});
+        tokens.push_back({.type = TokenType::ptr_type, .value = "ptr", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "add") {
@@ -160,15 +161,15 @@ std::vector<Token> Lexer::tokenize() {
         buf.clear();
         continue;
       } else if (buf == "import") {
-        tokens.push_back({.type = TokenType::import, .line = local_lines});
+        tokens.push_back({.type = TokenType::import, .value = "import", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "use") {
-        tokens.push_back({.type = TokenType::use, .line = local_lines});
+        tokens.push_back({.type = TokenType::use, .value = "uhead", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "none") {
-        tokens.push_back({.type = TokenType::none, .line = local_lines});
+        tokens.push_back({.type = TokenType::none, .value = "none", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "nil") {
@@ -177,7 +178,7 @@ std::vector<Token> Lexer::tokenize() {
         buf.clear();
         continue;
       } else if (buf == "NoArg" || buf == "noarg") {
-        tokens.push_back({.type = TokenType::no_arg, .line = local_lines});
+        tokens.push_back({.type = TokenType::no_arg, .value = "noarg", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "cr") {
@@ -185,7 +186,7 @@ std::vector<Token> Lexer::tokenize() {
         buf.clear();
         continue;
       } else if (buf == "fun") {
-        tokens.push_back({.type = TokenType::_fnc, .line = local_lines});
+        tokens.push_back({.type = TokenType::_fnc, .value = "fun", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "endfn") {
@@ -193,7 +194,7 @@ std::vector<Token> Lexer::tokenize() {
         buf.clear();
         continue;
       } else if (buf == "ret") {
-        tokens.push_back({.type = TokenType::ret, .line = local_lines});
+        tokens.push_back({.type = TokenType::ret, .value = "ret", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "mkpub") {
@@ -205,15 +206,15 @@ std::vector<Token> Lexer::tokenize() {
         buf.clear();
         continue;
       }*/ else if (buf == "while") {
-        tokens.push_back({.type = TokenType::_while, .line = local_lines});
+        tokens.push_back({.type = TokenType::_while, .value = "while", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "loop") {
-        tokens.push_back({.type = TokenType::_loop, .line = local_lines});
+        tokens.push_back({.type = TokenType::_loop, .value = "loop", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "for") {
-        tokens.push_back({.type = TokenType::_for, .line = local_lines});
+        tokens.push_back({.type = TokenType::_for, .value = "for", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "foreach") {
@@ -221,19 +222,19 @@ std::vector<Token> Lexer::tokenize() {
         buf.clear();
         continue;
       } else if (buf == "stop") {
-        tokens.push_back({.type = TokenType::_stop, .line = local_lines});
+        tokens.push_back({.type = TokenType::_stop, .value = "stop", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "continue") {
-        tokens.push_back({.type = TokenType::_continue, .line = local_lines});
+        tokens.push_back({.type = TokenType::_continue, .value = "continue", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "true") {
-        tokens.push_back({.type = TokenType::_true, .line = local_lines});
+        tokens.push_back({.type = TokenType::_true, .value = "true", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "false") {
-        tokens.push_back({.type = TokenType::_false, .line = local_lines});
+        tokens.push_back({.type = TokenType::_false, .value = "false", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "unload") {
@@ -241,11 +242,11 @@ std::vector<Token> Lexer::tokenize() {
         buf.clear();
         continue;
       } else if (buf == "declmod") {
-        tokens.push_back({.type = TokenType::_declmod, .line = local_lines});
+        tokens.push_back({.type = TokenType::_declmod, .value = "declmod", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "endmod") {
-        tokens.push_back({.type = TokenType::_endmod, .line = local_lines});
+        tokens.push_back({.type = TokenType::_endmod, .value = "endmod", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "umod") {
@@ -265,39 +266,39 @@ std::vector<Token> Lexer::tokenize() {
         buf.clear();
         continue;
       } else if (buf == "ref") {
-        tokens.push_back({.type = TokenType::ref, .line = local_lines});
+        tokens.push_back({.type = TokenType::ref, .value = "&", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "deref") {
-        tokens.push_back({.type = TokenType::deref, .line = local_lines});
+        tokens.push_back({.type = TokenType::deref, .value = "*", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "globl") {
-        tokens.push_back({.type = TokenType::_globl, .line = local_lines});
+        tokens.push_back({.type = TokenType::_globl, .value = "globl", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "header") {
-        tokens.push_back({.type = TokenType::_header, .line = local_lines});
+        tokens.push_back({.type = TokenType::_header, .value = "header", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "uhead") {
-        tokens.push_back({.type = TokenType::_uhead, .line = local_lines});
+        tokens.push_back({.type = TokenType::_uhead, .value = "uhead", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "leave") {
-        tokens.push_back({.type = TokenType::_leave, .line = local_lines});
+        tokens.push_back({.type = TokenType::_leave, .value = "leave", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "pub") {
-        tokens.push_back({.type = TokenType::_pub, .line = local_lines});
+        tokens.push_back({.type = TokenType::_pub, .value = "pub", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "extern") {
-        tokens.push_back({.type = TokenType::_extern, .line = local_lines});
+        tokens.push_back({.type = TokenType::_extern, .value = "extern", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "inline" || buf == "inl") {
-        tokens.push_back({.type = TokenType::_inline, .line = local_lines});
+        tokens.push_back({.type = TokenType::_inline, .value = "inline", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "list") {
@@ -305,11 +306,11 @@ std::vector<Token> Lexer::tokenize() {
         buf.clear();
         continue;
       } else if (buf == "struct") {
-        tokens.push_back({.type = TokenType::_struct, .line = local_lines});
+        tokens.push_back({.type = TokenType::_struct, .value = "struct", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "impl") {
-        tokens.push_back({.type = TokenType::_impl, .line = local_lines});
+        tokens.push_back({.type = TokenType::_impl, .value = "impl", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "nwstruct") {
@@ -317,7 +318,7 @@ std::vector<Token> Lexer::tokenize() {
         buf.clear();
         continue;
       } else if (buf == "aloc") {
-        tokens.push_back({.type = TokenType::_new, .line = local_lines});
+        tokens.push_back({.type = TokenType::_new, .value = "aloc", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "goto") {
@@ -326,15 +327,19 @@ std::vector<Token> Lexer::tokenize() {
         buf.clear();
         continue;
       } else if (buf == "nmem") {
-        tokens.push_back({.type = TokenType::_nmem, .line = local_lines});
+        tokens.push_back({.type = TokenType::_nmem, .value = "nmem", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "borrow") {
-        tokens.push_back({.type = TokenType::_borrow, .line = local_lines});
+        tokens.push_back({.type = TokenType::_borrow, .value = "borrow", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "in") {
         tokens.push_back({.type = TokenType::_in, .value = "in", .line = local_lines});
+        buf.clear();
+        continue;
+      } else if (buf == "with") {
+        tokens.push_back({.type = TokenType::_with, .value = "with", .line = local_lines});
         buf.clear();
         continue;
       } else if (buf == "$def") {

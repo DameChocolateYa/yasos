@@ -231,8 +231,8 @@ char *read$MODFile(File *self) {
 }
 
 __attribute__((visibility("default")))
-Vec *read_lines$MODFile(File *self) {
-  Vec *lines = new$MODVec(sizeof(String*));
+Vec read_lines$MODFile(File *self) {
+  Vec lines = new$MODVec(sizeof(String*));
   if (self->fd < 0) {
     fprintf(stderr, "File::read_lines: Tried to read lines from a NULL File\n");
     return lines;
@@ -248,15 +248,15 @@ Vec *read_lines$MODFile(File *self) {
 
   while ((newline = strchr(start, '\n')) != NULL) {
     *newline = '\0';
-    String *line = from$MODString(start);
-    push_string$MODVec(lines, line);
+    String line = from$MODString(start);
+    push_string$MODVec(&lines, &line);
 
     start = newline + 1;
   }
 
   if (*start != '\0') {
-    String *line = from$MODString(start);
-    push_string$MODVec(lines, line);
+    String line = from$MODString(start);
+    push_string$MODVec(&lines, &line);
   }
 
   return lines;
@@ -310,7 +310,8 @@ Dir *new$MODDir(const char *path, const char *flags) {
     return NULL;
   }
 
-  dir->path = from$MODString(path);
+  String s = from$MODString(path);
+  dir->path = &s;
   if (!dir->path) {
     fprintf(stderr, "Dir::new: Could not create a String instance of path\n");
     return NULL;

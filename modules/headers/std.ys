@@ -15,7 +15,7 @@ struct Vec {
 
 struct EnvArgs {
   size: i32;
-  internal_data: &Vec;
+  internal_data: Vec;
 }
 
 struct String {
@@ -81,8 +81,8 @@ inline const ITERATION_END: i32 = -1;
 endmod;
 
 impl EnvArgs {
-  fun new(argc: i32, argv: &str) -> &EnvArgs : "extern";
-  fun get_arg(borrow self: &EnvArgs) -> &String : "extern";
-  fun iterate(borrow self: &EnvArgs, i: &i32) -> &String : "extern";
+  fun new(argc: i32, argv: &str) -> EnvArgs : "extern";
+  fun get_arg(borrow self: &EnvArgs) -> String : "extern";
+  fun iterate(borrow self: &EnvArgs, i: &i32) -> String : "extern";
   fun destroy(self: &EnvArgs) : "extern";
 }

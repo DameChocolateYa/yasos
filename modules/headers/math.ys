@@ -8,10 +8,28 @@
 #- sin, cos and tan functions wont work properly by the moment, their use is not recommended
 #- It is recommended to use their equivalent in LIBC
 
-inline const PI = 3.141592;
-inline const E = 2.718281;
+struct Vec2 {
+  x: double,
+  y: double
+}
+
+struct Vec3 {
+  x: double,
+  y: double,
+  z: double
+}
+
+struct Vec4 {
+  x: double,
+  y: double,
+  z: double,
+  w: double
+}
 
 declmod math;
+
+inline const PI = 3.141592;
+inline const E = 2.718282;
 
 fun sqrt(x: double) -> double : "extern";
 fun pow(base: double, exponent: int) -> double : "extern";

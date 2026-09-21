@@ -18,21 +18,21 @@ struct String {
 #--
 
 struct Vec {
-  data: &any;
-  size: int;
-  capacity: int;
-  elem_size: int;
-  is_membusy: int;
-};
+  data: &any,
+  size: i32,
+  capacity: i32,
+  elem_size: i32,
+  is_membusy: bool,
+}
 
 impl Vec {
-  fun new(elem_size: int) -> &Vec : "extern";
-  fun new_ptr(n: i32, undefan) -> &Vec : "extern";
-  fun new_int(n: i32, undefan) -> &Vec : "extern";
-  fun new_string(n: i32, undefan) -> &Vec : "extern";
-  fun new_double(n: i32, undefan) -> &Vec : "extern";
-  fun new_char(n: i32, undefan) -> &Vec : "extern";
-  fun new_vec(n: i32, undefan) -> &Vec : "extern";
+  fun new(elem_size: int) -> Vec : "extern";
+  fun new_ptr(n: i32, undefan) -> Vec : "extern";
+  fun new_int(n: i32, undefan) -> Vec : "extern";
+  fun new_string(n: i32, undefan) -> Vec : "extern";
+  fun new_double(n: i32, undefan) -> Vec : "extern";
+  fun new_char(n: i32, undefan) -> Vec : "extern";
+  fun new_vec(n: i32, undefan) -> Vec : "extern";
 
   fun push(borrow self: &Vec, elem: &any) : "extern";
   fun pop(borrow self: &Vec) : "extern";
@@ -42,7 +42,7 @@ impl Vec {
 
   fun push_ptr(borrow self: &Vec, val: &any) : "extern";
   fun push_int(borrow self: &Vec, val: int) : "extern";
-  fun push_string(borrow self: &Vec, val: &String) : "extern";
+  fun push_string(borrow self: &Vec, val: String) : "extern";
   fun push_char(borrow self: &Vec, val: char) : "extern";
   fun push_double(borrow self: &Vec, val: double) : "extern";
   fun push_vec(borrow self: &Vec, borrow val: &Vec) : "extern";
@@ -57,10 +57,10 @@ impl Vec {
   fun get(borrow self: &Vec, index: int) -> &any : "extern";
   fun get_ptr(borrow self: &Vec, index: i32) -> &any : "extern";
   fun get_int(borrow self: &Vec, index: int) -> int : "extern";
-  fun get_string(borrow self: &Vec, index: int) -> &String : "extern";
+  fun get_string(borrow self: &Vec, index: int) -> String : "extern";
   fun get_char(borrow self: &Vec, index: i32) -> char : "extern";
   fun get_double(borrow self: &Vec, index: int) -> double : "extern";
-  fun get_vec(borrow self: &Vec, index: int) -> &Vec : "extern";
+  fun get_vec(borrow self: &Vec, index: int) -> Vec : "extern";
 
   fun set_int(borrow self: &Vec, index: int, val: int) : "extern";
   fun set_string(borrow self: &Vec, index: int, val: &String) : "extern";
@@ -86,16 +86,16 @@ impl Vec {
   fun cpy_in(borrow dest: &Vec, to: int, borrow src: &Vec, from: int) : "extern";
   fun cpy_xelem_in(borrow dest: &Vec, borrow src: &Vec, n_par: int, undefan) : "extern";
 
-  fun clone(borrow self: &Vec) -> &Vec : "extern";
+  fun clone(borrow self: &Vec) -> Vec : "extern";
   fun iterate(borrow self: &Vec, i: &i32) -> &any : "extern";
   fun size(borrow self: &Vec) -> int : "extern";
 
   fun ssize() -> int : "extern";
 
-  fun abc() -> &Vec : "extern";
-  fun ABC() -> &Vec : "extern";
-  fun abcABC() -> &Vec : "extern";
-  fun ABCabc() -> &Vec : "extern";
-  fun AaBbCc() -> &Vec : "extern";
-  fun aAbBcC() -> &Vec : "extern";
+  fun abc() -> Vec : "extern";
+  fun ABC() -> Vec : "extern";
+  fun abcABC() -> Vec : "extern";
+  fun ABCabc() -> Vec : "extern";
+  fun AaBbCc() -> Vec : "extern";
+  fun aAbBcC() -> Vec : "extern";
 };

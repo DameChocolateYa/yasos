@@ -17,19 +17,19 @@
 #include "vector.h"
 
 __attribute__((visibility("default")))
-Vec *new$MODVec(int elem_size) {
-  Vec *self = (Vec *)alloc$MODmem(sizeof(Vec));
+Vec new$MODVec(int elem_size) {
+  Vec self = {0};
   
-  self->data = alloc$MODmem(elem_size * 2);
-  if (!self->data) {
+  self.data = alloc$MODmem(elem_size * 2);
+  if (!self.data) {
     fprintf(stderr, "Vec::new: could not allocate memory for data\n");
     return self;
   }
 
-  self->size = 0;
-  self->capacity = 2;
-  self->is_membusy = true;
-  self->elem_size = elem_size;
+  self.size = 0;
+  self.capacity = 2;
+  self.is_membusy = true;
+  self.elem_size = elem_size;
 
   return self;
 }
@@ -55,14 +55,14 @@ void push$MODVec(Vec *vec, void *elem) {
 }
 
 __attribute__((visibility("default")))
-Vec *new_ptr$MODVec(int n, ...) {
+Vec new_ptr$MODVec(int n, ...) {
   va_list args;
   va_start(args, n);
 
-  Vec *self = new$MODVec(sizeof(void *));
+  Vec self = new$MODVec(sizeof(void *));
   for (int i = 0; i < n; i++) {
     void *elem = va_arg(args, void *);
-    push$MODVec(self, &elem);
+    push$MODVec(&self, &elem);
   }
 
   va_end(args);
@@ -71,14 +71,14 @@ Vec *new_ptr$MODVec(int n, ...) {
 }
 
 __attribute__((visibility("default")))
-Vec *new_int$MODVec(int n, ...) {
+Vec new_int$MODVec(int n, ...) {
   va_list args;
   va_start(args, n);
 
-  Vec *self = new$MODVec(sizeof(int));
+  Vec self = new$MODVec(sizeof(int));
   for (int i = 0; i < n; i++) {
     int elem = va_arg(args, int);
-    push$MODVec(self, &elem);
+    push$MODVec(&self, &elem);
   }
 
   va_end(args);
@@ -87,14 +87,14 @@ Vec *new_int$MODVec(int n, ...) {
 }
 
 __attribute__((visibility("default")))
-Vec *new_string$MODVec(int n, ...) {
+Vec new_string$MODVec(int n, ...) {
   va_list args;
   va_start(args, n);
 
-  Vec *self = new$MODVec(sizeof(String *));
+  Vec self = new$MODVec(sizeof(String *));
   for (int i = 0; i < n; i++) {
     String *elem = va_arg(args, String *);
-    push$MODVec(self, &elem);
+    push$MODVec(&self, &elem);
   }
 
   va_end(args);
@@ -103,14 +103,14 @@ Vec *new_string$MODVec(int n, ...) {
 }
 
 __attribute__((visibility("default")))
-Vec *new_double$MODVec(int n, ...) {
+Vec new_double$MODVec(int n, ...) {
   va_list args;
   va_start(args, n);
 
-  Vec *self = new$MODVec(sizeof(double));
+  Vec self = new$MODVec(sizeof(double));
   for (int i = 0; i < n; i++) {
     double elem = va_arg(args, double);
-    push$MODVec(self, &elem);
+    push$MODVec(&self, &elem);
   }
 
   va_end(args);
@@ -119,14 +119,14 @@ Vec *new_double$MODVec(int n, ...) {
 }
 
 __attribute__((visibility("default")))
-Vec *new_char$MODVec(int n, ...) {
+Vec new_char$MODVec(int n, ...) {
   va_list args;
   va_start(args, n);
 
-  Vec *self = new$MODVec(sizeof(char));
+  Vec self = new$MODVec(sizeof(char));
   for (int i = 0; i < n; i++) {
     char elem = (char)va_arg(args, int);
-    push$MODVec(self, &elem);
+    push$MODVec(&self, &elem);
   }
 
   va_end(args);
@@ -135,14 +135,14 @@ Vec *new_char$MODVec(int n, ...) {
 }
 
 __attribute__((visibility("default")))
-Vec *new_vec$MODVec(int n, ...) {
+Vec new_vec$MODVec(int n, ...) {
   va_list args;
   va_start(args, n);
 
-  Vec *self = new$MODVec(sizeof(Vec *));
+  Vec self = new$MODVec(sizeof(Vec *));
   for (int i = 0; i < n; i++) {
     Vec *elem = va_arg(args, Vec *);
-    push$MODVec(self, &elem);
+    push$MODVec(&self, &elem);
   }
 
   va_end(args);
@@ -206,8 +206,10 @@ void push_int$MODVec(Vec *vec, int val) {
 }
 
 __attribute__((visibility("default")))
-void push_string$MODVec(Vec *vec, String *val) {
-  push$MODVec(vec, &val);
+void push_string$MODVec(Vec *vec, String val) {
+  String clone = clone$MODString(&val);
+
+  push$MODVec(vec, &clone);
 }
 
 __attribute__((visibility("default")))
@@ -257,8 +259,8 @@ void pushm_string$MODVec(Vec *vec, int n, ...) {
   va_start(args, n);
 
   for (int i = 0; i < n; i++) {
-    String *val = va_arg(args, String*);
-    push_string$MODVec(vec, val);
+    String *val = va_arg(args, String *);
+    push_string$MODVec(vec, *val);
   }
 
   va_end(args);
@@ -304,7 +306,7 @@ void pushm_char$MODVec(Vec *vec, int n, ...) {
 
 __attribute__((visibility("default")))
 void* get$MODVec(Vec *vector, int index) {
-  if (!vector->data || !vector->is_membusy) {
+  if (!vector->data) {
     return NULL;
   }
 
@@ -329,8 +331,8 @@ int get_int$MODVec(Vec *vector, int index) {
 }
 
 __attribute__((visibility("default")))
-String *get_string$MODVec(Vec *vector, int index) {
-  String* ptr = *(String**)get$MODVec(vector, index);
+String get_string$MODVec(Vec *vector, int index) {
+  String ptr = *(String*)get$MODVec(vector, index);
   return ptr;
 }
 
@@ -502,8 +504,6 @@ void destroy$MODVec(Vec* vector) {
   vector->size = 0;
   vector->elem_size = 0;
   vector->is_membusy = false;
-
-  free$MODmem(vector);
 }
 
 __attribute__((visibility("default")))
@@ -653,20 +653,20 @@ void cpy_xelem_in$MODVec(Vec* dest, Vec *src, int n_par, ...) {
 }
 
 __attribute__((visibility("default")))
-Vec *clone$MODVec(Vec *og) {
-  Vec *cloned = (Vec *)alloc$MODmem(sizeof(Vec));
-  cloned->data = (char *)alloc$MODmem(og->elem_size * og->capacity);
+Vec clone$MODVec(Vec *og) {
+  Vec cloned;
+  cloned.data = (char *)alloc$MODmem(og->elem_size * og->capacity);
 
-  if (!cloned->data) {
+  if (!cloned.data) {
     fprintf(stderr, "Vec::clone: Could not clone Vector (error allocating memory)\n");
     return cloned;
   }
 
-  memcpy(cloned->data, og->data, og->capacity * og->elem_size);
-  cloned->capacity = og->capacity;
-  cloned->size = og->size;
-  cloned->elem_size = og->elem_size;
-  cloned->is_membusy = true;
+  memcpy(cloned.data, og->data, og->capacity * og->elem_size);
+  cloned.capacity = og->capacity;
+  cloned.size = og->size;
+  cloned.elem_size = og->elem_size;
+  cloned.is_membusy = true;
 
   return cloned;
 }
@@ -692,38 +692,38 @@ int ssize$MODVec() {
 }
 
 __attribute__((visibility("default")))
-Vec *abc$MODVec() {
-  Vec *abc = new_char$MODVec(26, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z');
+Vec abc$MODVec() {
+  Vec abc = new_char$MODVec(26, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z');
   return abc;
 }
 
 __attribute__((visibility("default")))
-Vec *ABC$MODVec() {
-  Vec *abc = new_char$MODVec(26, 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z');
+Vec ABC$MODVec() {
+  Vec abc = new_char$MODVec(26, 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z');
   return abc;
 }
 
 
 __attribute__((visibility("default")))
-Vec *abcABC$MODVec() {
-  Vec *abc = new_char$MODVec(52, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z');
+Vec abcABC$MODVec() {
+  Vec abc = new_char$MODVec(52, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z');
   return abc;
 }
 
 __attribute__((visibility("default")))
-Vec *ABCabc$MODVec() {
-  Vec *abc = new_char$MODVec(52, 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z');
+Vec ABCabc$MODVec() {
+  Vec abc = new_char$MODVec(52, 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z');
   return abc;
 }
 
 __attribute__((visibility("default")))
-Vec *AaBbCc$MODVec() {
-  Vec *abc = new_char$MODVec(52, 'A', 'a', 'B', 'b', 'C', 'c', 'D', 'd', 'E', 'e', 'F', 'f', 'G', 'g', 'H', 'h', 'I', 'i', 'J', 'j', 'K', 'k', 'L', 'l', 'M', 'm', 'N', 'n', 'O', 'o', 'P', 'p', 'Q', 'q', 'R', 'r', 'S', 's', 'T', 't', 'U', 'u', 'V', 'v', 'W', 'w', 'X', 'x', 'Y', 'y', 'Z', 'z');
+Vec AaBbCc$MODVec() {
+  Vec abc = new_char$MODVec(52, 'A', 'a', 'B', 'b', 'C', 'c', 'D', 'd', 'E', 'e', 'F', 'f', 'G', 'g', 'H', 'h', 'I', 'i', 'J', 'j', 'K', 'k', 'L', 'l', 'M', 'm', 'N', 'n', 'O', 'o', 'P', 'p', 'Q', 'q', 'R', 'r', 'S', 's', 'T', 't', 'U', 'u', 'V', 'v', 'W', 'w', 'X', 'x', 'Y', 'y', 'Z', 'z');
   return abc;
 }
 
 __attribute__((visibility("default")))
-Vec *aAbBcC$MODVec() {
-  Vec *abc = new_char$MODVec(52, 'a', 'A', 'b', 'B', 'c', 'C', 'd', 'D', 'e', 'E', 'f', 'F', 'g', 'G', 'h', 'H', 'i', 'I', 'j', 'J', 'k', 'K', 'l', 'L', 'm', 'M', 'n', 'N', 'o', 'O', 'p', 'P', 'q', 'Q', 'r', 'R', 's', 'S', 't', 'T', 'u', 'U', 'v', 'V', 'w', 'W', 'x', 'X', 'y', 'Y', 'z', 'Z');
+Vec aAbBcC$MODVec() {
+  Vec abc = new_char$MODVec(52, 'a', 'A', 'b', 'B', 'c', 'C', 'd', 'D', 'e', 'E', 'f', 'F', 'g', 'G', 'h', 'H', 'i', 'I', 'j', 'J', 'k', 'K', 'l', 'L', 'm', 'M', 'n', 'N', 'o', 'O', 'p', 'P', 'q', 'Q', 'r', 'R', 's', 'S', 't', 'T', 'u', 'U', 'v', 'V', 'w', 'W', 'x', 'X', 'y', 'Y', 'z', 'Z');
   return abc;
 }

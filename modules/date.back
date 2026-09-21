@@ -12,18 +12,18 @@ struct Time {
   hour: int;
   minute: int;
   second: int;
-};
+}
 
 struct Date {
   year: int;
   month: int;
   day: int;
   time: Time;
-};
+}
 
-declmod date;
+#-declmod date;
 
-declmod time;
+#-declmod time;
 
 fun new(hour: int, minute: int, second: int) -> Time {
   let t: Time;
@@ -76,7 +76,7 @@ fun from_int(x: int) -> Time {
   ret t;
 } pub;
 
-endmod;
+#-endmod;
 
 fun new(day: int, month: int, year: int, hour: int, minute: int, second: int) -> Date {
   let d: Date;
@@ -90,4 +90,4 @@ fun new(day: int, month: int, year: int, hour: int, minute: int, second: int) ->
   ret d;
 } pub;
 
-endmod;
+#-endmod;

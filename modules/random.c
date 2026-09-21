@@ -43,11 +43,11 @@ typedef struct {
 YSEXPORT GeneratorInt *new$MODGeneratorInt() {
     GeneratorInt *self = (GeneratorInt *)alloc$MODmem(sizeof(GeneratorInt));
 
-    Vec *internal_data = new$MODVec(sizeof(int));
-    Vec *copies = new$MODVec(sizeof(Vec *));
+    Vec internal_data = new$MODVec(sizeof(int));
+    Vec copies = new$MODVec(sizeof(Vec *));
 
-    self->internal_data = internal_data;
-    self->copies = copies;
+    self->internal_data = &internal_data;
+    self->copies = &copies;
 
     return self;
 }

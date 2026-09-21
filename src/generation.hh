@@ -131,19 +131,48 @@ class Generator {
     std::string struct_template = "";
   };
 
+  struct FuncParamInfo {
+    Type source_type;
+    llvm::Type *abi_type;
+    bool indirect;
+  };
+
+  struct FuncRetInfo {
+    Type source_type;
+    llvm::Type *abi_type;
+    bool indirect;
+  };
+
   struct Func {
     std::string name;
-    std::vector<std::pair<std::string, Type>> args;
-    Type ret_type;
+    std::vector<std::pair<std::string, FuncParamInfo>> args;
+    FuncRetInfo ret_info;
     bool in_line;
     llvm::Function *llvm_func;
     llvm::FunctionType *llvm_functype;
     std::vector<NodeStmt> code_branch;  // just in case it is an inline function
+    std::string source_code; // If it uses generic types
+    bool no_discard = false;
+  };
+
+  // More shit for structs
+  struct StructFieldInfo {
+    int index;
+    Type meta_type;
+    llvm::Type *llvm_type;
+    bool is_struct;
+    std::string struct_name;
+  };
+
+  struct StructInfo {
+    std::string name;
+    Type type;
+    llvm::StructType *llvm_type;
   };
 
   std::string filename;
 
-  const NodeProg m_prog;
+  NodeProg m_prog;
   std::stringstream m_output;
   size_t m_stack_size = 0;
   size_t m_stack_size_rel = 0;  // Used only for rsp (NOT RBP)
@@ -164,17 +193,23 @@ class Generator {
       stmt_orde;  // 1 - start | 2- end | 3- update (for)
   std::unordered_map<std::string, llvm::BasicBlock *> m_declared_blocks;
 
-  std::map<std::string, llvm::StructType *> m_struct_templates;
+  std::map<std::string, StructInfo> m_struct_templates;
+
   std::map<std::string, std::map<std::string, std::pair<int, llvm::Type *>>>
       m_struct_arg_templates;
+  std::map<std::string, std::map<std::string, StructFieldInfo>> m_struct_field_info; // struct name, field name, field info
 
   std::map<std::string, std::vector<NodeExpr>> m_vars_in_structs;
   std::vector<NodeExpr> m_struct_temp_args;  // shitty way
+  std::unordered_map<std::string, std::pair<NodeStmtStruct, std::vector<Type>>> generic_structs;
 
   std::vector<Func> m_funcs;
+  std::unordered_map<std::string, std::pair<NodeStmtDefFunc, std::vector<Type>>> generic_functions; // Generic functions + compiler definitions -> Type is the generated types
+
   llvm::AllocaInst *return_slot;
   bool returned = false;
   llvm::BasicBlock *current_clean_block;
+  llvm::BasicBlock *current_generic_section_block;
   llvm::BasicBlock *global_init_block;
 
   bool stack_aligned_in_call = false;
@@ -255,7 +290,7 @@ class Generator {
 
   llvm::Value *gen_expr(const NodeExpr &expr, bool as_lvalue = false,
                         bool get_pointer = false, bool no_val = false);
-  void gen_stmt(const NodeStmt &stmt, bool avoid_code_generation = false);
+  void gen_stmt(NodeStmt &stmt, bool avoid_code_generation = false);
   void gen_prog(bool avoid_code_generation = false);
 };
 

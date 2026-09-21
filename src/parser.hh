@@ -35,7 +35,8 @@ struct Type {
     Ptr,
     NoArg,
     NxtUndefNum,
-    UserDefined
+    UserDefined,
+    Generic // compilator will replace it when it finds its right definition
   };
 
   Kind kind;
@@ -45,6 +46,12 @@ struct Type {
   std::string user_type = "";
 
   std::shared_ptr<Type> pointee = nullptr;
+  std::vector<Type> template_types;
+};
+
+enum Trait {
+  Generic,
+  Undefined
 };
 
 struct NodeExpr;
@@ -148,6 +155,7 @@ struct NodeExprProperty {
   std::shared_ptr<NodeExpr> base;
   Token base_tok;
   Token property;
+  std::vector<std::string> path;
 
   int is_func = false;
   std::vector<NodeExprPtr> args; // optional
@@ -175,6 +183,12 @@ struct NodeExprList {
 struct NodeExprListElement {
   NodeExprPtr list_expr;
   NodeExprPtr index;
+  int line;
+};
+
+struct NodeExprInlineStructDecl {
+  Token struct_type_tok;
+  std::vector<NodeExprPtr> members;
   int line;
 };
 
@@ -225,7 +239,7 @@ struct NodeExprAbs {
 struct NodeExpr {
   std::variant<NodeExprIntLit, NodeExprIdent, NodeExprStrLit, NodeExprCharLit,
     NodeExprFloatLit, NodeExprCall, NodeExprBinary, NodeExprBinaryAssign,
-    NodeExprUnary, NodeExprUnaryIncDec, NodeExprNoArg, NodeExprNone,
+    NodeExprUnary, NodeExprUnaryIncDec, NodeExprInlineStructDecl, NodeExprNoArg, NodeExprNone,
     NodeExprNullptr, NodeExprCR, NodeExprBoolValue, NodeExprProperty,
     NodeExprGetPtr, NodeExprDeref, NodeExprList, NodeExprListElement,
     NodeExprStruct, NodeExprNew, NodeExprIsDef, NodeExprIsNotDef,
@@ -233,6 +247,8 @@ struct NodeExpr {
       var;
 
   NodeExpr() = default;
+  NodeExpr(std::nullptr_t)
+    : var(NodeExprNullptr{}) {}
   virtual ~NodeExpr() = default;
 
   template <typename T> NodeExpr(T val) : var(std::move(val)) {}
@@ -363,12 +379,16 @@ struct NodeStmtDefFunc {
   Type return_type;
   bool is_defined;
   std::vector<NodeStmt> code_branch;
+  std::string source_code; // for generics
   bool is_pub = false;
   bool is_extern = false;
   std::vector<std::string> absolute_type_name_args;
   bool is_vargs;
   NodeStmtVar ret_var; // Optional...
   std::vector<std::string> flags;
+  bool generic = false;
+  std::vector<std::string> generic_names;
+  std::vector<std::string> impls; // For generation.cc
   int line;
 };
 
@@ -448,12 +468,17 @@ struct NodeStmtListElement {
 struct NodeStmtStruct {
   Token name;
   std::vector<std::pair<std::string, Type>> fields;
+  bool generic_types = false;
+  std::vector<std::string> generic_names;
+  std::string source_code;
   int line;
 };
 
 struct NodeStmtImpl {
   Token struct_name;
   std::vector<NodeStmtDefFunc> funcs; // this will be a little weird to program
+  std::unordered_map<std::string, Trait> traits;
+  std::vector<std::string> generic_names;
   int line;
 };
 
@@ -560,7 +585,16 @@ private:
 
 public:
   inline explicit Parser(std::vector<Token> tokens) : m_tokens(std::move(tokens)) {}
-  Type parse_type();
+  inline std::string parse_value_as_str(Token tok) {
+    if (tok.type == TokenType::str_lit) {
+      return '"' + tok.value.value() + '"';
+    }
+
+    return tok.value.value();
+  }
+  Type parse_type(bool consume = true);
+  std::string get_next_type_as_str();
+  Trait parse_trait();
   std::string parse_mangled_chain();
   std::optional<NodeExpr> parse_property_chain(std::optional<NodeExpr> base_expr = std::nullopt, Token base = Token{.value = "(NULL)"});
   std::optional<NodeExpr> parse_primary_expr();

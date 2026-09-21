@@ -6,18 +6,19 @@
 *#
 
 struct String {
-	data: &char;
+	data: str;
 	size: int;
   mem_busy: bool;
 };
 
 impl String {
-  fun new() -> &String : "extern";
+  fun new() -> String : "extern";
   fun nnew(borrow string: &String) : "extern";
-  fun from(src: str) -> &String : "extern";
+  fun from(src: str) -> String : "extern";
+  fun on_instance() -> String;
 
   fun set(borrow self: &String, src: str) : "extern";
-  fun clone(borrow og: &String) -> &String : "extern";
+  fun clone(borrow og: &String) -> String : "extern";
   fun iterate(borrow self: &String, i: &i32) -> char : "extern";
   fun clear(borrow self: &String) : "extern";
 
@@ -42,7 +43,8 @@ impl String {
   fun destroy(self: &String) : "extern";
   fun destroym(n: int, undefan);
 
-  fun to_str(borrow self: &String) -> str : "extern";
+  fun as_str(borrow self: &String) -> str;
+  fun to_str(borrow self: &String) -> &str : "extern";
 
   fun is_empty(borrow self: &String) -> int : "extern";
   fun to_int(borrow self: &String) -> int : "extern";
@@ -57,7 +59,7 @@ impl String {
 
   fun ch(borrow self: &String) -> char : "extern";
   fun is_whitespace(borrow self: &String) -> int : "extern";
-  fun cmp_str(borrow self: &String, src: str) -> int : "extern";
+  fun cmp_str(borrow self: &String, src: str) -> bool : "extern";
   fun cmp(borrow self: &String, borrow s2: &String) -> int : "extern";
 
   fun size(borrow self: &String) -> int : "extern";
@@ -75,10 +77,10 @@ fun len(s: str) -> int : "extern";
 fun static_cat(dest: str, src: str) : "extern";
 fun union(dest: str, src: str) : "extern";
 fun new_union(dest: str, s1: str, s2: str) : "extern";
-fun get_cat(s1: str, s2: str) -> str : "extern";
+#-fun get_cat(s1: str, s2: str) -> str : "extern";
 fun cat(s1: str, s2: str) : "extern";
 
-fun find(string: str, substring: str) -> int : "extern";
+#-fun find(string: str, substring: str) -> int : "extern";
 
 fun cutidx(s1: str, begin: int, end: int) -> str : "extern";
 fun bufcutidx(buf: &str, begin: int, end: int) : "extern";

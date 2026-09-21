@@ -1,0 +1,6 @@
+- Fixed value structs
+- Fixed (partially) struct property access
+- Added a Expr which creates a value structure
+- Now a structure > 16 bytes can be passed as argument and returned from a function without need a pointer (at least not a user pointer)
+- Added no-discard flag
+- Added type deduction according to the context (just in some cases)

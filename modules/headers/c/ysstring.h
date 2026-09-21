@@ -26,7 +26,7 @@ __attribute__((visibility("default")))
 YSString *new$MODString();
 
 __attribute__((visibility("default")))
-YSString *from$MODString(const char *src);
+YSString from$MODString(const char *src);
 
 __attribute__((visibility("default")))
 void set$MODString(YSString *string, const char *src);
@@ -81,6 +81,9 @@ void destroy$MODString(YSString *string);
 
 __attribute__((visibility("default")))
 void destroym$MODString(int n, ...);
+
+__attribute__((visibility("default")))
+char *as_str$MODString(YSString *string);
 
 __attribute__((visibility("default")))
 char *to_str$MODString(YSString *string);
@@ -139,7 +142,7 @@ static inline YSString *ysstring_new(void) {
     return new$MODString();
 }
 
-static inline YSString *ysstring_from(const char *src) {
+static inline YSString ysstring_from(const char *src) {
     return from$MODString(src);
 }
 
@@ -222,6 +225,10 @@ static inline void ysstring_destroy(YSString *string) {
 
 static inline void ysstring_destroym(int n, ...) {
     destroym$MODString(n);
+}
+
+static inline char *ysstring_as_str(YSString *string) {
+  return as_str$MODString(string);
 }
 
 static inline char *ysstring_to_str(YSString *string) {

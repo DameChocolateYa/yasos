@@ -130,7 +130,8 @@ enum class TokenType {
   _size_of,
   _nmem,
   _borrow,
-  _in
+  _in,
+  _with
 };
 
 struct Token {
