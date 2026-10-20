@@ -3,14 +3,15 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**",
-                "/usr/lib64/llvm22/include"
+                "${workspaceFolder}/src",
+                "/usr/lib/llvm-17/include",
+                "/usr/include/x86_64-linux-gnu/" // If we dont put this... llvm will complain about not being able to find sys/types.h
             ],
             "defines": [],
             "compilerPath": "/usr/bin/g++",
             "cStandard": "c23",
             "cppStandard": "c++23",
-            "intelliSenseMode": "linux-clang-x86"
+            "intelliSenseMode": "linux-clang-x64"
         }
     ],
     "version": 4
