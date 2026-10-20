@@ -47,4 +47,11 @@ clean:
 
 distclean: clean
 
-.PHONY: all clean distclean
+install:
+	@mkdir -p /usr/include/ysinclude
+	@mkdir -p /usr/lib/yslib
+
+	@cp -fr modules/libys.so /usr/lib/yslib
+	@cp -fr modules/headers/*.ys /usr/include/ysinclude
+
+.PHONY: all clean distclean install

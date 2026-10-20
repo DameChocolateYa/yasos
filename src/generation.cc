@@ -8,7 +8,6 @@
 #include "generation.hh"
 
 #include <llvm/Analysis/InstructionSimplify.h>
-#include <llvm/Analysis/SimplifyQuery.h>
 #include <llvm/Analysis/TargetLibraryInfo.h>
 #include <llvm/IR/Attributes.h>
 #include <llvm/IR/BasicBlock.h>
@@ -217,7 +216,6 @@ static std::string get_mangled_generic_name(std::string base_name,
   std::string type_prefix;
   for (const auto &ty : types) {
     type_prefix += get_type_as_str(ty);
-    std::cerr << "MANG: " << get_type_as_str(ty) << "\n";
   }
   std::string new_name = type_prefix + base_name;
 
@@ -226,7 +224,6 @@ static std::string get_mangled_generic_name(std::string base_name,
       new_name.append("$MOD" + mod);
     }
   }
-  std::cerr << "MANG_RES: " << new_name << "\n";
 
   return new_name;
 }
@@ -538,7 +535,6 @@ static bool is_valid_ret_type(Generator *gen, llvm::Type *type, int line) {
     uint64_t size_in_bytes = DL.getTypeAllocSize(type);
 
     if (size_in_bytes > 16 && !type->isPointerTy()) {
-      std::cerr << size_in_bytes << "\n";
       add_error(
           "Structures greater than 16 bytes need to be passed as pointers",
           line);
@@ -663,7 +659,6 @@ static void generate_function_definition_from_generic(Generator *gen,
       pos = source_code.find(generic, pos + ty_as_str.size());
     }
   }
-  std::cerr << source_code << "\n";
 
   Lexer lexer(std::move(source_code));
   std::vector<Token> tokens = lexer.tokenize();
@@ -1476,14 +1471,11 @@ llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
     llvm::Value *operator()(const NodeExprCall &expr_call) const {
       std::string fn = expr_call.name.value.value();
 
-      std::cerr << "N: " << fn << ", " << last_box_type->template_types.size() << "\n"; 
       if (gen->generic_functions.contains(fn)) {
         generate_function_definition_from_generic(
             gen, fn, last_box_type->template_types);
         fn = get_mangled_generic_name(fn, last_box_type->template_types);
-      std::cerr << "NN: " << fn << "\n";
       }
-      std::cerr << "NNN: " << fn << "\n";
 
       std::vector<NodeExprPtr> arg_values = expr_call.args;
       std::optional<llvm::Value *> ret_val =
@@ -1511,7 +1503,6 @@ llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
 
       std::string struct_name_not_mangled = struct_name;
       struct_name = get_mangled_generic_name(last_box_type->user_type, last_box_type->template_types, false);
-      std::cerr << struct_name << "\n";
       llvm::StructType *struct_type =
           gen->m_struct_templates.at(struct_name).llvm_type;
 
@@ -2154,7 +2145,6 @@ void Generator::gen_stmt(NodeStmt &stmt, bool avoid_code_generation) {
       }*/
 
       last_box_type = std::make_optional<Type>(var_type);
-      std::cerr << "FWD: " << last_box_type->template_types.size() << "\n";
       if (stmt_var.has_initial_value && !stmt_var.is_inline &&
           gen->current_mode != Mode::Global) {
         init_val = gen->gen_expr(stmt_var.expr);
@@ -2941,7 +2931,6 @@ void Generator::gen_stmt(NodeStmt &stmt, bool avoid_code_generation) {
       std::vector<std::pair<std::string, FuncParamInfo>> args;
 
       if (stmt_def_func.generic) {
-        std::cerr << "IN: " << name << "\n";
         gen->generic_functions.insert({name, {generic_func, {}}});
         return;
       }
@@ -3065,7 +3054,6 @@ void Generator::gen_stmt(NodeStmt &stmt, bool avoid_code_generation) {
       for (int i = 0; i < f.args.size(); i++) {
         if (f.args[i].second.indirect) {
           int j = i + (ret_indirect ? 1 : 0);
-          std::cerr << name << ": " << i << "->" << ret_indirect << "->" << j << "\n";
           func->addParamAttr(j, llvm::Attribute::getWithByValType(
                                     TheContext, f.args[i].second.abi_type));
           func->addParamAttr(

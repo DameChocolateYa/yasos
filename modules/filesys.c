@@ -249,14 +249,14 @@ Vec read_lines$MODFile(File *self) {
   while ((newline = strchr(start, '\n')) != NULL) {
     *newline = '\0';
     String line = from$MODString(start);
-    push_string$MODVec(&lines, &line);
+    push_string$MODVec(&lines, line);
 
     start = newline + 1;
   }
 
   if (*start != '\0') {
     String line = from$MODString(start);
-    push_string$MODVec(&lines, &line);
+    push_string$MODVec(&lines, line);
   }
 
   return lines;
