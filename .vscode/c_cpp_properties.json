@@ -4,7 +4,7 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/src",
-                "/usr/lib/llvm-17/include",
+                "/usr/lib/llvm-22/include",
                 "/usr/include/x86_64-linux-gnu/" // If we dont put this... llvm will complain about not being able to find sys/types.h
             ],
             "defines": [],

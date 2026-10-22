@@ -333,7 +333,8 @@ TypeMapping map_type_to_llvm(Type t, Generator *gen, bool is_ref = false,
         type.base_type = gen->m_struct_templates.at(t.user_type).llvm_type;
         if (t.pointee != nullptr) {
           auto pointee_mapping = map_type_to_llvm(*t.pointee, gen);
-          type.type = llvm::PointerType::getUnqual(pointee_mapping.type);
+          //type.type = llvm::PointerType::getUnqual(pointee_mapping.type);
+          type.type = llvm::PointerType::get(TheContext, 0);
           type.base_type = pointee_mapping.type;
         } else
           type.type = type.base_type;
@@ -358,10 +359,11 @@ TypeMapping map_type_to_llvm(Type t, Generator *gen, bool is_ref = false,
       type.base_type = llvm::Type::getInt8Ty(TheContext);
       if (t.pointee != nullptr) {
         auto pointee_mapping = map_type_to_llvm(*t.pointee, gen);
-        type.type = llvm::PointerType::getUnqual(pointee_mapping.type);
-        type.base_type = pointee_mapping.type;
+        //type.type = llvm::PointerType::getUnqual(pointee_mapping.type);
+        type.type = llvm::PointerType::get(TheContext, 0);
+        type.base_type = llvm::Type::getInt8Ty(TheContext);
       } else
-        type.type = type.base_type;
+        type.type = llvm::PointerType::get(TheContext, 0);
       break;
 
     default:

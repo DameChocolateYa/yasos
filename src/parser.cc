@@ -148,9 +148,14 @@ Type Parser::parse_type(bool consume_type) {
   if (peek().has_value() && peek().value().type == TokenType::amp) {
     if (consume_type)
       consume();
-    pointee = std::make_shared<Type>(parse_type());
-    is_ref = true;
-    return *pointee;
+
+    Type referenced_type = parse_type(consume_type);
+
+    type = referenced_type;
+    type.pointee = std::make_shared<Type>(referenced_type);
+    type.is_ref = true;
+
+    return type;
   }
 
   if (peek().has_value() && is_type(peek().value())) {
