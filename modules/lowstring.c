@@ -1014,6 +1014,21 @@ int size$MODString(String *self) {
   return self->size;
 }
 
+__attribute__((visibility("default")))
+char at$MODString(String *self, int index) {
+  if (!self) {
+    fprintf(stderr, "Error (String::at): invalid String\n");
+    return '\0';
+  }
+
+  if (index < 0 || index > self->size) {
+    fprintf(stderr, "Error (String::at): index out of range\n");
+    return '\0';
+  }
+
+  return self->data[index];
+}
+
 /*__attribute__((visibility("default")))
 int cmp$MODString(String *self, String *s2) { // This should not work in most of the cases, it needs to have the same memory direction
   printf("%d, %d\n", self->mem_busy, s2->mem_busy);

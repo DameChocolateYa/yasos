@@ -1,2 +1,1 @@
-- Fixed big problem with opaque pointers related with user structs and any pointers
-- This may means that part of the type management system should be rewritten to make it work correctly with LLVM opaque pointers
+- Added String::at

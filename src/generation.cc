@@ -946,11 +946,14 @@ static void call_destroy(Generator *gen, Generator::Var &var,
   if (!var.struct_template.empty() && var.destroy_after_scoup && !var.moved &&
       var.is_owner && !var.is_borrowed) {
     const std::string name = var.name;
-    const std::string func_name_mangled =
+    std::string func_name_mangled =
         "destroy" + std::string("$MOD") + var.base_type->getStructName().str();
     if (func_name_mangled == gen->current_func ||
-        !gen->declared_funcs.contains(func_name_mangled))
-      return;
+        !gen->declared_funcs.contains(func_name_mangled)) {
+          func_name_mangled = "drop" + std::string("$MOD") + var.base_type->getStructName().str();
+          if (!gen->declared_funcs.contains(func_name_mangled))
+            return;
+        }
 
     llvm::Value *base = var.var_ptr;
 
@@ -3181,7 +3184,7 @@ void Generator::gen_stmt(NodeStmt &stmt, bool avoid_code_generation) {
           segment = name.substr(start, end - start);
         }
 
-        if (segment == "destroy") {
+        if (segment == "destroy" || segment == "drop") {
           destroy = true;
         }
 

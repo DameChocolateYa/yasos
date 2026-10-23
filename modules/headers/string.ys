@@ -61,6 +61,7 @@ impl String {
   fun is_whitespace(borrow self: &String) -> int : "extern";
   fun cmp_str(borrow self: &String, src: str) -> bool : "extern";
   fun cmp(borrow self: &String, borrow s2: &String) -> int : "extern";
+  fun at(borrow self: &String, index: i32) -> char : "extern";
 
   fun size(borrow self: &String) -> int : "extern";
   fun ssize(borrow self: &String) -> int : "extern";
