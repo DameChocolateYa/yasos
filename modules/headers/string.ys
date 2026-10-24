@@ -5,6 +5,16 @@
  * See LICENSE file in the project root for full license text.
 *#
 
+#- From Vector
+struct Vec {
+  data: &any,
+  size: i32,
+  capacity: i32,
+  elem_size: i32,
+  is_membusy: bool,
+}
+-#
+
 struct String {
 	data: str;
 	size: int;
@@ -62,6 +72,7 @@ impl String {
   fun cmp_str(borrow self: &String, src: str) -> bool : "extern";
   fun cmp(borrow self: &String, borrow s2: &String) -> int : "extern";
   fun at(borrow self: &String, index: i32) -> char : "extern";
+  fun chars(borrow self: &String) -> Vec : "extern";
 
   fun size(borrow self: &String) -> int : "extern";
   fun ssize(borrow self: &String) -> int : "extern";
@@ -93,7 +104,7 @@ fun bufcut(buf: &str, substr: str) : "extern";
 fun sub(s1: str, begin: int, end: int) -> str : "extern";
 fun bufsub(buf: &str, begin: int, end: int) : "extern";
 
-fun to_int(s: str) : "extern";
+fun to_int(s: str) -> i32 : "extern";
 fun to_double(s: str) : "extern";
 
 fun cmp(s1: str, s2: str) -> int : "extern";

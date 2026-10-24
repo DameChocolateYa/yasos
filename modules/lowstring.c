@@ -18,6 +18,7 @@
 #include "cutype.h"
 #include "mem.h"
 #include "string.h"
+#include "vector.h"
 
 #define true 1
 #define false 0
@@ -1027,6 +1028,19 @@ char at$MODString(String *self, int index) {
   }
 
   return self->data[index];
+}
+
+__attribute__((visibility("default")))
+Vec chars$MODString(String *self) {
+  if (!self || !self->data)
+    return (Vec){0};
+  
+  Vec v = new$MODVec(sizeof(char));
+  for (int i = 0; i < self->size; i++) {
+    push_char$MODVec(&v, self->data[i]);
+  }
+
+  return v;
 }
 
 /*__attribute__((visibility("default")))

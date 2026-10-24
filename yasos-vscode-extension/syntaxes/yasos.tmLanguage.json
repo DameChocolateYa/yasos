@@ -29,7 +29,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control.yasos",
-					"match": "\\b(if|while|loop|for|foreach|in|ret|elif|else|fun|var|const|let|cnst|struct|goto|nmem|declmod|endmod|import|use|impl|inc|dec|borrow|aloc|stop|continue|extern|pub|inline)\\b|\\$def|\\$undef|\\$if|\\$elif|\\$else|\\$endif"
+					"match": "\\b(if|while|loop|for|foreach|in|ret|elif|else|fun|var|const|let|cnst|struct|goto|nmem|declmod|endmod|import|use|impl|inc|dec|borrow|aloc|stop|continue|extern|pub|inline)\\b|\\$def|\\$undef|\\$if|\\$elif|\\$else|\\$endif|\\$sizeof"
 				}
 			]
 		},
