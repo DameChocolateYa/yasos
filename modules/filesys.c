@@ -92,7 +92,7 @@ bool erase$MODFilesys(const char *path) {
 // The File flags system only works in GNU/Linux
 
 __attribute__((visibility("default")))
-File *open$MODFile(char *path, const char *raw_flags) {
+File open$MODFile(char *path, const char *raw_flags) {
   int flags = 0;
 
   if (strchr(raw_flags, 'r') && strchr(raw_flags, 'w')) {
@@ -108,29 +108,29 @@ File *open$MODFile(char *path, const char *raw_flags) {
   if (strchr(raw_flags, 't')) flags |= 512; // TRUNC
   if (strchr(raw_flags, 'a')) flags |= 1024; // APPEND
 
-  File *f = (File *)alloc$MODmem(sizeof(File));
-  f->path = path;
-  f->is_open = true;
-  f->fd = sys_open(path, flags, 0644);
+  File f;
+  f.path = path;
+  f.is_open = true;
+  f.fd = sys_open(path, flags, 0644);
 
-  if (f->fd < 0) {
+  if (f.fd < 0) {
     fprintf(stderr, "Could not open file (%s)\n", path);
-    f->is_open = false;
+    f.is_open = false;
     return f;
   }
 
-  f->bufsize = 4096;
-  f->buffer = (char *)alloc$MODmem(f->bufsize);
-  if (!f->buffer) {
+  f.bufsize = 4096;
+  f.buffer = (char *)alloc$MODmem(f.bufsize);
+  if (!f.buffer) {
     fprintf(stderr, "Could not allocate memory for File management\n");
-    f->is_open = false;
+    f.is_open = false;
     return f;
   }
 
-  cpy$MODstring(f->buffer, "");
+  cpy$MODstring(f.buffer, "");
 
-  f->pos = 0;
-  f->flags = flags;
+  f.pos = 0;
+  f.flags = flags;
 
   return f;
 }
@@ -176,8 +176,6 @@ void close$MODFile(File *self) {
   self->bufsize = 0;
   self->flags = 0;
   self->pos = 0;
-
-  free$MODmem(self);
 }
 
 __attribute__((visibility("default")))
@@ -303,21 +301,21 @@ bool exist$MODDir(Dir *self) {
 }
 
 __attribute__((visibility("default")))
-Dir *new$MODDir(const char *path, const char *flags) {
-  Dir *dir = (Dir *)alloc$MODmem(sizeof(Dir));
-  if (!dir || !path || !flags) {
+Dir new$MODDir(const char *path, const char *flags) {
+  Dir dir;
+  if (!path || !flags) {
     fprintf(stderr, "Dir::new: Failed to create Dir instance\n");
-    return NULL;
+    return (Dir){0};
   }
 
   String s = from$MODString(path);
-  dir->path = &s;
-  if (!dir->path) {
+  dir.path = &s;
+  if (!dir.path) {
     fprintf(stderr, "Dir::new: Could not create a String instance of path\n");
-    return NULL;
+    return (Dir){0};
   }
 
-  if (!exist$MODDir(dir) && strchr(flags, 'c')) {
+  if (!exist$MODDir(&dir) && strchr(flags, 'c')) {
     mkdir_internal(path);
   }
 
