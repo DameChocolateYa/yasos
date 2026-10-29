@@ -1,1 +1,1 @@
-- Added String::at
+- Fixed a bug which didn't give error when tried to use a struct variable already moved by a function property (__YASOS_EXPERIMENTAL_MEMORY_MANAGEMENT__)

@@ -181,9 +181,11 @@ class Generator {
   std::map<std::string, std::pair<int, int>> m_lists;
   std::unordered_map<std::string, GlobVar> m_glob_vars;
   std::vector<std::string> m_vars_order;
+
   std::unordered_map<std::string,
                      std::pair<llvm::Type *, std::vector<llvm::Type *>>>
       declared_funcs;
+      
   std::unordered_map<std::string, std::vector<Var>> m_fnc_args;
   std::unordered_map<std::string, Type> m_fnc_custom_ret;
   std::vector<std::string> m_string_literals;

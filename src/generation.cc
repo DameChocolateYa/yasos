@@ -749,6 +749,7 @@ static std::optional<llvm::Value *> call_func(
       auto arg_valid = *arg_val;
       if (std::holds_alternative<NodeExprIdent>(arg_valid.var)) {
         auto ident = std::get<NodeExprIdent>(arg_valid.var);
+        gen->m_vars.at(ident.ident.value.value()).is_owner = true;
         if (gen->m_vars.contains(ident.ident.value.value()) &&
             (gen->m_vars.at(ident.ident.value.value()).is_owner ||
              gen->m_vars.at(ident.ident.value.value()).is_borrowed)) {
@@ -1580,6 +1581,12 @@ llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
 
       // ================= FUNC CALL =================
       if (expr_property.is_func) {
+        if (gen->m_vars.at(expr_property.base_tok.value.value()).moved && m_preprocessor_bool.contains("__YASOS_EXPERIMENTAL_MEMORY_MANAGEMENT__")) {
+          add_error("'" + expr_property.base_tok.value.value() + "' is a moved value or is uninitalized", 
+            expr_property.line);
+            return nullptr;
+        }
+
         std::string func_name = expr_property.property.value.value();
         std::string mangled = func_name + "$MOD" + struct_name_not_mangled;
 
@@ -1599,6 +1606,14 @@ llvm::Value *Generator::gen_expr(const NodeExpr &expr, bool as_lvalue,
 
         std::vector<llvm::Value *> args;
         args.push_back(property_ptr);
+
+        for (const auto &f : gen->m_funcs) {
+          if (f.name == mangled) {
+            if (!f.args.at(0).second.source_type.is_borrowed)
+              gen->m_vars.at(expr_property.base_tok.value.value()).moved = true;
+          }
+        } 
+
         for (auto &a : expr_property.args) args.push_back(gen->gen_expr(*a));
 
         std::optional<llvm::Value *> return_value =
