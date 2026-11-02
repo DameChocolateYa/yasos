@@ -13,6 +13,11 @@ struct Vec2 {
   y: double
 }
 
+struct IVec2 {
+  x: i32,
+  y: i32
+}
+
 struct Vec3 {
   x: double,
   y: double,
@@ -24,6 +29,20 @@ struct Vec4 {
   y: double,
   z: double,
   w: double
+}
+
+struct Color {
+	r: double,
+	g: double,
+	b: double,
+	a: double
+}
+
+struct Color256 {
+	r: i32,
+	g: i32,
+	b: i32,
+	a: i32
 }
 
 declmod math;
@@ -60,5 +79,12 @@ fun deg2rad(deg: double) -> double : "extern";
 fun rad2deg(rad: double) -> double : "extern";
 
 fun ec_cuad(a: double, b: double, c: double, return_first: bool) -> double : "extern";
+
+endmod;
+
+declmod color;
+
+fun to_256(c: Color) -> Color256 : "extern";
+fun to_unit(c: Color256) -> Color : "extern";
 
 endmod;

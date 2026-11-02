@@ -7,7 +7,20 @@
 
 use "headers/std.ys";
 
-#- Can not use PI due to the problem importing constants
+struct Color {
+	r: double,
+	g: double,
+	b: double,
+	a: double
+}
+
+struct Color256 {
+	r: i32,
+	g: i32,
+	b: i32,
+	a: i32
+}
+
 declmod math;
 
 fun sqrt(x: double) -> double : "extern"; #- defined in C
@@ -186,5 +199,29 @@ fun ec_cuad(a: double, b: double, c: double, return_first: bool) -> double {
 
   ret x2;
 } pub;
+
+fun db_to_int(n: double) -> i32 : "extern";
+
+endmod;
+
+declmod color;
+
+fun to_256(c: Color) -> Color256 {
+	ret Color256[
+		math::db_to_int(c.r * 255.0),
+		math::db_to_int(c.g * 255.0),
+		math::db_to_int(c.b * 255.0),
+		math::db_to_int(c.a * 255.0)
+	];
+} : "pub";
+
+fun to_unit(c: Color256) -> Color {
+  ret Color[
+    c.r / 255.0,
+    c.g / 255.0,
+    c.b / 255.0,
+    c.a / 255.0
+  ];
+} : "pub";
 
 endmod;

@@ -21,6 +21,9 @@
 			"include": "#strings"
 		},
 		{
+			"include": "#strings2"
+		},
+		{
 			"include": "#numbers"
 		}
 	],
@@ -72,6 +75,17 @@
 			"name": "string.quoted.double.yasos",
 			"begin": "\"",
 			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.yasos",
+					"match": "\\\\."
+				}
+			]
+		},
+		"strings2": {
+			"name": "string.quoted.double.yasos",
+			"begin": "''",
+			"end": "''",
 			"patterns": [
 				{
 					"name": "constant.character.escape.yasos",

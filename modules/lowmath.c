@@ -39,7 +39,7 @@ double round$MODmath(double num, int decimals) {
 }
 
 __attribute__((visibility("default")))
-int db_to_int$MODmath(float n) {
+int db_to_int$MODmath(double n) {
   return (int)n;
 }
 
