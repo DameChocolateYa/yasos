@@ -516,6 +516,12 @@ void cpy$MODstring(char *dest, const char *src) {
     ;
 }
 
+// while arrays are fucked due to structure var declaration ( [] )
+__attribute__((visibility("default")))
+char *at_char_array$MODstring(char **array, int index) {
+  return array[index];
+}
+
 // Functions of String struct implementation
 
 #include <stdarg.h>

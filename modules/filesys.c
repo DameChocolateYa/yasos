@@ -203,6 +203,20 @@ int write$MODFile(File *self, const char *data) {
 }
 
 __attribute__((visibility("default")))
+int write_c$MODFile(File *self, const char c) {
+  if (self == NULL || self->fd < 0 || self->buffer == NULL) {
+    fprintf(stderr, "File::write: Tried to write in a NULL File\n");
+    return -1;
+  }
+
+  int len = 1;
+
+  int bytes = sys_write(self->fd, &c, len);
+
+  return bytes;
+}
+
+__attribute__((visibility("default")))
 char *read$MODFile(File *self) {
   if (self->fd < 0) {
     fprintf(stderr, "File::read: Tried to read bytes from a NULL File\n");

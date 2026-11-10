@@ -130,6 +130,8 @@ fun get_splited(string: str, delimiter: str, bufsize: &int) -> &str : "extern";
 
 fun cpy(dest: &str, src: str) : "extern";
 
+fun at_char_array(array: &str, index: i32) -> str : "extern";
+
 inline const STR_EMPTY: str = "";
 inline const STR_WHITE: str = " ";
 inline const STR_NULLT: str = "\0";

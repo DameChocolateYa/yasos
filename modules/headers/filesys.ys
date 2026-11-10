@@ -48,6 +48,7 @@ impl File {
   fun close(borrow f: &File) : "extern";
   fun is_open(borrow f: File) -> int : "extern";
   fun write(borrow f: &File, data: str) -> int : "extern";
+  fun write_c(borrow f: &File, c: char) -> i32 : "extern";
   fun read(borrow f: &File) -> str : "extern";
   fun read_lines(borrow self: &File) -> Vec : "extern";
   fun seek(borrow f: &File, pos: int, whence: int) : "extern";
